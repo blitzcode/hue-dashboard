@@ -217,8 +217,7 @@ discoverBridgeIP bridgeIP =
                     traceS TLError $ "Bad / stale bridge IP: " <> (show e)
                     discoverBridgeIP Nothing
                 Right (cfg :: BridgeConfigNoWhitelist) -> do
-                    traceS TLInfo $ "Success, bridge configuration: "
-                           <> (show cfg)
+                    traceS TLInfo $ "Success, bridge configuration: " <> (show cfg)
                     return ip
         Nothing -> do
             -- No IP, run bridge discovery
@@ -265,8 +264,7 @@ setupUser bridgeIP userID =
                 Right err@(ResponseError { .. }) -> do
                     -- Got an error from the bridge, just create a fresh user ID
                     traceS TLError $
-                        "Error response verifying user ID (retry in 5s): " <> (show err)
-                    waitNSec 5
+                        "Error response verifying user ID: " <> (show err)
                     setupUser bridgeIP Nothing
                 Right (ResponseOK (_ :: [String])) -> do
                     -- Looks like we got our timezone list, user ID is whitelisted and verified
@@ -304,6 +302,38 @@ setupUser bridgeIP userID =
                     traceS TLInfo $ "Successfully created new user ID: " <> uid
                     setupUser bridgeIP (Just uid)
 
+data Light = Light { lgtName :: !String
+                   , lgtType :: !String
+                   , lgtOn   :: !Bool
+                   } deriving Show
+
+instance FromJSON Light where
+    parseJSON j = do (Object o) <- parseJSON j
+                     ls <- o .: "state"
+                     Light <$> o .: "name" <*> o .: "type" <*> ls .: "on"
+
+traceAllLights :: (MonadIO m, MonadCatch m) => IPAddress -> String -> m ()
+traceAllLights bridgeIP userID = do
+    -- Request all light information
+    --
+    -- http://www.developers.meethue.com/documentation/lights-api#11_get_all_lights
+    --
+    try (bridgeRequest MethodGET bridgeIP noBody userID "lights") >>= \case
+        Left (e :: SomeException) -> do
+            -- Network / IO / parsing error, retry
+            traceS TLError $ "Failed to query lights: " <> (show e)
+        Right err@(ResponseError { .. }) -> do
+            -- Error from the bridge
+            traceS TLError $ "Error response querying lights: " <> show err
+        Right (ResponseOK (lights :: HM.HashMap String Light)) -> do
+            -- Successfully retrieved light information
+            liftIO . forM_ (HM.elems lights) $ \Light { .. } -> do
+                putStr $ printf "%20s (%20s) %s\n"
+                                lgtName
+                                lgtType
+                                (if lgtOn then "On" else "Off" :: String)
+            liftIO $ putStrLn ""
+
 main :: IO ()
 main =
   -- Setup tracing
@@ -322,5 +352,8 @@ main =
     -- Setup application monad
     flip evalStateT AppState { _asPC = newCfg
                              } $ do
+      void . forever $ do
+          traceAllLights bridgeIP userID
+          waitNSec 3
       return ()
 
