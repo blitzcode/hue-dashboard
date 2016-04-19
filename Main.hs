@@ -83,7 +83,7 @@ instance Show BridgeConfigNoWhitelist where
                                                  (show bcnwMac)
 
 instance FromJSON BridgeConfigNoWhitelist where
-    parseJSON (Object o) = do
+    parseJSON (Object o) =
         BridgeConfigNoWhitelist <$> o .: "swversion"
                                 <*> o .: "apiversion"
                                 <*> o .: "name"
@@ -145,7 +145,7 @@ data BridgeResponse a = ResponseError { reType :: !BridgeError
                       | ResponseOK a
                         deriving Show
 
--- Generic response type from the bridge, either we get an array containing an object with
+-- Generic response type from the bridge. Either we get an array containing an object with
 -- the 'error' key and the type / address / description fields, or we get our wanted response
 instance FromJSON a => FromJSON (BridgeResponse a) where
     parseJSON j = let parseError = do [(Object o)] <- parseJSON j
@@ -164,8 +164,9 @@ data PersistConfig = PersistConfig
 
 makeLenses ''PersistConfig
 
+-- Auto-generated instances through Generic
 instance FromJSON PersistConfig
-instance ToJSON PersistConfig
+instance ToJSON   PersistConfig
 
 -- Application state
 data AppState = AppState
@@ -253,7 +254,7 @@ setupUser bridgeIP userID =
     -- Do we have a user ID to try?
     case userID of
         Just uid -> do
-            -- Verify user ID by querying timezone list, which requires a whitelisting
+            -- Verify user ID by querying timezone list, which requires whitelisting
             traceS TLInfo $ "Trying to verify user ID: " <> uid
             try (bridgeRequest MethodGET bridgeIP noBody uid "info/timezones") >>= \case
                 Left (e :: SomeException) -> do
@@ -276,7 +277,7 @@ setupUser bridgeIP userID =
             -- http://www.developers.meethue.com/documentation/configuration-api#71_create_user
             --
             host <- liftIO getHostName
-            let body = -- We use our application name and the host name, as specified
+            let body = -- We use our application name and the host name, as recommended
                        HM.fromList ([("devicetype", "haskell-hue#" <> host)] :: [(String, String)])
             traceS TLInfo $ "Creating new user ID: " <> (show body)
             try (bridgeRequest MethodPOST bridgeIP (Just body) "" "") >>= \case
