@@ -20,6 +20,7 @@ executable haskell-hue
                        lens,
                        ansi-terminal,
                        containers,
+                       unordered-containers,
                        bytestring,
                        text,
                        http-conduit,
@@ -31,7 +32,8 @@ executable haskell-hue
                        time,
                        yaml,
                        exceptions,
-                       filepath
+                       filepath,
+                       hostname
   ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -threaded -dynamic
   ghc-prof-options:    -fprof-auto -caf-all
 
