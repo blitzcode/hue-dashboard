@@ -1,0 +1,35 @@
+name:                haskell-hue
+version:             0.1.0.0
+synopsis:            Haskell control of Philips Hue light bulbs
+description:         Please see README.md
+homepage:            https://github.com/blitzcode/haskell-hue#readme
+license:             MIT
+author:              Tim C. Schroeder
+maintainer:          www.blitzcode.net
+copyright:           (C) 2016 Tim C. Schroeder
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable haskell-hue
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5,
+                       mtl,
+                       transformers,
+                       lens,
+                       ansi-terminal,
+                       containers,
+                       bytestring,
+                       text,
+                       http-conduit,
+                       http-client,
+                       aeson,
+                       attoparsec,
+                       monad-control,
+                       async,
+                       time,
+                       yaml
+  ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -threaded -dynamic
+  ghc-prof-options:    -fprof-auto -caf-all
+
