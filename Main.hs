@@ -165,6 +165,7 @@ data PersistConfig = PersistConfig
 makeLenses ''PersistConfig
 
 instance FromJSON PersistConfig
+instance ToJSON PersistConfig
 
 -- Application state
 data AppState = AppState
@@ -190,12 +191,13 @@ loadConfig fn = do
                          "Can't load configuration: " <> (Y.prettyPrintParseException e)
                         traceS TLInfo "Proceeding without prior configuration data"
                         return Nothing
-        Right cfg -> do traceS TLInfo $ "Configuration: %s" <> show cfg
+        Right cfg -> do traceS TLInfo $ "Configuration: " <> show cfg
                         return $ Just cfg
 
 storeConfig :: MonadIO m => FilePath -> PersistConfig -> m ()
-storeConfig _ _ = do
-    return () -- TODO
+storeConfig fn cfg = do
+    traceS TLInfo "Storing persistent configuration..."
+    liftIO $ Y.encodeFile fn cfg
 
 waitNSec :: MonadIO m => Int -> m ()
 waitNSec sec = liftIO . threadDelay $ sec * 1000 * 1000
