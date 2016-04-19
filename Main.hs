@@ -13,6 +13,7 @@ import Network.HTTP.Simple
 import System.FilePath ()
 import Data.Aeson hiding ((.=))
 import Data.Monoid
+import Data.Maybe
 import qualified Data.Yaml as Y
 import Control.Lens
 import Control.Monad
@@ -25,10 +26,12 @@ import GHC.Generics
 
 import Trace
 
+type IPAddress = String
+
 -- Bridge description obtained from the broker server
 data Bridge = Bridge
     { brID                :: String
-    , brInternalIPAddress :: String
+    , brInternalIPAddress :: IPAddress
     , brName              :: Maybe String
     , brMacAddress        :: Maybe String
     }
@@ -52,50 +55,50 @@ instance Show Bridge where
 
 -- Discover local Hue bridges using the broker server
 -- http://www.developers.meethue.com/documentation/hue-bridge-discovery
-discoverBridges :: (MonadThrow m, MonadIO m) => m [Bridge]
-discoverBridges = do
+queryBrokerServer :: (MonadThrow m, MonadIO m) => m [Bridge]
+queryBrokerServer = do
     let brokerServerURL = "https://www.meethue.com/api/nupnp"
     request  <- parseRequest brokerServerURL
     response <- httpJSON request
     return (getResponseBody response :: [Bridge])
 
--- Bridge configuration obtained from the api/config endpoint
-data BridgeConfig = BridgeConfig
-    { bcSWVersion  :: String
-    , bcAPIVersion :: String
-    , bcName       :: String
-    , bcMac        :: String
+-- Bridge configuration obtained from the api/config endpoint without a whitelisted user
+data BridgeConfigNoWhitelist = BridgeConfigNoWhitelist
+    { bcnwSWVersion  :: String
+    , bcnwAPIVersion :: String
+    , bcnwName       :: String
+    , bcnwMac        :: String
     }
 
-instance Show BridgeConfig where
-    show BridgeConfig { .. } = printf "Name: %s, SW Ver: %s, API Ver: %s, Mac: %s"
-                                   (show bcName)
-                                   (show bcSWVersion)
-                                   (show bcAPIVersion)
-                                   (show bcMac)
+instance Show BridgeConfigNoWhitelist where
+    show BridgeConfigNoWhitelist { .. } = printf "Name: %s, SW Ver: %s, API Ver: %s, Mac: %s"
+                                                 (show bcnwName)
+                                                 (show bcnwSWVersion)
+                                                 (show bcnwAPIVersion)
+                                                 (show bcnwMac)
 
-instance FromJSON BridgeConfig where
+instance FromJSON BridgeConfigNoWhitelist where
     parseJSON (Object o) = do
-        BridgeConfig <$> o .: "swversion"
-                     <*> o .: "apiversion"
-                     <*> o .: "name"
-                     <*> o .: "mac"
+        BridgeConfigNoWhitelist <$> o .: "swversion"
+                                <*> o .: "apiversion"
+                                <*> o .: "name"
+                                <*> o .: "mac"
     parseJSON _ = fail "Expected object"
 
 -- Get the basic bridge configuration. This is one of the few API requests we can make
--- without having a linked user. We use this to check if the IP we have is actually
+-- without having a whitelisted user. We use this to check if the IP we have is actually
 -- pointing to a working Hue bridge
-getBridgeConfig :: (MonadIO m, MonadThrow m) => String -> m BridgeConfig
-getBridgeConfig bridgeIP = do
+getBridgeConfigNoWhitelist :: (MonadIO m, MonadThrow m) => String -> m BridgeConfigNoWhitelist
+getBridgeConfigNoWhitelist bridgeIP = do
     unless (isIpAddress $ B8.pack bridgeIP) $ fail "Invalid IP address"
     request  <- parseRequest $ "GET http://" <> bridgeIP <> "/api/no-user/config"
     response <- httpJSON request
-    return (getResponseBody response :: BridgeConfig)
+    return (getResponseBody response :: BridgeConfigNoWhitelist)
 
--- Configuration data which we persist in a configuration file
+-- Configuration data which we persist in a file
 data PersistConfig = PersistConfig
-    { _pcBridgeIP :: Maybe String
-    , _pcUserID   :: Maybe String
+    { _pcBridgeIP :: IPAddress
+    , _pcUserID   :: String
     } deriving (Generic, Show)
 
 makeLenses ''PersistConfig
@@ -105,7 +108,6 @@ instance FromJSON PersistConfig
 -- Application state
 data AppState = AppState
     { _asPC        :: PersistConfig
-    , _asBridgeCfg :: Maybe BridgeConfig
     }
 
 makeLenses ''AppState
@@ -116,69 +118,93 @@ type AppIO = AppT IO
 
 -- Load / store / create persistent configuration
 defaultPersistConfig :: PersistConfig
-defaultPersistConfig = PersistConfig Nothing Nothing
+defaultPersistConfig = PersistConfig "" ""
 
-configFile :: FilePath
-configFile = "./config.yaml"
-
-tryLoadConfig :: AppIO ()
-tryLoadConfig = do
+loadConfig :: MonadIO m => FilePath -> m (Maybe PersistConfig)
+loadConfig fn = do
     -- Try to load persistent configuration into the state
     traceS TLInfo "Loading persistent configuration..."
-    liftIO (Y.decodeFileEither configFile) >>= \case
-        Left e    -> traceS TLError $
+    (liftIO $ Y.decodeFileEither fn) >>= \case
+        Left e    -> do traceS TLError $
                          "Can't load configuration: " <> (Y.prettyPrintParseException e)
-        Right cfg -> do asPC .= cfg
-                        traceS TLInfo $ "Configuration: %s" <> show cfg
+                        return Nothing
+        Right cfg -> do traceS TLInfo $ "Configuration: %s" <> show cfg
+                        return $ Just cfg
+
+storeConfig :: MonadIO m => FilePath -> PersistConfig -> m ()
+storeConfig fn cfg = do
+    return () -- TODO
 
 waitNSec :: MonadIO m => Int -> m ()
 waitNSec sec = liftIO . threadDelay $ sec * 1000 * 1000
 
+-- Verify existing bridge IP and / or discover new one
+discoverBridgeIP :: (MonadIO m, MonadCatch m) => Maybe IPAddress -> m IPAddress
+discoverBridgeIP bridgeIP =
+    -- Do we have a bridge IP to try?
+    case bridgeIP of
+        Just ip -> do
+            -- Verify bridge IP by querying bridge config
+            traceS TLInfo $ "Trying to verify bridge IP: " <> ip
+            try (getBridgeConfigNoWhitelist ip) >>= \case
+                Left (e :: SomeException) -> do
+                    traceS TLError $ "Bad bridge IP: " <> (show e)
+                    discoverBridgeIP Nothing
+                Right cfg -> do
+                    traceS TLInfo $ "Success, bridge configuration: "
+                           <> (show cfg)
+                    return ip
+        Nothing -> do
+            -- No IP, run bridge discovery
+            traceS TLInfo "Running bridge discovery using broker server..."
+            try queryBrokerServer >>= \case
+                Left (e :: SomeException) -> do
+                    traceS TLError $ "Bridge discovery failed (retry in 5s): " <> (show e)
+                    waitNSec 5
+                    discoverBridgeIP Nothing
+                Right bridges ->
+                    if null bridges
+                        then do traceS TLError "No bridge found (retry in 5s)"
+                                waitNSec 5
+                                discoverBridgeIP Nothing
+                        else do traceS TLInfo $
+                                    printf "Found %i bridge(s), using first:\n%s"
+                                           (length bridges) (show bridges)
+                                -- TODO: Try all bridges till we find a working
+                                --       one instead of always going for the first
+                                discoverBridgeIP . Just . brInternalIPAddress . head $ bridges
+
+-- Verify existing user or create new one
+setupUser :: MonadIO m => IPAddress -> Maybe String -> m String
+setupUser bridgeIP userID =
+   let setupUserLoop =
+           -- Do we have a user ID to try?
+           case userID of
+               Just uid -> do
+                   -- Verify user ID by querying user config
+                   traceS TLInfo $ "Trying to verify user ID: " <> uid
+                   setupUserLoop
+               Nothing     -> do
+                   setupUserLoop
+    in setupUserLoop
+
 main :: IO ()
 main =
-  -- Setup tracing and our application monad
-  withTrace Nothing True False True TLInfo $
-  flip evalStateT AppState { _asPC        = defaultPersistConfig
-                           , _asBridgeCfg = Nothing
-                           } $ do
-    -- Load configuration data from last run
-    tryLoadConfig
-    -- Discover bridge IP
-    let bridgeDiscoverLoop = do
-            -- Do we have a bridge IP to try?
-            use (asPC . pcBridgeIP) >>= \case
-                Just ip -> do
-                    -- Verify bridge IP by querying bridge config
-                    traceS TLInfo $ "Trying to verify bridge IP: " <> ip
-                    try (getBridgeConfig ip) >>= \case
-                        Left (e :: SomeException) -> do
-                            traceS TLError $ "Bad bridge IP: " <> (show e)
-                            asPC . pcBridgeIP .= Nothing
-                            bridgeDiscoverLoop
-                        Right cfg -> do
-                            traceS TLInfo $ "Success, bridge configuration: "
-                                   <> (show cfg)
-                            asBridgeCfg .= Just cfg
-                Nothing -> do
-                    -- No IP, run bridge discovery
-                    traceS TLInfo "Running bridge discovery using broker server..."
-                    try discoverBridges >>= \case
-                        Left (e :: SomeException) -> do
-                            traceS TLError $ "Bridge discovery failed (retry in 5s): " <> (show e)
-                            waitNSec 5
-                        Right bridges ->
-                            if null bridges
-                                then traceS TLError "No bridge found (retry in 5s)" >> waitNSec 5
-                                else do traceS TLInfo $
-                                            printf "Found %i bridge(s), using first:\n%s"
-                                                   (length bridges) (show bridges)
-                                        -- TODO: Try all bridges till we find a working
-                                        --       one instead of always going for the first
-                                        asPC . pcBridgeIP .=
-                                            (Just . brInternalIPAddress . head $ bridges)
-                    bridgeDiscoverLoop
-     in bridgeDiscoverLoop
-    -- Create user
-
-    -- We have a working bridge connection and user, write configuration data for next time
+  -- Setup tracing
+  withTrace Nothing True False True TLInfo $ do
+    -- Load configuration (might not be there)
+    let configFile = "./config.yaml"
+    mbCfg <- loadConfig configFile
+    -- Bridge connection and user ID
+    bridgeIP <- discoverBridgeIP   $ view pcBridgeIP <$> mbCfg
+    userID   <- setupUser bridgeIP $ view pcUserID   <$> mbCfg
+    -- We have everything setup, build store configuration
+    let newCfg = (fromMaybe defaultPersistConfig mbCfg)
+                     & pcBridgeIP .~ bridgeIP
+                     & pcUserID   .~ userID
+    storeConfig configFile newCfg
+    -- Setup application monad
+    flip evalStateT AppState { _asPC = newCfg
+                             } $ do
+      return ()
 
