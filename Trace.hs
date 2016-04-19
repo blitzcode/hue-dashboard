@@ -17,6 +17,7 @@ import qualified System.Console.ANSI as A
 import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Concurrent
 import qualified Data.Text as T
 import qualified Data.Text.IO as TI
@@ -68,9 +69,9 @@ withTrace traceFn echoOn appendOn colorOn level f =
         )
         $ \_ -> f
 
-trace :: TraceLevel -> T.Text -> IO ()
-trace lvl msg = void $ withMVar traceSettings $ \ts -> -- TODO: Have to take an MVar even if
-                                                       --       tracing is off, speed this up
+trace :: MonadIO m => TraceLevel -> T.Text -> m ()
+trace lvl msg = -- TODO: Have to take an MVar even if tracing is off, speed this up
+                liftIO . void $ withMVar traceSettings $ \ts ->
    when (lvl /= TLNone && fromEnum lvl <= fromEnum (tsLevel ts)) $ do
        tid  <- printf "%-12s" . show <$> myThreadId
        time <- printf "%-26s" . show . zonedTimeToLocalTime <$> getZonedTime
@@ -99,15 +100,15 @@ trace lvl msg = void $ withMVar traceSettings $ \ts -> -- TODO: Have to take an 
                         TI.hPutStrLn h msg
                         hPutStrLn h ""
 
-traceT :: TraceLevel -> T.Text -> IO ()
+traceT :: MonadIO m => TraceLevel -> T.Text -> m ()
 traceT = trace
 
-traceS :: TraceLevel -> String -> IO ()
+traceS :: MonadIO m => TraceLevel -> String -> m ()
 traceS lvl msg = trace lvl (T.pack msg)
 
-traceB :: TraceLevel -> B.ByteString -> IO ()
+traceB :: MonadIO m => TraceLevel -> B.ByteString -> m ()
 traceB lvl msg = trace lvl (E.decodeUtf8 msg)
 
-traceAndThrow :: String -> IO a
-traceAndThrow err = traceS TLError err >> (throwIO $ ErrorCall err)
+traceAndThrow :: MonadIO m => String -> m a
+traceAndThrow err = traceS TLError err >> (liftIO . throwIO $ ErrorCall err)
 
