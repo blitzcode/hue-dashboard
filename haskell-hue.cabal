@@ -30,7 +30,8 @@ executable haskell-hue
                        async,
                        time,
                        yaml,
-                       exceptions
+                       exceptions,
+                       filepath
   ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -threaded -dynamic
   ghc-prof-options:    -fprof-auto -caf-all
 
