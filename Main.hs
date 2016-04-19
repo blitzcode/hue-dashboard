@@ -10,7 +10,7 @@ module Main where
 
 import Network.HTTP.Client (isIpAddress)
 import Network.HTTP.Simple
-import System.FilePath ()
+import System.FilePath
 import Data.Aeson hiding ((.=))
 import Data.Monoid
 import Data.Maybe
@@ -85,15 +85,17 @@ instance FromJSON BridgeConfigNoWhitelist where
                                 <*> o .: "mac"
     parseJSON _ = fail "Expected object"
 
--- Get the basic bridge configuration. This is one of the few API requests we can make
--- without having a whitelisted user. We use this to check if the IP we have is actually
--- pointing to a working Hue bridge
-getBridgeConfigNoWhitelist :: (MonadIO m, MonadThrow m) => String -> m BridgeConfigNoWhitelist
-getBridgeConfigNoWhitelist bridgeIP = do
+-- Call a REST API on the Hue bridge
+bridgeRequest :: forall m a. (MonadIO m, MonadThrow m, FromJSON a)
+              => IPAddress
+              -> String
+              -> String
+              -> m a
+bridgeRequest bridgeIP userID apiEndPoint = do
     unless (isIpAddress $ B8.pack bridgeIP) $ fail "Invalid IP address"
-    request  <- parseRequest $ "GET http://" <> bridgeIP <> "/api/no-user/config"
+    request  <- parseRequest $ "GET http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
     response <- httpJSON request
-    return (getResponseBody response :: BridgeConfigNoWhitelist)
+    return (getResponseBody response :: a)
 
 -- Configuration data which we persist in a file
 data PersistConfig = PersistConfig
@@ -144,13 +146,15 @@ discoverBridgeIP bridgeIP =
     -- Do we have a bridge IP to try?
     case bridgeIP of
         Just ip -> do
-            -- Verify bridge IP by querying bridge config
+            -- Verify bridge IP by querying the bridge config. This is one of the few API
+            -- requests we can make without having a whitelisted user, use it to verify
+            -- that our IP points to a valid Hue bridge
             traceS TLInfo $ "Trying to verify bridge IP: " <> ip
-            try (getBridgeConfigNoWhitelist ip) >>= \case
+            try (bridgeRequest ip "no-user" "config") >>= \case
                 Left (e :: SomeException) -> do
                     traceS TLError $ "Bad bridge IP: " <> (show e)
                     discoverBridgeIP Nothing
-                Right cfg -> do
+                Right (cfg :: BridgeConfigNoWhitelist) -> do
                     traceS TLInfo $ "Success, bridge configuration: "
                            <> (show cfg)
                     return ip
@@ -176,17 +180,24 @@ discoverBridgeIP bridgeIP =
 
 -- Verify existing user or create new one
 setupUser :: MonadIO m => IPAddress -> Maybe String -> m String
-setupUser bridgeIP userID =
-   let setupUserLoop =
-           -- Do we have a user ID to try?
-           case userID of
-               Just uid -> do
-                   -- Verify user ID by querying user config
-                   traceS TLInfo $ "Trying to verify user ID: " <> uid
-                   setupUserLoop
-               Nothing     -> do
-                   setupUserLoop
-    in setupUserLoop
+setupUser bridgeIP userID = {-
+    -- Do we have a user ID to try?
+    case userID of
+        Just uid -> do
+            -- Verify user ID by querying timezone list
+            traceS TLInfo $ "Trying to verify user ID: " <> uid
+            try (bridgeRequest bridgeIP uid "info/timezones") >>= \case
+                Left (e :: SomeException) -> do
+                    traceS TLError $ "Error verifying user ID: " <> (show e)
+                    discoverBridgeIP Nothing
+                Right (cfg :: BridgeConfigNoWhitelist) -> do
+                    traceS TLInfo $ "Success, bridge configuration: "
+                           <> (show cfg)
+                    return ip
+                    setupUser bridgeIP
+        Nothing     -> do
+            setupUser-}
+    return ""
 
 main :: IO ()
 main =
@@ -198,7 +209,7 @@ main =
     -- Bridge connection and user ID
     bridgeIP <- discoverBridgeIP   $ view pcBridgeIP <$> mbCfg
     userID   <- setupUser bridgeIP $ view pcUserID   <$> mbCfg
-    -- We have everything setup, build store configuration
+    -- We have everything setup, build and store configuration
     let newCfg = (fromMaybe defaultPersistConfig mbCfg)
                      & pcBridgeIP .~ bridgeIP
                      & pcUserID   .~ userID
