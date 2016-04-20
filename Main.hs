@@ -32,6 +32,8 @@ import GHC.Generics
 
 import Trace
 
+-- TODO: Split this into multiple modules
+
 type IPAddress = String
 
 -- Bridge description obtained from the broker server
@@ -408,6 +410,7 @@ setupUser bridgeIP userID =
                     setupUser bridgeIP (Just uid)
 
 -- Obtain full bridge configuration
+-- TODO: Turn this function into a general 'do request, report errors, retry' wrapper
 requestBridgeConfig :: (MonadIO m, MonadCatch m) => IPAddress -> String -> m BridgeConfig
 requestBridgeConfig bridgeIP userID = do
     traceS TLInfo $ "Trying to obtain full bridge configuration..."
@@ -422,12 +425,16 @@ requestBridgeConfig bridgeIP userID = do
             traceS TLError $
                 "Error response obtaining bridge configuration (retry in 5s): " <> show err
             waitNSec 5
+            -- TODO: It makes sense to retry if we have a connection error, but in case of
+            --       something like a parsing error or an access denied type response, an
+            --       endless retry loop might not do anything productive
             requestBridgeConfig bridgeIP userID
         Right (ResponseOK (cfg :: BridgeConfig)) -> do
             -- Success, trace and return
             traceS TLInfo $ "Full bridge configuration:\n" <> show cfg
             return cfg
 
+-- TODO: Finish this
 data Light = Light { lgtName :: !String
                    , lgtType :: !String
                    , lgtOn   :: !Bool
@@ -438,6 +445,7 @@ instance FromJSON Light where
                      ls <- o .: "state"
                      Light <$> o .: "name" <*> o .: "type" <*> ls .: "on"
 
+-- TODO: Store this in the state, maybe even have a worker thread do it
 traceAllLights :: (MonadIO m, MonadCatch m) => IPAddress -> String -> m ()
 traceAllLights bridgeIP userID = do
     -- Request all light information
@@ -481,6 +489,7 @@ main =
     flip evalStateT AppState { _asPC = newCfg
                              , _asBC = bridgeConfig
                              } $ do
+      -- TODO: Spit out main loop, add general error recovery
       void . forever $ do
           traceAllLights bridgeIP userID
           waitNSec 3
