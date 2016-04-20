@@ -101,6 +101,20 @@ data BridgeConfig = BridgeConfig
     {
     }
 
+instance FromJSON BridgeConfig where
+    parseJSON (Object o) =
+        return BridgeConfig
+        {-
+        BridgeConfig <$> o .: "swversion"
+                     <*> o .: "apiversion"
+                     <*> o .: "name"
+                     <*> o .: "mac"
+        -}
+    parseJSON _ = fail "Expected object"
+
+requestBridgeConfig :: (MonadIO m, MonadThrow m) => IPAddress -> String -> m BridgeConfig
+requestBridgeConfig bridgeIP userID = bridgeRequest MethodGET bridgeIP noBody userID "config"
+
 data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
                            deriving (Eq, Enum)
 
@@ -124,7 +138,7 @@ bridgeRequest :: forall m a body. (MonadIO m, MonadThrow m, FromJSON a, ToJSON b
 bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
     unless (isIpAddress $ B8.pack bridgeIP) $ fail "Invalid IP address"
     request' <- parseRequest $
-                    (show method) <> " http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
+                    show method <> " http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
     let request = case mbBody of
                       Just j  -> setRequestBodyJSON j request'
                       Nothing -> request'
@@ -215,7 +229,9 @@ waitNSec :: MonadIO m => Int -> m ()
 waitNSec sec = liftIO . threadDelay $ sec * 1000 * 1000
 
 data APIVersion = APIVersion { avMajor :: !Int, avMinor :: !Int, avPatch :: !Int }
-                  deriving Show
+
+instance Show APIVersion where
+    show APIVersion { .. } = show avMajor <> "." <> show avMinor <> "." <> show avPatch
 
 parseAPIVersion :: String -> Maybe APIVersion
 parseAPIVersion s = rightToMaybe . parseOnly parser $ T.pack s
@@ -233,28 +249,28 @@ discoverBridgeIP bridgeIP =
             traceS TLInfo $ "Trying to verify bridge IP: " <> ip
             try (bridgeRequest MethodGET ip noBody  "no-user" "config") >>= \case
                 Left (e :: SomeException) -> do
-                    traceS TLError $ "Bad / stale bridge IP: " <> (show e)
+                    traceS TLError $ "Bad / stale bridge IP: " <> show e
                     discoverBridgeIP Nothing
                 Right (cfg :: BridgeConfigNoWhitelist) -> do
-                    traceS TLInfo $ "Success, basic bridge configuration: " <> (show cfg)
+                    traceS TLInfo $ "Success, basic bridge configuration:\n" <> (show cfg)
                     -- Obtained and traced basic configuration, check API version
                     case parseAPIVersion (bcnwAPIVersion cfg) of
                         Nothing ->
                             traceS TLError $ "Failed to parse API version: " <> (bcnwAPIVersion cfg)
                         Just av ->
                             if   avMajor av >= 1 && avMinor av >= 12
-                            then return ()
+                            then traceS TLInfo $ "Bridge API version OK: " <> show av
                             else traceS TLWarn $
                                      "API version lower than expected (1.12.0), " <>
                                      "please update the bridge to avoid incompatibilities: " <>
-                                     (bcnwAPIVersion cfg)
+                                     show av
                     return ip
         Nothing -> do
             -- No IP, run bridge discovery
             traceS TLInfo "Running bridge discovery using broker server..."
             try queryBrokerServer >>= \case
                 Left (e :: SomeException) -> do
-                    traceS TLError $ "Bridge discovery failed (retry in 5s): " <> (show e)
+                    traceS TLError $ "Bridge discovery failed (retry in 5s): " <> show e
                     waitNSec 5
                     discoverBridgeIP Nothing
                 Right bridges ->
@@ -288,13 +304,13 @@ setupUser bridgeIP userID =
             try (bridgeRequest MethodGET bridgeIP noBody uid "info/timezones") >>= \case
                 Left (e :: SomeException) -> do
                     -- Network / IO / parsing error
-                    traceS TLError $ "Failed to verify user ID (retry in 5s): " <> (show e)
+                    traceS TLError $ "Failed to verify user ID (retry in 5s): " <> show e
                     waitNSec 5
                     setupUser bridgeIP (Just uid)
                 Right err@(ResponseError { .. }) -> do
                     -- Got an error from the bridge, just create a fresh user ID
                     traceS TLError $
-                        "Error response verifying user ID: " <> (show err)
+                        "Error response verifying user ID: " <> show err
                     setupUser bridgeIP Nothing
                 Right (ResponseOK (_ :: [String])) -> do
                     -- Looks like we got our timezone list, user ID is whitelisted and verified
@@ -308,18 +324,18 @@ setupUser bridgeIP userID =
             host <- liftIO getHostName
             let body = -- We use our application name and the host name, as recommended
                        HM.fromList ([("devicetype", "haskell-hue#" <> host)] :: [(String, String)])
-            traceS TLInfo $ "Creating new user ID: " <> (show body)
+            traceS TLInfo $ "Creating new user ID: " <> show body
             try (bridgeRequest MethodPOST bridgeIP (Just body) "" "") >>= \case
                 Left (e :: SomeException) -> do
                     -- Network / IO / parsing error, retry
-                    traceS TLError $ "Failed to create user ID (retry in 5s): " <> (show e)
+                    traceS TLError $ "Failed to create user ID (retry in 5s): " <> show e
                     waitNSec 5
                     setupUser bridgeIP Nothing
                 Right err@(ResponseError { .. }) -> do
                     -- Error from the bridge, try again and alert user if we require the
                     -- link button on the bridge to be pressed
                     traceS TLError $
-                        "Error response creating user ID (retry in 5s): " <> (show err)
+                        "Error response creating user ID (retry in 5s): " <> show err
                     case reType of
                         BELinkButtonNotPressed ->
                             traceS TLWarn $
@@ -351,7 +367,7 @@ traceAllLights bridgeIP userID = do
     try (bridgeRequest MethodGET bridgeIP noBody userID "lights") >>= \case
         Left (e :: SomeException) -> do
             -- Network / IO / parsing error
-            traceS TLError $ "Failed to query lights: " <> (show e)
+            traceS TLError $ "Failed to query lights: " <> show e
         Right err@(ResponseError { .. }) -> do
             -- Error from the bridge
             traceS TLError $ "Error response querying lights: " <> show err
