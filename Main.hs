@@ -99,22 +99,37 @@ instance FromJSON BridgeConfigNoWhitelist where
 -- http://www.developers.meethue.com/documentation/configuration-api#72_get_configuration
 --
 data BridgeConfig = BridgeConfig
-    { bcName             :: !String
-    , bcZigBeeChannel    :: !Int
-    , bcBridgeID         :: !String
-    , bcMac              :: !String
-    , bcIPAddress        :: !String
-    , bcNetmask          :: !String
-    , bcGateway          :: !String
-    , bcModelID          :: !String
-    , bcSWVersion        :: !String
-    , bcAPIVersion       :: !String
-    , bcSWUpdate         :: !(Maybe SWUpdate)
-    , bcLinkButton       :: !Bool
-    , bcPortalServices   :: !Bool
-    , bcPortalConnection :: !String
-    , bcPortalState      :: !(Maybe PortalState)
-    , bcFactoryNew       :: !Bool
+    { _bcName             :: !String
+    , _bcZigBeeChannel    :: !Int
+    , _bcBridgeID         :: !String
+    , _bcMac              :: !String
+    , _bcIPAddress        :: !String
+    , _bcNetmask          :: !String
+    , _bcGateway          :: !String
+    , _bcModelID          :: !String
+    , _bcSWVersion        :: !String
+    , _bcAPIVersion       :: !String
+    , _bcSWUpdate         :: !(Maybe SWUpdate)
+    , _bcLinkButton       :: !Bool
+    , _bcPortalServices   :: !Bool
+    , _bcPortalConnection :: !String
+    , _bcPortalState      :: !(Maybe PortalState)
+    , _bcFactoryNew       :: !Bool
+    } deriving Show
+
+data SWUpdate = SWUpdate
+    { _swuUpdateState    :: !Int
+    , _swuCheckForUpdate :: !Bool
+    , _swuURL            :: !String
+    , _swuText           :: !String
+    , _swuNotify         :: !Bool
+    } deriving Show
+
+data PortalState = PortalState
+    { _psSignedOn      :: !Bool
+    , _psIncoming      :: !Bool
+    , _psOutgoing      :: !Bool
+    , _psCommunication :: !String
     } deriving Show
 
 instance FromJSON BridgeConfig where
@@ -137,14 +152,6 @@ instance FromJSON BridgeConfig where
                      <*> o .:  "factorynew"
     parseJSON _ = fail "Expected object"
 
-data SWUpdate = SWUpdate
-    { swuUpdateState    :: !Int
-    , swuCheckForUpdate :: !Bool
-    , swuURL            :: !String
-    , swuText           :: !String
-    , swuNotify         :: !Bool
-    } deriving Show
-
 instance FromJSON SWUpdate where
     parseJSON (Object o) =
         SWUpdate <$> o .: "updatestate"
@@ -154,13 +161,6 @@ instance FromJSON SWUpdate where
                  <*> o .: "notify"
     parseJSON _ = fail "Expected object"
 
-data PortalState = PortalState
-    { psSignedOn      :: !Bool
-    , psIncoming      :: !Bool
-    , psOutgoing      :: !Bool
-    , psCommunication :: !String
-    } deriving Show
-
 instance FromJSON PortalState where
     parseJSON (Object o) =
         PortalState <$> o .: "signedon"
@@ -169,8 +169,9 @@ instance FromJSON PortalState where
                     <*> o .: "communication"
     parseJSON _ = fail "Expected object"
 
-requestBridgeConfig :: (MonadIO m, MonadThrow m) => IPAddress -> String -> m BridgeConfig
-requestBridgeConfig bridgeIP userID = bridgeRequest MethodGET bridgeIP noBody userID "config"
+makeLenses ''BridgeConfig
+makeLenses ''SWUpdate
+makeLenses ''PortalState
 
 data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
                            deriving (Eq, Enum)
@@ -406,6 +407,27 @@ setupUser bridgeIP userID =
                     traceS TLInfo $ "Successfully created new user ID: " <> uid
                     setupUser bridgeIP (Just uid)
 
+-- Obtain full bridge configuration
+requestBridgeConfig :: (MonadIO m, MonadCatch m) => IPAddress -> String -> m BridgeConfig
+requestBridgeConfig bridgeIP userID = do
+    traceS TLInfo $ "Trying to obtain full bridge configuration..."
+    try (bridgeRequest MethodGET bridgeIP noBody userID "config") >>= \case
+        Left (e :: SomeException) -> do
+            -- Network / IO / parsing error
+            traceS TLError $ "Failed to obtain bridge configuration (retry in 5s): " <> show e
+            waitNSec 5
+            requestBridgeConfig bridgeIP userID
+        Right err@(ResponseError { .. }) -> do
+            -- Got an error from the bridge
+            traceS TLError $
+                "Error response obtaining bridge configuration (retry in 5s): " <> show err
+            waitNSec 5
+            requestBridgeConfig bridgeIP userID
+        Right (ResponseOK (cfg :: BridgeConfig)) -> do
+            -- Success, trace and return
+            traceS TLInfo $ "Full bridge configuration:\n" <> show cfg
+            return cfg
+
 data Light = Light { lgtName :: !String
                    , lgtType :: !String
                    , lgtOn   :: !Bool
@@ -455,7 +477,6 @@ main =
     storeConfig configFile newCfg
     -- Request full bridge configuration
     bridgeConfig <- requestBridgeConfig bridgeIP userID
-    traceS TLInfo $ "Full bridge configuration:\n" <> show bridgeConfig
     -- Setup application monad
     flip evalStateT AppState { _asPC = newCfg
                              , _asBC = bridgeConfig
