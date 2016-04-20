@@ -13,8 +13,11 @@ import Network.HTTP.Simple
 import Network.HostName
 import System.FilePath
 import Data.Aeson hiding ((.=))
+import Data.Attoparsec.Text hiding (try)
 import Data.Monoid
 import Data.Maybe
+import Data.Either.Combinators
+import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Yaml as Y
 import Control.Lens
@@ -90,6 +93,14 @@ instance FromJSON BridgeConfigNoWhitelist where
                                 <*> o .: "mac"
     parseJSON _ = fail "Expected object"
 
+-- Actual bridge configuration obtainable by whitelisted user
+--
+-- http://www.developers.meethue.com/documentation/configuration-api#72_get_configuration
+--
+data BridgeConfig = BridgeConfig
+    {
+    }
+
 data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
                            deriving (Eq, Enum)
 
@@ -151,8 +162,8 @@ instance FromJSON a => FromJSON (BridgeResponse a) where
     parseJSON j = let parseError = do [(Object o)] <- parseJSON j
                                       err <- o .: "error"
                                       ResponseError <$> (toEnum <$> err .: "type")
-                                                    <*> err .: "address"
-                                                    <*> err .: "description"
+                                                    <*>             err .: "address"
+                                                    <*>             err .: "description"
                       parseOK    = ResponseOK <$> parseJSON j
                    in parseError <|> parseOK
 
@@ -203,6 +214,13 @@ storeConfig fn cfg = do
 waitNSec :: MonadIO m => Int -> m ()
 waitNSec sec = liftIO . threadDelay $ sec * 1000 * 1000
 
+data APIVersion = APIVersion { avMajor :: !Int, avMinor :: !Int, avPatch :: !Int }
+                  deriving Show
+
+parseAPIVersion :: String -> Maybe APIVersion
+parseAPIVersion s = rightToMaybe . parseOnly parser $ T.pack s
+    where parser = APIVersion <$> (decimal <* char '.') <*> (decimal <* char '.') <*> decimal
+
 -- Verify existing bridge IP and / or discover new one
 discoverBridgeIP :: (MonadIO m, MonadCatch m) => Maybe IPAddress -> m IPAddress
 discoverBridgeIP bridgeIP =
@@ -218,7 +236,18 @@ discoverBridgeIP bridgeIP =
                     traceS TLError $ "Bad / stale bridge IP: " <> (show e)
                     discoverBridgeIP Nothing
                 Right (cfg :: BridgeConfigNoWhitelist) -> do
-                    traceS TLInfo $ "Success, bridge configuration: " <> (show cfg)
+                    traceS TLInfo $ "Success, basic bridge configuration: " <> (show cfg)
+                    -- Obtained and traced basic configuration, check API version
+                    case parseAPIVersion (bcnwAPIVersion cfg) of
+                        Nothing ->
+                            traceS TLError $ "Failed to parse API version: " <> (bcnwAPIVersion cfg)
+                        Just av ->
+                            if   avMajor av >= 1 && avMinor av >= 12
+                            then return ()
+                            else traceS TLWarn $
+                                     "API version lower than expected (1.12.0), " <>
+                                     "please update the bridge to avoid incompatibilities: " <>
+                                     (bcnwAPIVersion cfg)
                     return ip
         Nothing -> do
             -- No IP, run bridge discovery
@@ -321,7 +350,7 @@ traceAllLights bridgeIP userID = do
     --
     try (bridgeRequest MethodGET bridgeIP noBody userID "lights") >>= \case
         Left (e :: SomeException) -> do
-            -- Network / IO / parsing error, retry
+            -- Network / IO / parsing error
             traceS TLError $ "Failed to query lights: " <> (show e)
         Right err@(ResponseError { .. }) -> do
             -- Error from the bridge
