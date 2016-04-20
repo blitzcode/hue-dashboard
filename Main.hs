@@ -93,23 +93,80 @@ instance FromJSON BridgeConfigNoWhitelist where
                                 <*> o .: "mac"
     parseJSON _ = fail "Expected object"
 
--- Actual bridge configuration obtainable by whitelisted user
+-- Actual bridge configuration obtainable by whitelisted user. We only parse a selection
+-- of potentially interesting fields
 --
 -- http://www.developers.meethue.com/documentation/configuration-api#72_get_configuration
 --
 data BridgeConfig = BridgeConfig
-    {
-    }
+    { bcName             :: !String
+    , bcZigBeeChannel    :: !Int
+    , bcBridgeID         :: !String
+    , bcMac              :: !String
+    , bcIPAddress        :: !String
+    , bcNetmask          :: !String
+    , bcGateway          :: !String
+    , bcModelID          :: !String
+    , bcSWVersion        :: !String
+    , bcAPIVersion       :: !String
+    , bcSWUpdate         :: !(Maybe SWUpdate)
+    , bcLinkButton       :: !Bool
+    , bcPortalServices   :: !Bool
+    , bcPortalConnection :: !String
+    , bcPortalState      :: !(Maybe PortalState)
+    , bcFactoryNew       :: !Bool
+    } deriving Show
 
 instance FromJSON BridgeConfig where
     parseJSON (Object o) =
-        return BridgeConfig
-        {-
-        BridgeConfig <$> o .: "swversion"
-                     <*> o .: "apiversion"
-                     <*> o .: "name"
-                     <*> o .: "mac"
-        -}
+        BridgeConfig <$> o .:  "name"
+                     <*> o .:  "zigbeechannel"
+                     <*> o .:  "bridgeid"
+                     <*> o .:  "mac"
+                     <*> o .:  "ipaddress"
+                     <*> o .:  "netmask"
+                     <*> o .:  "gateway"
+                     <*> o .:  "modelid"
+                     <*> o .:  "swversion"
+                     <*> o .:  "apiversion"
+                     <*> o .:? "swupdate"
+                     <*> o .:  "linkbutton"
+                     <*> o .:  "portalservices"
+                     <*> o .:  "portalconnection"
+                     <*> o .:? "portalstate"
+                     <*> o .:  "factorynew"
+    parseJSON _ = fail "Expected object"
+
+data SWUpdate = SWUpdate
+    { swuUpdateState    :: !Int
+    , swuCheckForUpdate :: !Bool
+    , swuURL            :: !String
+    , swuText           :: !String
+    , swuNotify         :: !Bool
+    } deriving Show
+
+instance FromJSON SWUpdate where
+    parseJSON (Object o) =
+        SWUpdate <$> o .: "updatestate"
+                 <*> o .: "checkforupdate"
+                 <*> o .: "url"
+                 <*> o .: "text"
+                 <*> o .: "notify"
+    parseJSON _ = fail "Expected object"
+
+data PortalState = PortalState
+    { psSignedOn      :: !Bool
+    , psIncoming      :: !Bool
+    , psOutgoing      :: !Bool
+    , psCommunication :: !String
+    } deriving Show
+
+instance FromJSON PortalState where
+    parseJSON (Object o) =
+        PortalState <$> o .: "signedon"
+                    <*> o .: "incoming"
+                    <*> o .: "outgoing"
+                    <*> o .: "communication"
     parseJSON _ = fail "Expected object"
 
 requestBridgeConfig :: (MonadIO m, MonadThrow m) => IPAddress -> String -> m BridgeConfig
@@ -196,6 +253,7 @@ instance ToJSON   PersistConfig
 -- Application state
 data AppState = AppState
     { _asPC :: !PersistConfig
+    , _asBC :: !BridgeConfig
     }
 
 makeLenses ''AppState
@@ -395,8 +453,12 @@ main =
                      & pcBridgeIP .~ bridgeIP
                      & pcUserID   .~ userID
     storeConfig configFile newCfg
+    -- Request full bridge configuration
+    bridgeConfig <- requestBridgeConfig bridgeIP userID
+    traceS TLInfo $ "Full bridge configuration:\n" <> show bridgeConfig
     -- Setup application monad
     flip evalStateT AppState { _asPC = newCfg
+                             , _asBC = bridgeConfig
                              } $ do
       void . forever $ do
           traceAllLights bridgeIP userID
