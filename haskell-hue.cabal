@@ -35,6 +35,6 @@ executable haskell-hue
                        filepath,
                        hostname,
                        either
-  ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -threaded -dynamic
+  ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options:    -fprof-auto -caf-all
 

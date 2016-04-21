@@ -1,0 +1,91 @@
+
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
+
+module HueREST ( BridgeRequestMethod(..)
+               , noBody
+               , bridgeRequest
+               , BridgeError(..)
+               , BridgeResponse(..)
+               ) where
+
+import Control.Applicative
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Catch
+import Data.Aeson
+import Data.Monoid
+import qualified Data.ByteString.Char8 as B8
+import System.FilePath ((</>))
+import Network.HTTP.Client (isIpAddress)
+import Network.HTTP.Simple
+
+import Util
+
+-- Interface to make calls to the REST / HTTP / JSON based API of a Hue bridge
+
+data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
+                           deriving (Eq, Enum)
+
+instance Show BridgeRequestMethod where
+    show MethodGET  = "GET"
+    show MethodPOST = "POST"
+    show MethodPUT  = "PUT"
+
+-- Makes it a little easier to do a request without a body
+noBody :: Maybe Int
+noBody = Nothing
+
+-- Call a REST API on the Hue bridge
+bridgeRequest :: forall m a body. (MonadIO m, MonadThrow m, FromJSON a, ToJSON body)
+              => BridgeRequestMethod
+              -> IPAddress
+              -> Maybe body
+              -> String
+              -> String
+              -> m a
+bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
+    unless (isIpAddress $ B8.pack bridgeIP) $ fail "Invalid IP address"
+    request' <- parseRequest $
+                    show method <> " http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
+    let request = case mbBody of
+                      Just j  -> setRequestBodyJSON j request'
+                      Nothing -> request'
+    response <- httpJSON request
+    return (getResponseBody response :: a)
+
+-- We add custom constructors for the bridge errors we actually want to handle, default
+-- all others to BEOther
+--
+-- http://www.developers.meethue.com/documentation/error-messages
+--
+data BridgeError = BEUnauthorizedUser
+                 | BELinkButtonNotPressed
+                 | BEOther !Int
+                   deriving (Eq, Show)
+
+instance Enum BridgeError where
+    toEnum 1   = BEUnauthorizedUser
+    toEnum 101 = BELinkButtonNotPressed
+    toEnum err = BEOther err
+    fromEnum BEUnauthorizedUser     = 1
+    fromEnum BELinkButtonNotPressed = 101
+    fromEnum (BEOther err)          = err
+
+data BridgeResponse a = ResponseError { reType :: !BridgeError
+                                      , reAddr :: !String
+                                      , reDesc :: !String
+                                      }
+                      | ResponseOK a
+                        deriving Show
+
+-- Generic response type from the bridge. Either we get an array containing an object with
+-- the 'error' key and the type / address / description fields, or we get our wanted response
+instance FromJSON a => FromJSON (BridgeResponse a) where
+    parseJSON j = let parseError = do [(Object o)] <- parseJSON j
+                                      err <- o .: "error"
+                                      ResponseError <$> (toEnum <$> err .: "type")
+                                                    <*>             err .: "address"
+                                                    <*>             err .: "description"
+                      parseOK    = ResponseOK <$> parseJSON j
+                   in parseError <|> parseOK
+
