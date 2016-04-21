@@ -12,29 +12,28 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 executable haskell-hue
-  main-is:             Main.hs
-  default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5,
-                       mtl,
-                       transformers,
-                       lens,
-                       ansi-terminal,
-                       containers,
-                       unordered-containers,
-                       bytestring,
-                       text,
-                       http-conduit,
-                       http-client,
-                       aeson,
-                       attoparsec,
-                       monad-control,
-                       async,
-                       time,
-                       yaml,
-                       exceptions,
-                       filepath,
-                       hostname,
-                       either
-  ghc-options:         -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
-  ghc-prof-options:    -fprof-auto -caf-all
+  main-is:          Main.hs
+  default-language: Haskell2010
+  build-depends:    base >= 4.7 && < 5,
+                    mtl,
+                    transformers,
+                    lens,
+                    ansi-terminal,
+                    containers,
+                    unordered-containers,
+                    bytestring,
+                    text,
+                    http-conduit,
+                    http-client,
+                    aeson,
+                    attoparsec,
+                    monad-control,
+                    async,
+                    time,
+                    yaml,
+                    exceptions,
+                    filepath,
+                    hostname
+  ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
+  ghc-prof-options: -fprof-auto -caf-all
 

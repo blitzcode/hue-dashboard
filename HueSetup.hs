@@ -6,10 +6,7 @@ module HueSetup ( discoverBridgeIP
                 ) where
 
 import Data.Aeson
-import Data.Attoparsec.Text hiding (try)
 import Data.Monoid
-import Data.Either.Combinators
-import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import Text.Printf
 import Control.Monad.IO.Class
@@ -24,7 +21,7 @@ import HueJSON
 import HueBroker
 
 -- Before we can call the Hue API we need to discover the bridge IP and create a
--- whitelisted user
+-- whitelisted user by pushlinking
 
 -- Verify existing bridge IP and / or discover new one
 discoverBridgeIP :: (MonadIO m, MonadCatch m) => Maybe IPAddress -> m IPAddress
@@ -36,24 +33,22 @@ discoverBridgeIP bridgeIP =
             -- requests we can make without having a whitelisted user, use it to verify
             -- that our IP points to a valid Hue bridge
             traceS TLInfo $ "Trying to verify bridge IP: " <> ip
-            try (bridgeRequest MethodGET ip noBody  "no-user" "config") >>= \case
+            try (bridgeRequest MethodGET ip noBody "no-user" "config") >>= \case
                 Left (e :: SomeException) -> do
                     traceS TLError $ "Bad / stale bridge IP: " <> show e
                     discoverBridgeIP Nothing
                 Right (cfg :: BridgeConfigNoWhitelist) -> do
                     traceS TLInfo $ "Success, basic bridge configuration:\n" <> (show cfg)
                     -- Obtained and traced basic configuration, check API version
-                    case parseAPIVersion (cfg ^. bcnwAPIVersion) of
-                        Nothing ->
-                            traceS TLError $
-                                "Failed to parse API version: " <> (cfg ^. bcnwAPIVersion )
-                        Just av ->
-                            if   avMajor av >= 1 && avMinor av >= 12
-                            then traceS TLInfo $ "Bridge API version OK: " <> show av
-                            else traceS TLWarn $
-                                     "API version lower than expected (1.12.0), " <>
-                                     "please update the bridge to avoid incompatibilities: " <>
-                                     show av
+                    case cfg ^. bcnwAPIVersion of
+                        av@(APIVersion { .. })
+                            | avMajor >= 1 && avMinor >= 12 ->
+                                traceS TLInfo $ "Bridge API version OK: " <> show av
+                            | otherwise                     ->
+                                traceS TLWarn $
+                                    "API version lower than expected (1.12.0), " <>
+                                    "please update the bridge to avoid incompatibilities: " <>
+                                    show av
                     return ip
         Nothing -> do
             -- No IP, run bridge discovery
@@ -82,15 +77,6 @@ instance FromJSON UserNameResponse where
     parseJSON j = do [(Object o)] <- parseJSON j
                      o' <- o .: "success"
                      UserNameResponse <$> o' .: "username"
-
-data APIVersion = APIVersion { avMajor :: !Int, avMinor :: !Int, avPatch :: !Int }
-
-instance Show APIVersion where
-    show APIVersion { .. } = show avMajor <> "." <> show avMinor <> "." <> show avPatch
-
-parseAPIVersion :: String -> Maybe APIVersion
-parseAPIVersion s = rightToMaybe . parseOnly parser $ T.pack s
-    where parser = APIVersion <$> (decimal <* char '.') <*> (decimal <* char '.') <*> decimal
 
 -- Verify existing user or create new one
 createUser :: (MonadIO m, MonadCatch m) => IPAddress -> Maybe String -> m String
@@ -122,7 +108,7 @@ createUser bridgeIP userID =
             --
             host <- liftIO getHostName
             let body = -- We use our application name and the host name, as recommended
-                       HM.fromList ([("devicetype", "haskell-hue#" <> host)] :: [(String, String)])
+                       HM.fromList ([("devicetype", "hue-monitor#" <> host)] :: [(String, String)])
             traceS TLInfo $ "Creating new user ID: " <> show body
             try (bridgeRequest MethodPOST bridgeIP (Just body) "" "") >>= \case
                 Left (e :: SomeException) -> do

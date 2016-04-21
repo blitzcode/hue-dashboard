@@ -1,17 +1,23 @@
 
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards #-}
 
 module HueJSON where
 
 import Data.Aeson
+import Data.Monoid
+import Data.Attoparsec.Text
 import Control.Lens
 
--- Records and JSON instances for communication with a Hue bridge
+import Util
+
+-- Records, lenses and JSON instances for communication with a Hue bridge
+
+data APIVersion = APIVersion { avMajor :: !Int, avMinor :: !Int, avPatch :: !Int }
 
 -- Bridge configuration obtained from the api/config endpoint without a whitelisted user
 data BridgeConfigNoWhitelist = BridgeConfigNoWhitelist
     { _bcnwSWVersion  :: !String
-    , _bcnwAPIVersion :: !String
+    , _bcnwAPIVersion :: !APIVersion
     , _bcnwName       :: !String
     , _bcnwMac        :: !String
     } deriving Show
@@ -26,12 +32,12 @@ data BridgeConfig = BridgeConfig
     , _bcZigBeeChannel    :: !Int
     , _bcBridgeID         :: !String
     , _bcMac              :: !String
-    , _bcIPAddress        :: !String
+    , _bcIPAddress        :: !IPAddress
     , _bcNetmask          :: !String
     , _bcGateway          :: !String
     , _bcModelID          :: !String
     , _bcSWVersion        :: !String
-    , _bcAPIVersion       :: !String
+    , _bcAPIVersion       :: !APIVersion
     , _bcSWUpdate         :: !(Maybe SWUpdate)
     , _bcLinkButton       :: !Bool
     , _bcPortalServices   :: !Bool
@@ -99,6 +105,17 @@ instance FromJSON PortalState where
                     <*> o .: "outgoing"
                     <*> o .: "communication"
     parseJSON _ = fail "Expected object"
+
+instance FromJSON APIVersion where
+    parseJSON (String s) =
+        either (fail "Failed to parse version number")
+               return
+               (parseOnly parser s)
+      where parser = APIVersion <$> (decimal <* char '.') <*> (decimal <* char '.') <*> decimal
+    parseJSON _ = fail "Expected string"
+
+instance Show APIVersion where
+    show APIVersion { .. } = show avMajor <> "." <> show avMinor <> "." <> show avPatch
 
 makeLenses ''BridgeConfigNoWhitelist
 makeLenses ''BridgeConfig

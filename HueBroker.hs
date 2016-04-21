@@ -1,5 +1,5 @@
 
-{-# LANGUAGE RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module HueBroker ( BrokerBridge(..)
                  , queryBrokerServer
@@ -14,6 +14,10 @@ import Data.Aeson
 import qualified Data.ByteString.Char8 as B8
 
 import Util
+
+-- Discover local Hue bridges using the broker server
+--
+-- http://www.developers.meethue.com/documentation/hue-bridge-discovery
 
 -- Bridge description obtained from the broker server
 data BrokerBridge = BrokerBridge
@@ -33,10 +37,6 @@ instance FromJSON BrokerBridge where
                      <*> o .:? "macaddress"
     parseJSON _ = fail "Expected object"
 
--- Discover local Hue bridges using the broker server
---
--- http://www.developers.meethue.com/documentation/hue-bridge-discovery
---
 queryBrokerServer :: (MonadThrow m, MonadIO m) => m [BrokerBridge]
 queryBrokerServer = do
     let brokerServerURL = "https://www.meethue.com/api/nupnp"

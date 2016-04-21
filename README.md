@@ -1,5 +1,5 @@
 
-# Haskell Hue
+# Hue Monitor
 
 This project...
 

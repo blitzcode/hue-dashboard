@@ -1,9 +1,10 @@
 
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings, LambdaCase, RecordWildCards #-}
 
 module HueREST ( BridgeRequestMethod(..)
                , noBody
                , bridgeRequest
+               , bridgeRequestRetryTrace
                , BridgeError(..)
                , BridgeResponse(..)
                ) where
@@ -20,6 +21,7 @@ import Network.HTTP.Client (isIpAddress)
 import Network.HTTP.Simple
 
 import Util
+import Trace
 
 -- Interface to make calls to the REST / HTTP / JSON based API of a Hue bridge
 
@@ -53,6 +55,46 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
     response <- httpJSON request
     return (getResponseBody response :: a)
 
+
+-- Wrapper around bridgeRequest which traces errors and retries automatically
+bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
+                                            , MonadThrow m
+                                            , MonadCatch m
+                                            , FromJSON a
+                                            , Show a -- TODO: For the show instance of the
+                                                     ---      response, we actually never
+                                                     --       print the result...
+                                            , ToJSON body
+                                            )
+                        => BridgeRequestMethod
+                        -> IPAddress
+                        -> Maybe body
+                        -> String
+                        -> String
+                        -> m a
+bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
+    try (bridgeRequest MethodGET bridgeIP mbBody userID apiEndPoint) >>= \case
+        Left (e :: SomeException) -> do
+            -- Network / IO / parsing error
+            traceS TLError $ "bridgeRequest: Exception while contacting / processing '"
+                             <> apiEndPoint <> "' (retry in 5s): " <> show e
+            waitNSec 5
+            retry
+        Right err@(ResponseError { .. }) -> do
+            -- Got an error from the bridge
+            traceS TLError $ "bridgeRequest: Error response from '"
+                             <> apiEndPoint <> "' (retry in 5s): " <> show err
+            waitNSec 5
+            -- TODO: It makes sense to retry if we have a connection error, but in case of
+            --       something like a parsing error or an access denied type response, an
+            --       endless retry loop might not do anything productive
+            retry
+        Right (ResponseOK (val :: a)) -> do
+            -- Success
+            return val
+  where
+    retry = bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint
+
 -- We add custom constructors for the bridge errors we actually want to handle, default
 -- all others to BEOther
 --
@@ -71,6 +113,9 @@ instance Enum BridgeError where
     fromEnum BELinkButtonNotPressed = 101
     fromEnum (BEOther err)          = err
 
+-- Generic response type from the bridge. Either we get an array containing an object with
+-- the 'error' key and the type / address / description fields, or we get our wanted response
+
 data BridgeResponse a = ResponseError { reType :: !BridgeError
                                       , reAddr :: !String
                                       , reDesc :: !String
@@ -78,8 +123,6 @@ data BridgeResponse a = ResponseError { reType :: !BridgeError
                       | ResponseOK a
                         deriving Show
 
--- Generic response type from the bridge. Either we get an array containing an object with
--- the 'error' key and the type / address / description fields, or we get our wanted response
 instance FromJSON a => FromJSON (BridgeResponse a) where
     parseJSON j = let parseError = do [(Object o)] <- parseJSON j
                                       err <- o .: "error"
