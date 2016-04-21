@@ -32,7 +32,8 @@ main =
         bridgeConfig <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
         traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
         -- Launch application
-        run AppState { _asPC = newCfg
-                     , _asBC = bridgeConfig
+        run AppState { _asPC      = newCfg
+                     , _asBC     = bridgeConfig
+                     , _asLights = []
                      }
 

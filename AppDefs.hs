@@ -1,25 +1,21 @@
 
 {-# LANGUAGE TemplateHaskell #-}
 
-module AppDefs ( AppState(..)
-               , asPC
-               , asBC
-               , AppT
-               , AppIO
-               ) where
+module AppDefs where
 
 import Control.Lens
 import Control.Monad.State
 
 import PersistConfig (PersistConfig)
-import HueJSON (BridgeConfig)
+import HueJSON
 
 -- Some definitions for the App module which we split out here
 
 -- Application state
 data AppState = AppState
-    { _asPC :: !PersistConfig
-    , _asBC :: !BridgeConfig
+    { _asPC     :: !PersistConfig
+    , _asBC     :: !BridgeConfig
+    , _asLights :: ![Light]
     }
 
 makeLenses ''AppState

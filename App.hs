@@ -8,7 +8,6 @@ import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad
 import Control.Monad.State
-import Control.Monad.Catch
 import Text.Printf
 
 import Util
@@ -17,13 +16,11 @@ import HueJSON
 import HueREST
 import PersistConfig
 
--- TODO: Store this in the state, maybe even have a worker thread do it
-traceAllLights :: (MonadIO m, MonadCatch m) => IPAddress -> String -> m ()
-traceAllLights bridgeIP userID = do
-    -- Request all light information
-    (lights :: AllLights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
+traceAllLights :: AppIO ()
+traceAllLights = do
     -- Print light information
-    liftIO . forM_ (HM.elems lights) $ \light -> do
+    lights <- use asLights
+    liftIO . forM_ lights $ \light -> do
         putStr $ printf "%-25s | %-20s | %-22s | %-10s | %-4.1f%% | %-3s\n"
                         (light ^. lgtName)
                         (show $ light ^. lgtType)
@@ -37,23 +34,32 @@ traceAllLights bridgeIP userID = do
                           / 255 :: Float
                         )
                         (if light ^. lgtState . lsOn then "On" else "Off" :: String)
-    --liftIO . forM_ (HM.elems lights) $ \light -> print light
+    -- liftIO . forM_ (HM.elems lights) $ \light -> print light
     liftIO $ putStrLn ""
 
 -- TODO: Also obtain sensor data
 
-mainLoop :: AppIO ()
-mainLoop = do
-    -- Application main loop
+-- Update our local cache of the relevant bridge state
+fetchBridgeState :: AppIO ()
+fetchBridgeState = do
+    -- Bridge
     bridgeIP <- use $ asPC . pcBridgeIP
     userID   <- use $ asPC . pcUserID
-    traceAllLights bridgeIP userID
+    -- Request all light information
+    (lights :: AllLights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
+    asLights .= HM.elems lights
+
+-- Application main loop
+mainLoop :: AppIO ()
+mainLoop = do
+    fetchBridgeState
+    traceAllLights
     waitNSec 3
     mainLoop
 
+-- Setup application monad
 run :: AppState -> IO ()
 run as =
-    -- Setup application monad
     flip evalStateT as $
         mainLoop
 
