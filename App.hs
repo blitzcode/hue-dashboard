@@ -4,6 +4,8 @@
 module App ( run
            ) where
 
+import Data.Function
+import Data.List
 import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad
@@ -16,8 +18,8 @@ import HueJSON
 import HueREST
 import PersistConfig
 
-traceAllLights :: AppIO ()
-traceAllLights = do
+traceBridgeState :: AppIO ()
+traceBridgeState = do
     -- Print light information
     lights <- use asLights
     liftIO . forM_ lights $ \light -> do
@@ -37,8 +39,6 @@ traceAllLights = do
     -- liftIO . forM_ (HM.elems lights) $ \light -> print light
     liftIO $ putStrLn ""
 
--- TODO: Also obtain sensor data
-
 -- Update our local cache of the relevant bridge state
 fetchBridgeState :: AppIO ()
 fetchBridgeState = do
@@ -47,13 +47,14 @@ fetchBridgeState = do
     userID   <- use $ asPC . pcUserID
     -- Request all light information
     (lights :: AllLights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
-    asLights .= HM.elems lights
+    asLights .= sortBy (compare `on` _lgtName) (HM.elems lights)
+    -- TODO: Also obtain sensor data
 
 -- Application main loop
 mainLoop :: AppIO ()
 mainLoop = do
     fetchBridgeState
-    traceAllLights
+    traceBridgeState
     waitNSec 3
     mainLoop
 
