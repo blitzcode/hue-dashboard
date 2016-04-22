@@ -4,8 +4,10 @@
 module WebUI ( webUIStart
              ) where
 
+import Text.Printf
 import Data.Monoid
 import Control.Concurrent.STM
+import Control.Lens hiding ((#), set)
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Graphics.UI.Threepenny as UI
@@ -33,9 +35,25 @@ webUIStart lights = do
 
 setup :: TVar [Light] -> Window -> UI ()
 setup lights' window = do
+    -- Title
     void $ return window # set title "Hue Lights"
-
+    -- Lights
     lights <- liftIO . atomically $ readTVar lights'
-
-    return ()
+    let lightTiles =
+            (flip map) lights $ \light ->
+                let desc = printf "%-25s | %-20s | %-22s | %-10s | %-4.1f%% | %-3s\n"
+                                (light ^. lgtName)
+                                (show $ light ^. lgtType)
+                                (show $ light ^. lgtModelID)
+                                ( if   light ^. lgtState . lsReachable
+                                  then "Reachable"
+                                  else "Not Reachable"
+                                  :: String
+                                )
+                                ( (fromIntegral (light ^. lgtState . lsBrightness . non 255) * 100)
+                                  / 255 :: Float
+                                )
+                                (if light ^. lgtState . lsOn then "On" else "Off" :: String)
+                in UI.div #. "light-tile" #+ [string desc]
+    void $ getBody window #+ lightTiles
 
