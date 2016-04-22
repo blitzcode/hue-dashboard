@@ -29,7 +29,7 @@ data BrokerBridge = BrokerBridge
 
 instance FromJSON BrokerBridge where
     parseJSON (Object o) = do
-        ip <- o .:  "internalipaddress"
+        ip <- o .: "internalipaddress"
         unless (isIpAddress $ B8.pack ip) $ fail "Invalid IP address"
         BrokerBridge <$> o .:  "id"
                      <*> pure ip
