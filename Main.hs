@@ -12,6 +12,9 @@ import HueREST
 import HueSetup
 import PersistConfig
 
+import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Core
+
 main :: IO ()
 main =
     -- Setup tracing

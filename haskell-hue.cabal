@@ -30,7 +30,8 @@ executable haskell-hue
                     yaml,
                     exceptions,
                     filepath,
-                    hostname
+                    hostname,
+                    threepenny-gui
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 
