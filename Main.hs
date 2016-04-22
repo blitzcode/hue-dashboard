@@ -1,9 +1,12 @@
 
+{-# LANGUAGE RecordWildCards #-}
+
 module Main (main) where
 
 import Data.Monoid
 import Data.Maybe
 import Control.Lens
+import Control.Concurrent.STM
 
 import Trace
 import App
@@ -11,9 +14,6 @@ import AppDefs
 import HueREST
 import HueSetup
 import PersistConfig
-
-import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Core
 
 main :: IO ()
 main =
@@ -34,9 +34,11 @@ main =
         traceS TLInfo $ "Trying to obtain full bridge configuration..."
         bridgeConfig <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
         traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
+        -- TVar for sharing light state across threads
+        _asLights <- atomically $ newTVar []
         -- Launch application
         run AppState { _asPC     = newCfg
                      , _asBC     = bridgeConfig
-                     , _asLights = []
+                     , ..
                      }
 

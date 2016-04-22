@@ -5,6 +5,7 @@ module AppDefs where
 
 import Control.Lens
 import Control.Monad.State
+import Control.Concurrent.STM.TVar
 
 import PersistConfig (PersistConfig)
 import HueJSON
@@ -15,7 +16,7 @@ import HueJSON
 data AppState = AppState
     { _asPC     :: !PersistConfig
     , _asBC     :: !BridgeConfig
-    , _asLights :: ![Light]
+    , _asLights :: !(TVar [Light])
     }
 
 makeLenses ''AppState

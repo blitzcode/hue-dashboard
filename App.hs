@@ -10,6 +10,8 @@ import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad
 import Control.Monad.State
+import Control.Concurrent.STM
+import Control.Concurrent.Async
 import Text.Printf
 
 import Util
@@ -17,11 +19,12 @@ import AppDefs
 import HueJSON
 import HueREST
 import PersistConfig
+import WebUI
 
-traceBridgeState :: AppIO ()
-traceBridgeState = do
-    -- Print light information
-    lights <- use asLights
+_traceBridgeState :: AppIO ()
+_traceBridgeState = do
+    -- Debug print light information
+    lights <- use asLights >>= liftIO . atomically . readTVar
     liftIO . forM_ lights $ \light -> do
         putStr $ printf "%-25s | %-20s | %-22s | %-10s | %-4.1f%% | %-3s\n"
                         (light ^. lgtName)
@@ -45,22 +48,27 @@ fetchBridgeState = do
     -- Bridge
     bridgeIP <- use $ asPC . pcBridgeIP
     userID   <- use $ asPC . pcUserID
-    -- Request all light information
+    -- Request and store all light information
     (lights :: AllLights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
-    asLights .= sortBy (compare `on` _lgtName) (HM.elems lights)
+    tvar <- use asLights
+    liftIO . atomically . writeTVar tvar .
+        sortBy (compare `on` _lgtName) $ HM.elems lights -- Sort by name
     -- TODO: Also obtain sensor data
 
 -- Application main loop
 mainLoop :: AppIO ()
 mainLoop = do
     fetchBridgeState
-    traceBridgeState
+    -- _traceBridgeState
     waitNSec 3
     mainLoop
 
--- Setup application monad
+-- Start up application
 run :: AppState -> IO ()
 run as =
-    flip evalStateT as $
-        mainLoop
+    -- Web UI
+    withAsync (webUIStart $ as ^. asLights) $ \_ ->
+        -- Application monad
+        flip evalStateT as $
+            mainLoop
 

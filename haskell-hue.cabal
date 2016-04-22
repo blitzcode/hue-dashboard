@@ -31,7 +31,9 @@ executable haskell-hue
                     exceptions,
                     filepath,
                     hostname,
-                    threepenny-gui
+                    threepenny-gui,
+                    stm,
+                    async
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 
