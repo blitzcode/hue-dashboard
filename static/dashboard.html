@@ -5,10 +5,12 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Loading...</title>
   <link rel="icon" href="static/favicon.png">
   <!-- Bootstrap -->
   <link href="static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="static/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
   <!-- threepenny-gui -->
   <link rel="stylesheet" type="text/css" href="haskell.css"/>
   <script src="haskell.js"></script>
@@ -16,10 +18,67 @@
     Haskell.initFFI();
   </script>
   <!-- Our CSS -->
-  <link rel="stylesheet" type="text/css" href="static/dashboard.css"/>
+  <style>
+    .thumbnails .thumbnail { display: inline-block; width: 200px; }
+    .light-icon { width: 75px; float: left; }
+  </style>
 </head>
-<body>
+<body role="document">
   <noscript>Please enable JavaScript</noscript>
+
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <div class="navbar-brand" href="#">
+          <img src="static/favicon.png" style="height: 22px; float: left;" />
+          <span style="line-height: 22px; padding: 10px;">Hue Dashboard</span>
+          <div style="clear: both;"></div>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" role="main">
+
+      <!--
+    <div class="page-header">
+      <h1>Lights</h1>
+    </div>
+      -->
+
+<div class="thumbnails">
+  <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
+    <img class="light-icon" style="background: orange; padding: 10px;" src="static/svg/white_and_color_e27.svg"/>
+    <small>
+      Hue Bulb A19<br/>
+      Extended Color Light
+    </small>
+  </div>
+  <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Stube Leuchter Eins</div>
+    <img class="light-icon" src="static/svg/lightstrip.svg"/>
+    <small>
+      Hue Bulb A19<br/>
+      Extended Color Light
+    </small>
+  </div>
+  <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
+    <img class="light-icon" src="static/svg/go.svg"/>
+    <small>
+      Hue Bulb A19<br/>
+      Extended Color Light
+    </small>
+  </div>
+  <div class="thumbnail">
+    <div class="caption">Element4</div>
+    <img src="http://placehold.it/70x70" alt="Element4" />
+  </div>
+</div>
+
+  </div>
+
 </body>
 </html>
 
