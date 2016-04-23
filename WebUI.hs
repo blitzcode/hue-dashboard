@@ -36,7 +36,7 @@ webUIStart lights = do
 setup :: TVar [Light] -> Window -> UI ()
 setup lights' window = do
     -- Title
-    void $ return window # set title "Hue Lights"
+    void $ return window # set title "Hue Dashboard"
     -- Lights
     lights <- liftIO . atomically $ readTVar lights'
     let lightTiles =
