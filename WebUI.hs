@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
 
 module WebUI ( webUIStart
              ) where
@@ -10,6 +10,7 @@ import Data.Maybe
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>))
 import Control.Monad
+import Control.Exception
 import Control.Monad.IO.Class
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -36,6 +37,68 @@ webUIStart lights = do
                       , jsCustomHTML = Just "dashboard.html"
                       }
         $ setup lights
+
+-- The getElementById function return a Maybe, but actually just throws an exception if
+-- the element is not found. The exception is unfortunately completely unhelpful in
+-- tracking down the reason why the page couldn't be generated. UI is unfortunately also
+-- not MonadCatch, so we have to make due with runUI for the call
+getElementByIdSafe :: Window -> String -> UI Element
+getElementByIdSafe window elementID =
+    (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
+        Left (e :: SomeException) -> do
+            traceS TLError $ printf "getElementById for '%s' failed: %s" elementID (show e)
+            liftIO . throwIO $ e
+        Right Nothing -> do
+            traceS TLError $ printf "getElementById for '%s' failed" elementID
+            liftIO . throwIO $ userError "getElementById failure"
+        Right (Just e) ->
+            return e
+
+setup :: TVar [Light] -> Window -> UI ()
+setup lights' window = do
+    -- Title
+    void $ return window # set title "Hue Dashboard"
+    -- Bootstrap JS, should be in the body
+    -- void $ getBody window #+
+    --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
+    -- Lights
+    lights <- liftIO . atomically $ readTVar lights'
+    void $ (getElementByIdSafe window "lights") #+
+      [ UI.div #. "thumbnails" #+
+          ((flip map) lights $ \light ->
+            let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
+                brightPercent = printf "%.0f%%"
+                                  ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                                    * 100 / 255 :: Float
+                                  )
+                colorStr      = htmlColorFromRGB . colorFromLight $ light
+            in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+                ) #+
+                [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+                , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
+                                          & set UI.src (iconFromLM $ light ^. lgtModelID)
+                , UI.div #. "text-center" #+
+                  [ UI.h6 #+
+                    [ UI.small #+
+                      [ string $ (show $ light ^. lgtModelID)
+                      , UI.br
+                      , string $ (show $ light ^. lgtType)
+                      ]
+                    ]
+                  ]
+                , UI.div #. "small text-center" #+ [string "Brightness"]
+                , UI.div #. "progress" #+
+                  [ ( UI.div #. "progress-bar progress-bar-info" &
+                             set style [("width", brightPercent)]
+                    ) #+
+                    [ UI.small #+
+                      [ string brightPercent
+                      ]
+                    ]
+                  ]
+                ]
+          )
+      ]
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext
@@ -119,51 +182,4 @@ colorFromLight light
 -- Convert a normalized RGB triplet into an HTML color string
 htmlColorFromRGB :: (Float, Float, Float) -> String
 htmlColorFromRGB (r, g, b) = printf "rgb(%.0f, %.0f, %.0f)" (r * 255) (g * 255) (b * 255)
-
-setup :: TVar [Light] -> Window -> UI ()
-setup lights' window = do
-    -- Title
-    void $ return window # set title "Hue Dashboard"
-    -- Bootstrap JS, should be in the body
-    -- void $ getBody window #+
-    --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
-    -- Lights
-    lights <- liftIO . atomically $ readTVar lights'
-    -- TODO: This will throw an exception if we don't have the element...
-    void $ (fromJust <$> getElementById window "lights") #+
-      [ UI.div #. "thumbnails" #+
-          ((flip map) lights $ \light ->
-            let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
-                brightPercent = printf "%.0f%%"
-                                  ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                                    * 100 / 255 :: Float
-                                  )
-                colorStr      = htmlColorFromRGB . colorFromLight $ light
-            in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
-                ) #+
-                [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
-                , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
-                                          & set UI.src (iconFromLM $ light ^. lgtModelID)
-                , UI.div #. "text-center" #+
-                  [ UI.h6 #+
-                    [ UI.small #+
-                      [ string $ (show $ light ^. lgtModelID)
-                      , UI.br
-                      , string $ (show $ light ^. lgtType)
-                      ]
-                    ]
-                  ]
-                , UI.div #. "small text-center" #+ [string "Brightness"]
-                , UI.div #. "progress" #+
-                  [ ( UI.div #. "progress-bar progress-bar-info" &
-                             set style [("width", brightPercent)]
-                    ) #+
-                    [ UI.small #+
-                      [ string brightPercent
-                      ]
-                    ]
-                  ]
-                ]
-          )
-      ]
 
