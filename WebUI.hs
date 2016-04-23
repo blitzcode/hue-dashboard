@@ -28,10 +28,11 @@ webUIStart lights = do
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
     liftIO . startGUI
-        defaultConfig { jsPort   = Just port
-                      , jsAddr   = Just "0.0.0.0" -- All interfaces, not just loopback
-                      , jsLog    = traceB TLInfo
-                      , jsStatic = Just "static"
+        defaultConfig { jsPort       = Just port
+                      , jsAddr       = Just "0.0.0.0" -- All interfaces, not just loopback
+                      , jsLog        = traceB TLInfo
+                      , jsStatic     = Just "static"
+                      , jsCustomHTML = Just "dashboard.html"
                       }
         $ setup lights
 
