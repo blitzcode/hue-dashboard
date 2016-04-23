@@ -19,8 +19,12 @@
   </script>
   <!-- Our CSS -->
   <style>
-    .thumbnails .thumbnail { display: inline-block; width: 200px; }
-    .light-icon { width: 75px; float: left; }
+    .thumbnails .thumbnail
+    {   display: inline-block;
+        width: 150px;
+        margin: 0px 0px 0px 0px;
+        padding: 0px 5px 0px 5px;
+    }
   </style>
 </head>
 <body role="document">
@@ -47,22 +51,36 @@
       -->
 
 <div class="thumbnails">
+
   <div class="thumbnail">
     <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
-    <img class="light-icon" style="background: orange; padding: 10px;" src="static/svg/white_and_color_e27.svg"/>
-    <small>
-      Hue Bulb A19<br/>
-      Extended Color Light
-    </small>
+    <img class="img-rounded" style="background: orange; padding: 15px;" src="static/svg/go.svg"/>
+    <div class="text-center">
+      <h6>
+        <small>
+          Hue Bulb A19
+          <br/>
+          Extended Color Light
+        </small>
+      </h6>
+    </div>
+    <div class="small text-center">Brightness</div>
+    <div class="progress">
+      <div class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em; width: 60%;">
+        60%
+      </div>
+    </div>
   </div>
   <div class="thumbnail">
     <div class="caption" style="text-align: center;">Stube Leuchter Eins</div>
     <img class="light-icon" src="static/svg/lightstrip.svg"/>
     <small>
-      Hue Bulb A19<br/>
+      Hue Bulb A19
+      &middot;
       Extended Color Light
     </small>
   </div>
+
   <div class="thumbnail">
     <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
     <img class="light-icon" src="static/svg/go.svg"/>
@@ -72,10 +90,54 @@
     </small>
   </div>
   <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
+    <small>
+      Hue Bulb A19<br/>
+      Extended Color Light
+    </small>
+    <img class="light-icon" src="static/svg/go.svg"/>
+  </div>
+  <div class="thumbnail">
     <div class="caption">Element4</div>
     <img src="http://placehold.it/70x70" alt="Element4" />
   </div>
+  <div class="thumbnail">
+    <div class="caption">Element4</div>
+    <img src="http://placehold.it/70x70" alt="Element4" />
+  </div>
+  <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Kinderzimmer Decke</div>
+    <img class="img-rounded light-icon" style="background: orange; padding: 5px;" src="static/svg/white_and_color_e27.svg"/>
+    <div class="text-center">
+      <h6>
+        <small>
+          Hue Bulb A19
+          <br/>
+          Extended Color Light
+        </small>
+      </h6>
+    </div>
+    <div class="progress">
+      <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+        60%
+      </div>
+    </div>
+  </div>
+  <div class="thumbnail">
+    <div class="caption" style="text-align: center;">Stube Leuchter Eins</div>
+    <img class="light-icon" src="static/svg/lightstrip.svg"/>
+    <small>
+      Hue Bulb A19
+      &middot;
+      Extended Color Light
+    </small>
+  </div>
 </div>
+
+
+    <div id="lights"></div>
+
+    The End
 
   </div>
 

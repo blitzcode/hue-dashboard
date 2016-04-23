@@ -29,6 +29,8 @@ and run with
 
 Like any Hue API application you'll have to authorize access to your bridge by pushlinking. The program will discover your bridge and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this configuration from the created `config.yaml`.
 
+After startup connect to `localhost:8001` to view the dashboard.
+
 # Compatibility
 
 This program was developed on OS X 10.10 with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.

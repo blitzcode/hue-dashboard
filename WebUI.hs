@@ -6,6 +6,7 @@ module WebUI ( webUIStart
 
 import Text.Printf
 import Data.Monoid
+import Data.Maybe
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>))
 import Control.Monad
@@ -65,6 +66,7 @@ setup lights' window = do
     --    [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
     -- Lights
     lights <- liftIO . atomically $ readTVar lights'
+    lightsElement <- fromJust <$> getElementById window "lights"
     forM_ lights $ \light -> do
         let desc = printf "%-25s | %-20s | %-22s | %-10s | %-4.1f%% | %-3s\n"
                         (light ^. lgtName)
@@ -79,7 +81,7 @@ setup lights' window = do
                           / 255 :: Float
                         )
                         (if light ^. lgtState . lsOn then "On" else "Off" :: String)
-        void $ getBody window #+
+        return lightsElement #+
             [ UI.img & set UI.src (iconFromLM $ light ^. lgtModelID)
                      & set style  [ ("width", "75px")
                                   , ("float", "left")
