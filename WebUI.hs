@@ -30,7 +30,7 @@ webUIStart lights = do
     liftIO . startGUI
         defaultConfig { jsPort       = Just port
                       , jsAddr       = Just "0.0.0.0" -- All interfaces, not just loopback
-                      , jsLog        = traceB TLInfo
+                      , jsLog        = traceB TLInfo -- \_ -> return ()
                       , jsStatic     = Just "static"
                       , jsCustomHTML = Just "dashboard.html"
                       }
@@ -60,6 +60,9 @@ setup :: TVar [Light] -> Window -> UI ()
 setup lights' window = do
     -- Title
     void $ return window # set title "Hue Dashboard"
+    -- Bootstrap JS, should be in the body
+    void $ getBody window #+
+        [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
     -- Lights
     lights <- liftIO . atomically $ readTVar lights'
     forM_ lights $ \light -> do
