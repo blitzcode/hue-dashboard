@@ -11,7 +11,7 @@ import Data.List
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
-import Control.Lens hiding ((#), set, (<.>))
+import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
 import Control.Exception
 import Control.Monad.IO.Class
@@ -45,6 +45,7 @@ setup :: TVar Lights -> Window -> UI ()
 setup lights' window = do
     -- Title
     void $ return window # set title "Hue Dashboard"
+
     -- TODO: Bootrap's JS features need jQuery, but the version included in threepenny
     --       is too old to be supported. It seems we can't use any of the JS features in
     --       Bootstrap until it is updated
@@ -52,49 +53,57 @@ setup lights' window = do
     -- Bootstrap JS, should be in the body
     -- void $ getBody window #+
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
+
     -- Lights, display sorted by name
     lights <- liftIO . atomically
                    $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
                   <$> readTVar lights'
-    void $ (getElementByIdSafe window "lights") #+
-      [ UI.div #. "thumbnails" #+
-          ((flip map) lights $ \(lightID, light) ->
-            let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
-                brightPercent = printf "%.0f%%"
-                                  ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                                    * 100 / 255 :: Float
-                                  )
-                colorStr      = htmlColorFromRGB . colorFromLight $ light
-            in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
-                                        & set UI.id_ (buildID lightID "tile")
-                ) #+
-                [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
-                , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
-                                          & set UI.src (iconFromLM $ light ^. lgtModelID)
-                                          & set UI.id_ (buildID lightID "image")
-                , UI.div #. "text-center" #+
-                  [ UI.h6 #+
-                    [ UI.small #+
-                      [ string $ (show $ light ^. lgtModelID)
-                      , UI.br
-                      , string $ (show $ light ^. lgtType)
-                      ]
-                    ]
-                  ]
-                , UI.div #. "small text-center" #+ [string "Brightness"]
-                , UI.div #. "progress" #+
-                  [ ( UI.div #. "progress-bar progress-bar-info"
-                              & set style [("width", brightPercent)]
-                              & set UI.id_ (buildID lightID "brightness-bar")
+    -- Create all light tiles
+    --
+    -- TODO: This of course duplicates some code from the update routines, maybe just
+    --       build the skeleton here and let the updating set all actual state?
+    getElementByIdSafe window "lights" >>= \case
+      Nothing   -> return ()
+      Just root ->
+        void $ element root #+
+          [ UI.div #. "thumbnails" #+
+              ((flip map) lights $ \(lightID, light) ->
+                let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
+                    brightPercent = printf "%.0f%%"
+                                      ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                                        * 100 / 255 :: Float
+                                      )
+                    colorStr      = htmlColorFromRGB . colorFromLight $ light
+                in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+                                            & set UI.id_ (buildID lightID "tile")
                     ) #+
-                    [ UI.small #+
-                      [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
+                    [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+                    , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
+                                              & set UI.src (iconFromLM $ light ^. lgtModelID)
+                                              & set UI.id_ (buildID lightID "image")
+                    , UI.div #. "text-center" #+
+                      [ UI.h6 #+
+                        [ UI.small #+
+                          [ string $ (show $ light ^. lgtModelID)
+                          , UI.br
+                          , string $ (show $ light ^. lgtType)
+                          ]
+                        ]
+                      ]
+                    , UI.div #. "small text-center" #+ [string "Brightness"]
+                    , UI.div #. "progress" #+
+                      [ ( UI.div #. "progress-bar progress-bar-info"
+                                  & set style [("width", brightPercent)]
+                                  & set UI.id_ (buildID lightID "brightness-bar")
+                        ) #+
+                        [ UI.small #+
+                          [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
+                          ]
+                        ]
                       ]
                     ]
-                  ]
-                ]
-          )
-      ]
+              )
+          ]
 
 -- Build a string for the id field in a DOM object. Do this in one place as we need to
 -- locate them later when we want to update
@@ -105,18 +114,17 @@ buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 -- the element is not found. The exception is unfortunately completely unhelpful in
 -- tracking down the reason why the page couldn't be generated. UI is unfortunately also
 -- not MonadCatch, so we have to make due with runUI for the call
-getElementByIdSafe :: Window -> String -> UI Element
+getElementByIdSafe :: Window -> String -> UI (Maybe Element)
 getElementByIdSafe window elementID =
     (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
         Left (e :: SomeException) -> do
-            traceS TLError $ printf "getElementById for '%s' failed: %s" elementID (show e)
-            liftIO . throwIO $ e
+            traceS TLWarn $ printf "getElementById for '%s' failed: %s" elementID (show e)
+            return Nothing
         Right Nothing -> do
-            traceS TLError $ printf "getElementById for '%s' failed" elementID
-            liftIO . throwIO $ userError "getElementById failure"
+            traceS TLWarn $ printf "getElementById for '%s' failed" elementID
+            return Nothing
         Right (Just e) ->
-            return e
-
+            return $ Just e
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext
