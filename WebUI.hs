@@ -38,26 +38,14 @@ webUIStart lights = do
                       }
         $ setup lights
 
--- The getElementById function return a Maybe, but actually just throws an exception if
--- the element is not found. The exception is unfortunately completely unhelpful in
--- tracking down the reason why the page couldn't be generated. UI is unfortunately also
--- not MonadCatch, so we have to make due with runUI for the call
-getElementByIdSafe :: Window -> String -> UI Element
-getElementByIdSafe window elementID =
-    (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
-        Left (e :: SomeException) -> do
-            traceS TLError $ printf "getElementById for '%s' failed: %s" elementID (show e)
-            liftIO . throwIO $ e
-        Right Nothing -> do
-            traceS TLError $ printf "getElementById for '%s' failed" elementID
-            liftIO . throwIO $ userError "getElementById failure"
-        Right (Just e) ->
-            return e
-
 setup :: TVar [Light] -> Window -> UI ()
 setup lights' window = do
     -- Title
     void $ return window # set title "Hue Dashboard"
+    -- TODO: Bootrap's JS features need jQuery, but the version included in threepenny
+    --       is too old to be supported. It seems we can't use any of the JS features in
+    --       Bootstrap until it is updated
+    --
     -- Bootstrap JS, should be in the body
     -- void $ getBody window #+
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
@@ -99,6 +87,23 @@ setup lights' window = do
                 ]
           )
       ]
+
+-- The getElementById function return a Maybe, but actually just throws an exception if
+-- the element is not found. The exception is unfortunately completely unhelpful in
+-- tracking down the reason why the page couldn't be generated. UI is unfortunately also
+-- not MonadCatch, so we have to make due with runUI for the call
+getElementByIdSafe :: Window -> String -> UI Element
+getElementByIdSafe window elementID =
+    (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
+        Left (e :: SomeException) -> do
+            traceS TLError $ printf "getElementById for '%s' failed: %s" elementID (show e)
+            liftIO . throwIO $ e
+        Right Nothing -> do
+            traceS TLError $ printf "getElementById for '%s' failed" elementID
+            liftIO . throwIO $ userError "getElementById failure"
+        Right (Just e) ->
+            return e
+
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext

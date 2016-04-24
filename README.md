@@ -7,7 +7,7 @@ An application providing a web based dashboard for monitoring and controlling [P
 
 Implemented in Haskell, we're talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
 
-The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tabled. Work-in-progress.
+The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tablet. Work-in-progress.
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface.png)
 
