@@ -9,7 +9,13 @@ Implemented in Haskell, we're talking to the [Hue bridge](http://www2.meethue.co
 
 The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tablet. Probably best deployed on something like a Raspberry Pi. Work-in-progress.
 
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface.jpg)
+Accessing the web interface from an iPhone:
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone.jpg)
+
+And the same on the iPad:
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-ipad.jpg)
 
 Also see [this project on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#hue-dashboard) for more information.
 

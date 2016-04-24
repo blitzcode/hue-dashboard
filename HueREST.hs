@@ -25,6 +25,8 @@ import Util
 import Trace
 
 -- Interface to make calls to the REST / HTTP / JSON based API of a Hue bridge
+--
+-- http://www.developers.meethue.com/philips-hue-api
 
 data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
                            deriving (Eq, Enum)
@@ -55,6 +57,10 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
                       Nothing -> request'
     response <- httpJSON request
     return (getResponseBody response :: a)
+
+-- TODO: bridgeRequestTrace and bridgeRequestRetryTrace currently catch all exceptions,
+--       including things like a CTRL+C 'user interrupt'. This is poor practice, write
+--       specific handlers for the HTTP and JSON exceptions we care about
 
 -- Wrapper around bridgeRequest which traces errors and doesn't return anything, fire and forget
 bridgeRequestTrace :: forall m body. ( MonadIO m
@@ -100,6 +106,9 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                         -> m a
 bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
     try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
+        -- TODO: It makes sense to retry if we have a connection error, but in case of
+        --       something like a parsing error or an access denied type response, an
+        --       endless retry loop might not do anything productive
         Left (e :: SomeException) -> do
             -- Network / IO / parsing error
             traceS TLError $ "bridgeRequestRetryTrace: Exception while contacting / processing '"
@@ -111,9 +120,6 @@ bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
             traceS TLError $ "bridgeRequestRetryTrace: Error response from '"
                              <> apiEndPoint <> "' (retry in 5s): " <> show err
             waitNSec 5
-            -- TODO: It makes sense to retry if we have a connection error, but in case of
-            --       something like a parsing error or an access denied type response, an
-            --       endless retry loop might not do anything productive
             retry
         Right (ResponseOK (val :: a)) -> do
             -- Success

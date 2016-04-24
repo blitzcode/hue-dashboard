@@ -13,7 +13,7 @@ import WebUI
 
 -- Some definitions for the App module which we split out here
 
--- Application state
+-- Application state (TODO: Might be better to switch this to a reader)
 data AppState = AppState
     { _asPC     :: !PersistConfig
     , _asBC     :: !BridgeConfig
