@@ -10,7 +10,6 @@ import Text.Printf
 import Data.Monoid
 import Data.List
 import Data.Word
-import Data.Aeson
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
@@ -71,16 +70,15 @@ setup lights' tchan' bridgeIP userID window = do
     getElementByIdSafe window "lights" >>= \case
       Nothing   -> return ()
       Just root ->
-        void $ element root #+
-          [ UI.div #. "thumbnails" #+
-              ((flip map) lights $ \(lightID, light) ->
-                let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
-                    brightPercent = printf "%.0f%%"
-                                      ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                                        * 100 / 255 :: Float
-                                      )
-                    colorStr      = htmlColorFromRGB . colorFromLight $ light
-                in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+          forM_ lights $ \(lightID, light) ->
+            let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
+                brightPercent = printf "%.0f%%"
+                                  ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                                    * 100 / 255 :: Float
+                                  )
+                colorStr      = htmlColorFromRGB . colorFromLight $ light
+            in  void $ element root #+
+                  [ ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
                                             & set UI.id_ (buildID lightID "tile")
                     ) #+
                     [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
@@ -108,8 +106,7 @@ setup lights' tchan' bridgeIP userID window = do
                         ]
                       ]
                     ]
-              )
-          ]
+                  ]
     -- Register click handlers for each light image to switch them on / off
     --
     -- TODO: Add UI and handlers for changing color and brightness
