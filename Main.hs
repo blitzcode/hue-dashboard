@@ -37,6 +37,8 @@ main =
         traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
         -- TVar for sharing light state across threads
         _asLights <- atomically . newTVar $ HM.empty
+        -- TChan for propagating light updates
+        _asUpdate <- atomically $ newBroadcastTChan
         -- Launch application
         run AppState { _asPC     = newCfg
                      , _asBC     = bridgeConfig

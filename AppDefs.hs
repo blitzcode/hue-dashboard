@@ -5,10 +5,11 @@ module AppDefs where
 
 import Control.Lens
 import Control.Monad.State
-import Control.Concurrent.STM.TVar
+import Control.Concurrent.STM
 
 import PersistConfig (PersistConfig)
 import HueJSON
+import WebUI
 
 -- Some definitions for the App module which we split out here
 
@@ -17,6 +18,7 @@ data AppState = AppState
     { _asPC     :: !PersistConfig
     , _asBC     :: !BridgeConfig
     , _asLights :: !(TVar Lights)
+    , _asUpdate :: !LightUpdateTChan
     }
 
 makeLenses ''AppState

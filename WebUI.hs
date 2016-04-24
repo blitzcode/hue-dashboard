@@ -2,15 +2,18 @@
 {-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
 
 module WebUI ( webUIStart
+             , LightUpdate(..)
+             , LightUpdateTChan
              ) where
 
 import Text.Printf
 import Data.Monoid
-import Data.Maybe
 import Data.List
+import Data.Word
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
+import Control.Concurrent.Async
 import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
 import Control.Exception
@@ -21,14 +24,16 @@ import System.FilePath
 
 import Trace
 import HueJSON
+import LightColor
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
--- TODO: This is an extremely basic, proof-of-concept implementation. There's no real time
---       update of the light status and no way to change their state
+-- TODO: No support for changing any light state
 
-webUIStart :: MonadIO m => TVar Lights -> m ()
-webUIStart lights = do
+webUIStart :: MonadIO m => TVar Lights -> LightUpdateTChan -> m ()
+webUIStart lights tchan' = do
+    -- Duplicate broadcast channel
+    tchan <- liftIO . atomically $ dupTChan tchan'
     -- Start server
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
@@ -39,10 +44,10 @@ webUIStart lights = do
                       , jsStatic     = Just "static"
                       , jsCustomHTML = Just "dashboard.html"
                       }
-        $ setup lights
+        $ setup lights tchan
 
-setup :: TVar Lights -> Window -> UI ()
-setup lights' window = do
+setup :: TVar Lights -> LightUpdateTChan -> Window -> UI ()
+setup lights' tchan window = do
     -- Title
     void $ return window # set title "Hue Dashboard"
 
@@ -62,6 +67,7 @@ setup lights' window = do
     --
     -- TODO: This of course duplicates some code from the update routines, maybe just
     --       build the skeleton here and let the updating set all actual state?
+    --
     getElementByIdSafe window "lights" >>= \case
       Nothing   -> return ()
       Just root ->
@@ -104,6 +110,52 @@ setup lights' window = do
                     ]
               )
           ]
+    -- Worker thread for receiving light updates
+    updateWorker <- liftIO $ async $ lightUpdateWorker window tchan
+    on UI.disconnect window . const . liftIO $
+        cancel updateWorker
+
+-- Channel with light ID and update pair
+type LightUpdateTChan = TChan (String, LightUpdate)
+
+-- Different updates to the displayed light state
+data LightUpdate = LU_OnOff      !Bool
+                 | LU_Brightness !Word8
+                 | LU_Color      !(Float, Float, Float) -- RGB
+                   deriving Show
+
+-- Update DOM elements with light update messages received
+--
+-- TODO: We don't handle addition / removal of lights or changes in properties like the
+--       name. Need to refresh page for those to show up. Maybe that's OK?
+--
+lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
+lightUpdateWorker window tchan = runUI window $ loop
+  where
+    loop = do (liftIO . atomically $ readTChan tchan) >>=
+                \(lightID, update) -> case update of
+                  LU_OnOff s ->
+                      getElementByIdSafe window (buildID lightID "tile") >>= \case
+                        Just e  ->
+                          void $ return e & set style [("opacity", if s then "1.0" else "0.25")]
+                        Nothing -> return ()
+                  LU_Brightness brightness -> do
+                      let brightPercent = printf "%.0f%%"
+                                                 (fromIntegral brightness * 100 / 255 :: Float)
+                      getElementByIdSafe window (buildID lightID "brightness-bar") >>= \case
+                        Just e  ->
+                          void $ return e & set style [("width", brightPercent)]
+                        Nothing -> return ()
+                      getElementByIdSafe window (buildID lightID "brightness-text") >>= \case
+                        Just e  ->
+                          void $ return e & set UI.text brightPercent
+                        Nothing -> return ()
+                  LU_Color rgb ->
+                      getElementByIdSafe window (buildID lightID "image") >>= \case
+                        Just e  ->
+                          void $ return e & set style [("background", htmlColorFromRGB rgb)]
+                        Nothing -> return ()
+              loop
 
 -- Build a string for the id field in a DOM object. Do this in one place as we need to
 -- locate them later when we want to update
@@ -145,67 +197,4 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueGo                     -> "go"
                           LM_HueLightStripsPlus        -> "lightstrip"
                           LM_Unknown _                 -> "white_e27"
-
--- Compute a normalized RGB triplet for the given light
---
--- http://www.developers.meethue.com/documentation/color-conversions-rgb-xy
-colorFromLight :: Light -> (Float, Float, Float)
-colorFromLight light
-    | hasXY =
-          let -- XYZ conversion
-              x = xyX
-              y = xyY
-              z = 1 - x - y
-              yY = 1
-              xX = (yY / y) * x
-              zZ = (yY / y) * z
-              -- sRGB D65 conversion
-              r_sRGB =  xX * 1.656492 - yY * 0.354851 - zZ * 0.255038;
-              g_sRGB = -xX * 0.707196 + yY * 1.655397 + zZ * 0.036152;
-              b_sRGB =  xX * 0.051713 - yY * 0.121364 + zZ * 1.011530;
-              -- Clamp
-              (rClamp, gClamp, bClamp)
-                  | r_sRGB > b_sRGB && r_sRGB > g_sRGB && r_sRGB > 1 =
-                        (1, g_sRGB / r_sRGB, b_sRGB / r_sRGB) -- Red is too big
-                  | g_sRGB > b_sRGB && g_sRGB > r_sRGB && g_sRGB > 1 =
-                        (r_sRGB / g_sRGB, 1, b_sRGB / g_sRGB) -- Green is too big
-                  | b_sRGB > r_sRGB && b_sRGB > g_sRGB && b_sRGB > 1 =
-                        (r_sRGB / b_sRGB, g_sRGB / b_sRGB, 1) -- Blue is too big
-                  | otherwise =
-                        (r_sRGB, g_sRGB, b_sRGB)
-              -- Gamma correction
-              rGamma | rClamp <= 0.0031308 = 12.92 * rClamp
-                     | otherwise           = (1 + 0.055) * (rClamp ** (1 / 2.4)) - 0.055
-              gGamma | gClamp <= 0.0031308 = 12.92 * gClamp
-                     | otherwise           = (1 + 0.055) * (gClamp ** (1 / 2.4)) - 0.055
-              bGamma | bClamp <= 0.0031308 = 12.92 * bClamp
-                     | otherwise           = (1 + 0.055) * (bClamp ** (1 / 2.4)) - 0.055
-              -- Normalize
-              (r, g, b) | rGamma > bGamma && rGamma > gGamma =
-                            -- Red is largest
-                            if   rGamma > 1
-                            then (1, gGamma / rGamma, bGamma / rGamma)
-                            else (rGamma, gGamma, bGamma)
-                        | gGamma > bGamma && gGamma > rGamma =
-                            -- Green is largest
-                            if   gGamma > 1
-                            then (rGamma / gGamma, 1, bGamma / gGamma)
-                            else (rGamma, gGamma, bGamma)
-                        | bGamma > rGamma && bGamma > gGamma =
-                            -- Blue is largest
-                            if   bGamma > 1
-                            then (rGamma / bGamma, gGamma / bGamma, 1)
-                            else (rGamma, gGamma, bGamma)
-                        | otherwise = (rGamma, gGamma, bGamma)
-          in (r, g, b)
-    | otherwise = (255, 255, 255) -- TODO: Handle color temperature, might need
-                                  --       to check color mode field as well
-  where
-        xy         = light ^. lgtState . lsXY
-        hasXY      = isJust xy
-        [xyX, xyY] = xy ^. non [0, 0]
-
--- Convert a normalized RGB triplet into an HTML color string
-htmlColorFromRGB :: (Float, Float, Float) -> String
-htmlColorFromRGB (r, g, b) = printf "rgb(%.0f, %.0f, %.0f)" (r * 255) (g * 255) (b * 255)
 

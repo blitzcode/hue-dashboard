@@ -4,8 +4,6 @@
 module App ( run
            ) where
 
-import Data.Function
-import Data.List
 import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad
@@ -20,6 +18,7 @@ import HueJSON
 import HueREST
 import PersistConfig
 import WebUI
+import LightColor
 
 _traceBridgeState :: AppIO ()
 _traceBridgeState = do
@@ -48,27 +47,39 @@ fetchBridgeState = do
     bridgeIP <- use $ asPC . pcBridgeIP
     userID   <- use $ asPC . pcUserID
     -- Request all light information
-    (lights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
-    -- Compare and broadcast changes
+    (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
+    -- Go over all the lights
     ltvar <- use asLights
+    tchan <- use asUpdate
     oldLights <- liftIO . atomically $ readTVar ltvar
-    -- TODO
+    forM_ (HM.toList newLights) $ \(lightID, newLight) -> do
+      case HM.lookup lightID oldLights of
+        Nothing       -> return () -- TODO: New light, we don't do anything here yet
+        Just oldLight -> do
+          -- Compare state and broadcast changes
+          let writeChannel = liftIO . atomically . writeTChan tchan
+          when (oldLight ^. lgtState . lsOn /= newLight ^. lgtState . lsOn) $
+              writeChannel (lightID, LU_OnOff $ newLight ^. lgtState . lsOn)
+          when (oldLight ^. lgtState . lsBrightness /= newLight ^. lgtState . lsBrightness) $
+              writeChannel (lightID, LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255)
+          when (colorFromLight oldLight /= colorFromLight newLight) $
+              writeChannel (lightID, LU_Color $ colorFromLight newLight)
     -- Store new light state
-    liftIO . atomically . writeTVar ltvar $ lights
+    liftIO . atomically . writeTVar ltvar $ newLights
 
 -- Application main loop
 mainLoop :: AppIO ()
 mainLoop = do
     fetchBridgeState
     -- _traceBridgeState
-    waitNSec 3
+    waitNSec 1
     mainLoop
 
 -- Start up application
 run :: AppState -> IO ()
 run as =
     -- Web UI
-    withAsync (webUIStart $ as ^. asLights) $ \_ ->
+    withAsync (webUIStart (as ^. asLights) (as ^. asUpdate)) $ \_ ->
         -- Application monad
         flip evalStateT as $
             mainLoop
