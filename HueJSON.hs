@@ -22,7 +22,7 @@ import Util
 --
 -- http://www.developers.meethue.com/documentation/lights-api#11_get_all_lights
 
-type AllLights = HM.HashMap String Light
+type Lights = HM.HashMap String Light
 
 data Light = Light { _lgtState             :: !LightState
                    , _lgtType              :: !ZLL_LightType

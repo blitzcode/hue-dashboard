@@ -16,7 +16,7 @@ import HueJSON
 data AppState = AppState
     { _asPC     :: !PersistConfig
     , _asBC     :: !BridgeConfig
-    , _asLights :: !(TVar [Light])
+    , _asLights :: !(TVar Lights)
     }
 
 makeLenses ''AppState

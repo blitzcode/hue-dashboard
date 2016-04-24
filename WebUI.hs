@@ -7,6 +7,9 @@ module WebUI ( webUIStart
 import Text.Printf
 import Data.Monoid
 import Data.Maybe
+import Data.List
+import qualified Data.Function (on)
+import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>))
 import Control.Monad
@@ -24,7 +27,7 @@ import HueJSON
 -- TODO: This is an extremely basic, proof-of-concept implementation. There's no real time
 --       update of the light status and no way to change their state
 
-webUIStart :: MonadIO m => TVar [Light] -> m ()
+webUIStart :: MonadIO m => TVar Lights -> m ()
 webUIStart lights = do
     -- Start server
     let port = 8001
@@ -38,7 +41,7 @@ webUIStart lights = do
                       }
         $ setup lights
 
-setup :: TVar [Light] -> Window -> UI ()
+setup :: TVar Lights -> Window -> UI ()
 setup lights' window = do
     -- Title
     void $ return window # set title "Hue Dashboard"
@@ -49,11 +52,13 @@ setup lights' window = do
     -- Bootstrap JS, should be in the body
     -- void $ getBody window #+
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
-    -- Lights
-    lights <- liftIO . atomically $ readTVar lights'
+    -- Lights, display sorted by name
+    lights <- liftIO . atomically
+                   $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
+                  <$> readTVar lights'
     void $ (getElementByIdSafe window "lights") #+
       [ UI.div #. "thumbnails" #+
-          ((flip map) lights $ \light ->
+          ((flip map) lights $ \(lightID, light) ->
             let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
                 brightPercent = printf "%.0f%%"
                                   ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
@@ -61,10 +66,12 @@ setup lights' window = do
                                   )
                 colorStr      = htmlColorFromRGB . colorFromLight $ light
             in  ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+                                        & set UI.id_ (buildID lightID "tile")
                 ) #+
                 [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
                 , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
                                           & set UI.src (iconFromLM $ light ^. lgtModelID)
+                                          & set UI.id_ (buildID lightID "image")
                 , UI.div #. "text-center" #+
                   [ UI.h6 #+
                     [ UI.small #+
@@ -76,17 +83,23 @@ setup lights' window = do
                   ]
                 , UI.div #. "small text-center" #+ [string "Brightness"]
                 , UI.div #. "progress" #+
-                  [ ( UI.div #. "progress-bar progress-bar-info" &
-                             set style [("width", brightPercent)]
+                  [ ( UI.div #. "progress-bar progress-bar-info"
+                              & set style [("width", brightPercent)]
+                              & set UI.id_ (buildID lightID "brightness-bar")
                     ) #+
                     [ UI.small #+
-                      [ string brightPercent
+                      [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
                       ]
                     ]
                   ]
                 ]
           )
       ]
+
+-- Build a string for the id field in a DOM object. Do this in one place as we need to
+-- locate them later when we want to update
+buildID :: String -> String -> String
+buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 
 -- The getElementById function return a Maybe, but actually just throws an exception if
 -- the element is not found. The exception is unfortunately completely unhelpful in

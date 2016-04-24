@@ -5,6 +5,7 @@ module Main (main) where
 
 import Data.Monoid
 import Data.Maybe
+import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Concurrent.STM
 
@@ -35,7 +36,7 @@ main =
         bridgeConfig <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
         traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
         -- TVar for sharing light state across threads
-        _asLights <- atomically $ newTVar []
+        _asLights <- atomically . newTVar $ HM.empty
         -- Launch application
         run AppState { _asPC     = newCfg
                      , _asBC     = bridgeConfig
