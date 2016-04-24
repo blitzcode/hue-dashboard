@@ -7,7 +7,7 @@ An application providing a web based dashboard for monitoring and controlling [P
 
 Implemented in Haskell, we're talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
 
-The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tablet. Probably best deployed on something like a Raspberry Pi. Work-in-progress.
+The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. Lights can be switched on and off. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tablet. Probably best deployed on something like a Raspberry Pi. Work-in-progress.
 
 Accessing the web interface from an iPhone:
 
@@ -25,17 +25,17 @@ Also see [this project on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#
 
 # Build & Setup
 
-This project uses `stack`, so build with
+This project uses [stack](http://docs.haskellstack.org/en/stable/README/), so build with
 
     stack build
 
 and run with
 
-    stack exec haskell-hue
+    stack exec hue-dashboard
 
 Like any Hue API application you'll have to authorize access to your bridge by pushlinking. The program will discover your bridge and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this configuration from the created `config.yaml`.
 
-After startup connect to `localhost:8001` to view the dashboard.
+After startup connect to `localhost:8001` to view the dashboard. Be advised that the dashboard might also be visible to others on the network.
 
 # Compatibility
 
