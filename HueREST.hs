@@ -55,7 +55,6 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
     response <- httpJSON request
     return (getResponseBody response :: a)
 
-
 -- Wrapper around bridgeRequest which traces errors and retries automatically
 bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                                             , MonadThrow m
@@ -73,7 +72,7 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                         -> String
                         -> m a
 bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
-    try (bridgeRequest MethodGET bridgeIP mbBody userID apiEndPoint) >>= \case
+    try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
         Left (e :: SomeException) -> do
             -- Network / IO / parsing error
             traceS TLError $ "bridgeRequest: Exception while contacting / processing '"
