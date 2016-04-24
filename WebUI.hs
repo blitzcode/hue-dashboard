@@ -10,6 +10,7 @@ import Text.Printf
 import Data.Monoid
 import Data.List
 import Data.Word
+import Data.Aeson
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
@@ -21,16 +22,16 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import System.FilePath
 
+import Util
 import Trace
 import HueJSON
+import HueREST
 import LightColor
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
--- TODO: No support for changing any light state
-
-webUIStart :: MonadIO m => TVar Lights -> LightUpdateTChan -> m ()
-webUIStart lights tchan = do
+webUIStart :: MonadIO m => TVar Lights -> LightUpdateTChan -> IPAddress -> String -> m ()
+webUIStart lights tchan bridgeIP userID = do
     -- Start server
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
@@ -41,10 +42,10 @@ webUIStart lights tchan = do
                       , jsStatic     = Just "static"
                       , jsCustomHTML = Just "dashboard.html"
                       }
-        $ setup lights tchan
+        $ setup lights tchan bridgeIP userID
 
-setup :: TVar Lights -> LightUpdateTChan -> Window -> UI ()
-setup lights' tchan' window = do
+setup :: TVar Lights -> LightUpdateTChan -> IPAddress -> String -> Window -> UI ()
+setup lights' tchan' bridgeIP userID window = do
     -- Duplicate broadcast channel
     tchan <- liftIO . atomically $ dupTChan tchan'
     -- Title
@@ -109,6 +110,36 @@ setup lights' tchan' window = do
                     ]
               )
           ]
+    -- Register click handlers for each light image to switch them on / off
+    --
+    -- TODO: Add UI and handlers for changing color and brightness
+    --
+    forM_ lights $ \(lightID, _) ->
+        getElementByIdSafe window (buildID lightID "image") >>= \case
+            Nothing    -> return ()
+            Just image ->
+                on UI.click image $ \_ -> do
+                    -- Query current light state to see if we need to turn it on or off
+                    curLights <- liftIO . atomically $ readTVar lights'
+                    case HM.lookup lightID curLights of
+                        Nothing    -> return ()
+                        Just light ->
+                            let s    = light ^. lgtState . lsOn
+                                body = HM.fromList[("on" :: String, if s then False else True)]
+                            in  -- Fire off a REST API call in another thread
+                                --
+                                -- http://www.developers.meethue.com/documentation/
+                                --     lights-api#16_set_light_state
+                                --
+                                void . liftIO . async $
+                                    -- Don't hang forever in this thread if
+                                    -- the REST call fails, just trace & give up
+                                    bridgeRequestTrace
+                                        MethodPUT
+                                        bridgeIP
+                                        (Just body)
+                                        userID
+                                        ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
     updateWorker <- liftIO $ async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $

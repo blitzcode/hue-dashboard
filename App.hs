@@ -79,7 +79,11 @@ mainLoop = do
 run :: AppState -> IO ()
 run as =
     -- Web UI
-    withAsync (webUIStart (as ^. asLights) (as ^. asUpdate)) $ \_ ->
+    withAsync (webUIStart (as ^. asLights)
+                          (as ^. asUpdate)
+                          (as ^. asPC . pcBridgeIP)
+                          (as ^. asPC . pcUserID)
+              ) $ \_ ->
         -- Application monad
         flip evalStateT as $
             mainLoop

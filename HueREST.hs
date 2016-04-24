@@ -4,6 +4,7 @@
 module HueREST ( BridgeRequestMethod(..)
                , noBody
                , bridgeRequest
+               , bridgeRequestTrace
                , bridgeRequestRetryTrace
                , BridgeError(..)
                , BridgeResponse(..)
@@ -55,6 +56,32 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
     response <- httpJSON request
     return (getResponseBody response :: a)
 
+-- Wrapper around bridgeRequest which traces errors and doesn't return anything, fire and forget
+bridgeRequestTrace :: forall m body. ( MonadIO m
+                                     , MonadThrow m
+                                     , MonadCatch m
+                                     , ToJSON body
+                                     )
+                        => BridgeRequestMethod
+                        -> IPAddress
+                        -> Maybe body
+                        -> String
+                        -> String
+                        -> m ()
+bridgeRequestTrace method bridgeIP mbBody userID apiEndPoint = do
+    try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
+        Left (e :: SomeException) -> do
+            -- Network / IO / parsing error
+            traceS TLError $ "bridgeRequestTrace: Exception while contacting / processing '"
+                             <> apiEndPoint <> "' : " <> show e
+        Right err@(ResponseError { .. }) -> do
+            -- Got an error from the bridge
+            traceS TLError $ "bridgeRequestTrace: Error response from '"
+                             <> apiEndPoint <> "' : " <> show err
+        Right (ResponseOK (_ :: Value)) ->
+            -- Success
+            return ()
+
 -- Wrapper around bridgeRequest which traces errors and retries automatically
 bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                                             , MonadThrow m
@@ -75,13 +102,13 @@ bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
     try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
         Left (e :: SomeException) -> do
             -- Network / IO / parsing error
-            traceS TLError $ "bridgeRequest: Exception while contacting / processing '"
+            traceS TLError $ "bridgeRequestRetryTrace: Exception while contacting / processing '"
                              <> apiEndPoint <> "' (retry in 5s): " <> show e
             waitNSec 5
             retry
         Right err@(ResponseError { .. }) -> do
             -- Got an error from the bridge
-            traceS TLError $ "bridgeRequest: Error response from '"
+            traceS TLError $ "bridgeRequestRetryTrace: Error response from '"
                              <> apiEndPoint <> "' (retry in 5s): " <> show err
             waitNSec 5
             -- TODO: It makes sense to retry if we have a connection error, but in case of
