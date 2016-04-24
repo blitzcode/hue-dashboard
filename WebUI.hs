@@ -16,7 +16,6 @@ import Control.Concurrent.STM
 import Control.Concurrent.Async
 import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
-import Control.Exception
 import Control.Monad.IO.Class
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -31,9 +30,7 @@ import LightColor
 -- TODO: No support for changing any light state
 
 webUIStart :: MonadIO m => TVar Lights -> LightUpdateTChan -> m ()
-webUIStart lights tchan' = do
-    -- Duplicate broadcast channel
-    tchan <- liftIO . atomically $ dupTChan tchan'
+webUIStart lights tchan = do
     -- Start server
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
@@ -47,7 +44,9 @@ webUIStart lights tchan' = do
         $ setup lights tchan
 
 setup :: TVar Lights -> LightUpdateTChan -> Window -> UI ()
-setup lights' tchan window = do
+setup lights' tchan' window = do
+    -- Duplicate broadcast channel
+    tchan <- liftIO . atomically $ dupTChan tchan'
     -- Title
     void $ return window # set title "Hue Dashboard"
 
@@ -127,7 +126,11 @@ data LightUpdate = LU_OnOff      !Bool
 -- Update DOM elements with light update messages received
 --
 -- TODO: We don't handle addition / removal of lights or changes in properties like the
---       name. Need to refresh page for those to show up. Maybe that's OK?
+--       name. Need to refresh page for those to show up
+--
+-- TODO: Because getElementById just freezes when we pass it an non-existent element, our
+--       entire worker thread will just freeze when we receive an update for a new light,
+--       or one with a changed ID etc., very bad
 --
 lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
 lightUpdateWorker window tchan = runUI window $ loop
@@ -167,7 +170,12 @@ buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 -- tracking down the reason why the page couldn't be generated. UI is unfortunately also
 -- not MonadCatch, so we have to make due with runUI for the call
 getElementByIdSafe :: Window -> String -> UI (Maybe Element)
-getElementByIdSafe window elementID =
+getElementByIdSafe = getElementById
+--
+-- TODO: Disabled for now, the code below unfortunately does not work. This is very bad
+--       as a single typo or just a new light etc. will freeze our entire handler
+{-
+getElementByIdSafe window elementID = do
     (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
         Left (e :: SomeException) -> do
             traceS TLWarn $ printf "getElementById for '%s' failed: %s" elementID (show e)
@@ -177,6 +185,7 @@ getElementByIdSafe window elementID =
             return Nothing
         Right (Just e) ->
             return $ Just e
+-}
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext

@@ -67,7 +67,7 @@ fetchBridgeState = do
     -- Store new light state
     liftIO . atomically . writeTVar ltvar $ newLights
 
--- Application main loop
+-- Application main loop, poll and update every second
 mainLoop :: AppIO ()
 mainLoop = do
     fetchBridgeState
