@@ -7,6 +7,7 @@ module WebUI ( webUIStart
              ) where
 
 import Text.Printf
+import Data.Word
 import Data.Monoid
 import Data.List
 import qualified Data.Function (on)
@@ -103,7 +104,6 @@ setup AppEnv { .. } window = do
                 lgtOn <- anyLightsOn _aeLights
                 let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
                 -- Fire off a REST API call in another thread
-                --
                 -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
                 void . liftIO . async $
                     -- Don't hang forever in this thread if
@@ -144,7 +144,9 @@ setup AppEnv { .. } window = do
                   ]
                 ]
               , UI.div #. "small text-center" #+ [string "Brightness"]
-              , UI.div #. "progress" #+
+              , ( UI.div #. "progress"
+                          & set UI.id_ (buildID lightID "brightness-container")
+                ) #+
                 [ ( UI.div #. "progress-bar progress-bar-info"
                             & set style [("width", brightPercent)]
                             & set UI.id_ (buildID lightID "brightness-bar")
@@ -156,11 +158,12 @@ setup AppEnv { .. } window = do
                 ]
               ]
             ]
-    -- Register click handlers for each light image to switch them on / off
+    -- Register click handlers for the on / off and brightness switches
     --
-    -- TODO: Add UI and handlers for changing color and brightness
+    -- TODO: Add UI and handlers for changing color
     --
-    forM_ lights $ \(lightID, _) ->
+    forM_ lights $ \(lightID, _) -> do
+        -- Turn on / off by clicking the light symbol
         getElementByIdSafe window (buildID lightID "image") >>= \case
             Nothing    -> return ()
             Just image ->
@@ -168,15 +171,46 @@ setup AppEnv { .. } window = do
                     -- Query current light state to see if we need to turn it on or off
                     curLights <- liftIO . atomically $ readTVar _aeLights
                     case HM.lookup lightID curLights of
-                        Nothing    -> return ()
+                        Nothing    -> return () -- TODO
                         Just light ->
                             let s    = light ^. lgtState . lsOn
                                 body = HM.fromList[("on" :: String, if s then False else True)]
                             in  -- Fire off a REST API call in another thread
-                                --
                                 -- http://www.developers.meethue.com/documentation/
                                 --     lights-api#16_set_light_state
-                                --
+                                void . liftIO . async $
+                                    -- Don't hang forever in this thread if
+                                    -- the REST call fails, just trace & give up
+                                    bridgeRequestTrace
+                                        MethodPUT
+                                        (_aePC ^. pcBridgeIP)
+                                        (Just body)
+                                        (_aePC ^. pcUserID)
+                                        ("lights" </> lightID </> "state")
+        -- Change brightness bright clicking the left / right side of the brightness bar
+        getElementByIdSafe window (buildID lightID "brightness-container") >>= \case
+            Nothing    -> return ()
+            Just image ->
+                on UI.mousedown image $ \(mx, _) -> do
+                    -- Query current light state so we know what the relative brightness is
+                    --
+                    -- TODO: This is very slow because we can only increment / decrement
+                    --       again after we get the new brightness value from the bridge,
+                    --       set directly
+                    curLights <- liftIO . atomically $ readTVar _aeLights
+                    case HM.lookup lightID curLights of
+                        Nothing    -> return () -- TODO
+                        Just light ->
+                            let brightness    = fromIntegral $
+                                                    light ^. lgtState . lsBrightness . non 0 :: Int
+                                change        = -- TODO: Use better curve for more ergonomic adjust.
+                                                if mx < 50 then (-20) else 20
+                                newBrightness = fromIntegral .
+                                                    max 0 . min 255 $ brightness + change :: Word8
+                                body          = HM.fromList[("bri" :: String, newBrightness)]
+                             in -- Fire off a REST API call in another thread
+                                -- http://www.developers.meethue.com/documentation/
+                                --     lights-api#16_set_light_state
                                 void . liftIO . async $
                                     -- Don't hang forever in this thread if
                                     -- the REST call fails, just trace & give up
