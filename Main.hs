@@ -36,12 +36,12 @@ main =
         bridgeConfig <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
         traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
         -- TVar for sharing light state across threads
-        _asLights <- atomically . newTVar $ HM.empty
+        _aeLights <- atomically . newTVar $ HM.empty
         -- TChan for propagating light updates
-        _asUpdate <- atomically $ newBroadcastTChan
+        _aeBroadcast <- atomically $ newBroadcastTChan
         -- Launch application
-        run AppState { _asPC     = newCfg
-                     , _asBC     = bridgeConfig
-                     , ..
-                     }
+        run AppEnv { _aePC     = newCfg
+                   , _aeBC     = bridgeConfig
+                   , ..
+                   }
 

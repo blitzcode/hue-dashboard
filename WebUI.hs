@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables, RecordWildCards #-}
 
 module WebUI ( webUIStart
              , LightUpdate(..)
@@ -9,7 +9,6 @@ module WebUI ( webUIStart
 import Text.Printf
 import Data.Monoid
 import Data.List
-import Data.Word
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
@@ -21,16 +20,17 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import System.FilePath
 
-import Util
 import Trace
 import HueJSON
 import HueREST
 import LightColor
+import AppDefs
+import PersistConfig
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
-webUIStart :: MonadIO m => TVar Lights -> LightUpdateTChan -> IPAddress -> String -> m ()
-webUIStart lights tchan bridgeIP userID = do
+webUIStart :: MonadIO m => AppEnv -> m ()
+webUIStart ae = do
     -- Start server
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
@@ -41,12 +41,12 @@ webUIStart lights tchan bridgeIP userID = do
                       , jsStatic     = Just "static"
                       , jsCustomHTML = Just "dashboard.html"
                       }
-        $ setup lights tchan bridgeIP userID
+        $ setup ae
 
-setup :: TVar Lights -> LightUpdateTChan -> IPAddress -> String -> Window -> UI ()
-setup lights' tchan' bridgeIP userID window = do
+setup :: AppEnv -> Window -> UI ()
+setup AppEnv { .. } window = do
     -- Duplicate broadcast channel
-    tchan <- liftIO . atomically $ dupTChan tchan'
+    tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Title
     void $ return window # set title "Hue Dashboard"
 
@@ -61,7 +61,7 @@ setup lights' tchan' bridgeIP userID window = do
     -- Lights, display sorted by name
     lights <- liftIO . atomically
                    $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
-                  <$> readTVar lights'
+                  <$> readTVar _aeLights
     -- Create all light tiles
     --
     -- TODO: This of course duplicates some code from the update routines, maybe just
@@ -117,7 +117,7 @@ setup lights' tchan' bridgeIP userID window = do
             Just image ->
                 on UI.click image $ \_ -> do
                     -- Query current light state to see if we need to turn it on or off
-                    curLights <- liftIO . atomically $ readTVar lights'
+                    curLights <- liftIO . atomically $ readTVar _aeLights
                     case HM.lookup lightID curLights of
                         Nothing    -> return ()
                         Just light ->
@@ -133,23 +133,14 @@ setup lights' tchan' bridgeIP userID window = do
                                     -- the REST call fails, just trace & give up
                                     bridgeRequestTrace
                                         MethodPUT
-                                        bridgeIP
+                                        (_aePC ^. pcBridgeIP)
                                         (Just body)
-                                        userID
+                                        (_aePC ^. pcUserID)
                                         ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
     updateWorker <- liftIO $ async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
-
--- Channel with light ID and update pair
-type LightUpdateTChan = TChan (String, LightUpdate)
-
--- Different updates to the displayed light state
-data LightUpdate = LU_OnOff      !Bool
-                 | LU_Brightness !Word8
-                 | LU_Color      !(Float, Float, Float) -- RGB
-                   deriving Show
 
 -- Update DOM elements with light update messages received
 --
@@ -188,8 +179,8 @@ lightUpdateWorker window tchan = runUI window $ loop
                         Nothing -> return ()
               loop
 
--- Build a string for the id field in a DOM object. Do this in one place as we need to
--- locate them later when we want to update
+-- Build a string for the id field in a light specific DOM object. Do this in one
+-- place as we need to locate them later when we want to update
 buildID :: String -> String -> String
 buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 

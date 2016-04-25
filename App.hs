@@ -11,7 +11,7 @@ module App ( run
 import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad
-import Control.Monad.State
+import Control.Monad.Reader
 import Control.Concurrent.STM
 import Control.Concurrent.Async
 import Text.Printf
@@ -27,7 +27,7 @@ import LightColor
 _traceBridgeState :: AppIO ()
 _traceBridgeState = do
     -- Debug print light information
-    lights <- HM.elems <$> (use asLights >>= liftIO . atomically . readTVar)
+    lights <- HM.elems <$> (view aeLights >>= liftIO . atomically . readTVar)
     liftIO . forM_ lights $ \light -> do
         putStr $ printf "%-25s | %-20s | %-22s | %-10s | %-4.1f%% | %-3s\n"
                         (light ^. lgtName)
@@ -48,13 +48,13 @@ _traceBridgeState = do
 fetchBridgeState :: AppIO ()
 fetchBridgeState = do
   -- Bridge
-  bridgeIP <- use $ asPC . pcBridgeIP
-  userID   <- use $ asPC . pcUserID
+  bridgeIP <- view $ aePC . pcBridgeIP
+  userID   <- view $ aePC . pcUserID
   -- Request all light information
   (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
   -- Do all updating as a single transaction
-  tchan <- use asUpdate
-  ltvar <- use asLights
+  tchan <- view aeBroadcast
+  ltvar <- view aeLights
   liftIO . atomically $ do
     -- Fetch old state, store new one
     oldLights <- readTVar ltvar
@@ -82,15 +82,11 @@ mainLoop = do
     mainLoop
 
 -- Start up application
-run :: AppState -> IO ()
-run as =
+run :: AppEnv -> IO ()
+run ae =
     -- Web UI
-    withAsync (webUIStart (as ^. asLights)
-                          (as ^. asUpdate)
-                          (as ^. asPC . pcBridgeIP)
-                          (as ^. asPC . pcUserID)
-              ) $ \_ ->
+    withAsync (webUIStart ae) $ \_ ->
         -- Application monad
-        flip evalStateT as $
+        flip runReaderT ae $
             mainLoop
 
