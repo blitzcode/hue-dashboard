@@ -156,7 +156,7 @@ data LightUpdate = LU_OnOff      !Bool
 -- TODO: We don't handle addition / removal of lights or changes in properties like the
 --       name. Need to refresh page for those to show up
 --
--- TODO: Because getElementById just freezes when we pass it an non-existent element, our
+-- TODO: Because getElementById just freezes when we pass it a non-existent element, our
 --       entire worker thread will just freeze when we receive an update for a new light,
 --       or one with a changed ID etc., very bad
 --

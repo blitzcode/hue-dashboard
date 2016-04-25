@@ -108,7 +108,7 @@ createUser bridgeIP userID =
             --
             host <- liftIO getHostName
             let body = -- We use our application name and the host name, as recommended
-                       HM.fromList ([("devicetype", "hue-dashbaord#" <> host)] :: [(String, String)])
+                       HM.fromList ([("devicetype", "hue-dashboard#" <> host)] :: [(String, String)])
             traceS TLInfo $ "Creating new user ID: " <> show body
             try (bridgeRequest MethodPOST bridgeIP (Just body) "" "") >>= \case
                 Left (e :: SomeException) -> do
