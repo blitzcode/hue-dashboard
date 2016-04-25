@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, RecordWildCards #-}
 
 module WebUI ( webUIStart
              , LightUpdate(..)
@@ -10,6 +10,7 @@ import Text.Printf
 import Data.Word
 import Data.Monoid
 import Data.List
+import Data.Maybe
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
@@ -66,9 +67,7 @@ setup AppEnv { .. } window = do
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
 
     -- Root element where we insert all tiles
-    root <- getElementByIdSafe window "lights" >>= \case
-        Nothing   -> liftIO . throwIO . userError $ "Root 'lights' element missing"
-        Just root -> return root
+    root <- getElementByIdSafe window "lights"
     -- Lights, display sorted by name
     lights <- liftIO . atomically
                    $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
@@ -96,24 +95,22 @@ setup AppEnv { .. } window = do
           ]
         ]
     -- Register click handler for turning all lights on / off
-    getElementByIdSafe window (buildID "all-lights" "image") >>= \case
-        Nothing    -> return ()
-        Just image ->
-            on UI.click image $ \_ -> do
-                -- Query current light state to see if we need to turn everything on or off
-                lgtOn <- anyLightsOn _aeLights
-                let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
-                -- Fire off a REST API call in another thread
-                -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
-                void . liftIO . async $
-                    -- Don't hang forever in this thread if
-                    -- the REST call fails, just trace & give up
-                    bridgeRequestTrace
-                        MethodPUT
-                        (_aePC ^. pcBridgeIP)
-                        (Just body)
-                        (_aePC ^. pcUserID)
-                        ("groups" </> "0" </> "action") -- Special group 0, all lights
+    getElementByIdSafe window (buildID "all-lights" "image") >>= \image ->
+        on UI.click image $ \_ -> do
+            -- Query current light state to see if we need to turn everything on or off
+            lgtOn <- anyLightsOn _aeLights
+            let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
+            -- Fire off a REST API call in another thread
+            -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
+            void . liftIO . async $
+                -- Don't hang forever in this thread if
+                -- the REST call fails, just trace & give up
+                bridgeRequestTrace
+                    MethodPUT
+                    (_aePC ^. pcBridgeIP)
+                    (Just body)
+                    (_aePC ^. pcUserID)
+                    ("groups" </> "0" </> "action") -- Special group 0, all lights
     -- Create all light tiles
     --
     -- TODO: This of course duplicates some code from the update routines, maybe just
@@ -158,68 +155,58 @@ setup AppEnv { .. } window = do
                 ]
               ]
             ]
-    -- Register click handlers for the on / off and brightness switches
+    -- Register click handlers for the on / off and brightness controls. We make a REST
+    -- API call in another thread to change the state on the bridge. The call is fire &
+    -- forget, we don't retry in case of an error
+    --
+    -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
     --
     -- TODO: Add UI and handlers for changing color
     --
     forM_ lights $ \(lightID, _) -> do
         -- Turn on / off by clicking the light symbol
-        getElementByIdSafe window (buildID lightID "image") >>= \case
-            Nothing    -> return ()
-            Just image ->
-                on UI.click image $ \_ -> do
-                    -- Query current light state to see if we need to turn it on or off
-                    curLights <- liftIO . atomically $ readTVar _aeLights
-                    case HM.lookup lightID curLights of
-                        Nothing    -> return () -- TODO
-                        Just light ->
-                            let s    = light ^. lgtState . lsOn
-                                body = HM.fromList[("on" :: String, if s then False else True)]
-                            in  -- Fire off a REST API call in another thread
-                                -- http://www.developers.meethue.com/documentation/
-                                --     lights-api#16_set_light_state
-                                void . liftIO . async $
-                                    -- Don't hang forever in this thread if
-                                    -- the REST call fails, just trace & give up
-                                    bridgeRequestTrace
-                                        MethodPUT
-                                        (_aePC ^. pcBridgeIP)
-                                        (Just body)
-                                        (_aePC ^. pcUserID)
-                                        ("lights" </> lightID </> "state")
+        getElementByIdSafe window (buildID lightID "image") >>= \image ->
+            on UI.click image $ \_ -> do
+                -- Query current light state to see if we need to turn it on or off
+                curLights <- liftIO . atomically $ readTVar _aeLights
+                case HM.lookup lightID curLights of
+                    Nothing    -> return ()
+                    Just light ->
+                        -- Construct and perform REST API call
+                        let s    = light ^. lgtState . lsOn
+                            body = HM.fromList[("on" :: String, if s then False else True)]
+                        in  void . liftIO . async $
+                                bridgeRequestTrace
+                                    MethodPUT
+                                    (_aePC ^. pcBridgeIP)
+                                    (Just body)
+                                    (_aePC ^. pcUserID)
+                                    ("lights" </> lightID </> "state")
         -- Change brightness bright clicking the left / right side of the brightness bar
-        getElementByIdSafe window (buildID lightID "brightness-container") >>= \case
-            Nothing    -> return ()
-            Just image ->
-                on UI.mousedown image $ \(mx, _) -> do
-                    -- Query current light state so we know what the relative brightness is
-                    --
-                    -- TODO: This is very slow because we can only increment / decrement
-                    --       again after we get the new brightness value from the bridge,
-                    --       set directly
-                    curLights <- liftIO . atomically $ readTVar _aeLights
-                    case HM.lookup lightID curLights of
-                        Nothing    -> return () -- TODO
-                        Just light ->
-                            let brightness    = fromIntegral $
-                                                    light ^. lgtState . lsBrightness . non 0 :: Int
-                                change        = -- TODO: Use better curve for more ergonomic adjust.
-                                                if mx < 50 then (-20) else 20
-                                newBrightness = fromIntegral .
-                                                    max 0 . min 255 $ brightness + change :: Word8
-                                body          = HM.fromList[("bri" :: String, newBrightness)]
-                             in -- Fire off a REST API call in another thread
-                                -- http://www.developers.meethue.com/documentation/
-                                --     lights-api#16_set_light_state
-                                void . liftIO . async $
-                                    -- Don't hang forever in this thread if
-                                    -- the REST call fails, just trace & give up
-                                    bridgeRequestTrace
-                                        MethodPUT
-                                        (_aePC ^. pcBridgeIP)
-                                        (Just body)
-                                        (_aePC ^. pcUserID)
-                                        ("lights" </> lightID </> "state")
+        getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
+            on UI.mousedown image $ \(mx, _) -> do
+                -- Query current light state so we know what the relative brightness is
+                curLights <- liftIO . atomically $ readTVar _aeLights
+                case HM.lookup lightID curLights of
+                    Nothing    -> return ()
+                    Just light ->
+                        -- Construct and perform REST API call
+                        let brightness    = fromIntegral $
+                                                light ^. lgtState . lsBrightness . non 0 :: Int
+                            change        = -- Click on left part to decrement, right part to
+                                            -- increment. Same step size as Hue dimmer switch
+                                            if mx < 50 then (-30) else 30
+                            newBrightness = fromIntegral .
+                                                max 0 . min 255 $ brightness + change :: Word8
+                            body          = HM.fromList[("bri" :: String, newBrightness)]
+                         in do void . liftIO . async $
+                                   bridgeRequestTrace
+                                       MethodPUT
+                                       (_aePC ^. pcBridgeIP)
+                                       (Just body)
+                                       (_aePC ^. pcUserID)
+                                       ("lights" </> lightID </> "state")
+                               --atomically $ writeTChan
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
@@ -247,38 +234,28 @@ lightUpdateWorker window tchan = runUI window $ loop
         \(lightID, update) -> case update of
           -- Light turned on / off
           LU_OnOff s ->
-            getElementByIdSafe window (buildID lightID "tile") >>= \case
-              Just e  ->
+            getElementByIdSafe window (buildID lightID "tile") >>= \e ->
                 void $ return e & set style [if s then enabledOpacity else disabledOpacity]
-              Nothing -> return ()
           -- All lights off, grey out 'All Lights' tile
           LU_LastOff ->
-            getElementByIdSafe window (buildID "all-lights" "tile") >>= \case
-              Just e  -> void $ return e & set style [disabledOpacity]
-              Nothing -> return ()
+            getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->
+              void $ return e & set style [disabledOpacity]
           -- At least one light on, activate 'All Lights' tile
           LU_FirstOn ->
-            getElementByIdSafe window (buildID "all-lights" "tile") >>= \case
-              Just e  -> void $ return e & set style [enabledOpacity]
-              Nothing -> return ()
+            getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->
+              void $ return e & set style [enabledOpacity]
           -- Brightness change
           LU_Brightness brightness -> do
             let brightPercent = printf "%.0f%%"
                                        (fromIntegral brightness * 100 / 255 :: Float)
-            getElementByIdSafe window (buildID lightID "brightness-bar") >>= \case
-              Just e  ->
-                void $ return e & set style [("width", brightPercent)]
-              Nothing -> return ()
-            getElementByIdSafe window (buildID lightID "brightness-text") >>= \case
-              Just e  ->
-                void $ return e & set UI.text brightPercent
-              Nothing -> return ()
+            getElementByIdSafe window (buildID lightID "brightness-bar") >>= \e ->
+              void $ return e & set style [("width", brightPercent)]
+            getElementByIdSafe window (buildID lightID "brightness-text") >>= \e ->
+              void $ return e & set UI.text brightPercent
           -- Color change
           LU_Color rgb ->
-            getElementByIdSafe window (buildID lightID "image") >>= \case
-              Just e  ->
-                void $ return e & set style [("background", htmlColorFromRGB rgb)]
-              Nothing -> return ()
+            getElementByIdSafe window (buildID lightID "image") >>= \e ->
+              void $ return e & set style [("background", htmlColorFromRGB rgb)]
       loop
 
 -- Build a string for the id field in a light specific DOM object. Do this in one
@@ -286,27 +263,14 @@ lightUpdateWorker window tchan = runUI window $ loop
 buildID :: String -> String -> String
 buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 
--- The getElementById function return a Maybe, but actually just throws an exception if
--- the element is not found. The exception is unfortunately completely unhelpful in
--- tracking down the reason why the page couldn't be generated. UI is unfortunately also
--- not MonadCatch, so we have to make due with runUI for the call
-getElementByIdSafe :: Window -> String -> UI (Maybe Element)
-getElementByIdSafe = getElementById
---
--- TODO: Disabled for now, the code below unfortunately does not work. This is very bad
---       as a single typo or just a new light etc. will freeze our entire handler
-{-
+-- The getElementById function returns a Maybe, but actually just throws an exception if
+-- the element is not found. The exception is unfortunately a JS exception on the client,
+-- and our code just freezes / aborts without any helpful reason why the page couldn't be
+-- generated. Until this is fixed in threepenny, we can only add support for tracing
+getElementByIdSafe :: Window -> String -> UI Element
 getElementByIdSafe window elementID = do
-    (liftIO $ try (runUI window $ getElementById window elementID)) >>= \case
-        Left (e :: SomeException) -> do
-            traceS TLWarn $ printf "getElementById for '%s' failed: %s" elementID (show e)
-            return Nothing
-        Right Nothing -> do
-            traceS TLWarn $ printf "getElementById for '%s' failed" elementID
-            return Nothing
-        Right (Just e) ->
-            return $ Just e
--}
+    -- traceS TLInfo $ "getElementByIdSafe: " <> elementID
+    fromJust <$> getElementById window elementID
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext
