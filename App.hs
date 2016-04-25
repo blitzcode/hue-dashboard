@@ -1,5 +1,9 @@
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE   OverloadedStrings
+             , RecordWildCards
+             , LambdaCase
+             , ScopedTypeVariables
+             , TupleSections #-}
 
 module App ( run
            ) where
@@ -43,29 +47,31 @@ _traceBridgeState = do
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
 fetchBridgeState :: AppIO ()
 fetchBridgeState = do
-    -- Bridge
-    bridgeIP <- use $ asPC . pcBridgeIP
-    userID   <- use $ asPC . pcUserID
-    -- Request all light information
-    (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
-    -- Fetch old state, store new one (TODO: Do everything after this line as one transaction?)
-    ltvar <- use asLights
-    oldLights <- liftIO . atomically $ readTVar ltvar
-    liftIO . atomically . writeTVar ltvar $ newLights
+  -- Bridge
+  bridgeIP <- use $ asPC . pcBridgeIP
+  userID   <- use $ asPC . pcUserID
+  -- Request all light information
+  (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
+  -- Do all updating as a single transaction
+  tchan <- use asUpdate
+  ltvar <- use asLights
+  liftIO . atomically $ do
+    -- Fetch old state, store new one
+    oldLights <- readTVar ltvar
+    writeTVar ltvar $ newLights
     -- Go over all the lights
-    tchan <- use asUpdate
     forM_ (HM.toList newLights) $ \(lightID, newLight) -> do
       case HM.lookup lightID oldLights of
         Nothing       -> return () -- TODO: New light, we don't do anything here yet
         Just oldLight -> do
           -- Compare state and broadcast changes
-          let writeChannel = liftIO . atomically . writeTChan tchan
+          let writeChannel = writeTChan tchan . (lightID, )
           when (oldLight ^. lgtState . lsOn /= newLight ^. lgtState . lsOn) $
-              writeChannel (lightID, LU_OnOff $ newLight ^. lgtState . lsOn)
+              writeChannel . LU_OnOff $ newLight ^. lgtState . lsOn
           when (oldLight ^. lgtState . lsBrightness /= newLight ^. lgtState . lsBrightness) $
-              writeChannel (lightID, LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255)
+              writeChannel . LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255
           when (colorFromLight oldLight /= colorFromLight newLight) $
-              writeChannel (lightID, LU_Color $ colorFromLight newLight)
+              writeChannel . LU_Color $ colorFromLight newLight
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()
