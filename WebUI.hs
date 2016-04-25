@@ -30,6 +30,11 @@ import PersistConfig
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
+-- Opacities used for enabled and disabled elements
+enabledOpacity, disabledOpacity :: (String, String)
+enabledOpacity  = ("opacity", "1.0")
+disabledOpacity = ("opacity", "0.3")
+
 webUIStart :: MonadIO m => AppEnv -> m ()
 webUIStart ae = do
     -- Start server
@@ -68,40 +73,61 @@ setup AppEnv { .. } window = do
                    $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
                   <$> readTVar _aeLights
     -- 'All Lights' tile
-    void $ element root #+
-      [ ( UI.div #. "thumbnail" & set style [("opacity", "1.0")]
-                                & set UI.id_ (buildID "all-lights" "tile")
-        ) #+
-        [ UI.div #. "light-caption small" #+ [string "All Lights"]
-        , UI.img #. "img-rounded" & set UI.src "static/svg/bridge_v2.svg"
-                                  & set UI.id_ (buildID "all-lights" "image")
-        , UI.div #. "text-center" #+
-          [ UI.h6 #+
-            [ UI.small #+ intersperse UI.br
-              [ string "Hue Bridge"
-              , string $ "Model " <> (_aeBC ^. bcModelID)
-              , string $ "IP "    <> (_aePC ^. pcBridgeIP)
-              , string $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
-              , string $ (show $ length lights) <> " Lights Connected"
+    anyLightsOn _aeLights >>= \lgtOn ->
+      void $ element root #+
+        [ ( UI.div #. "thumbnail" & set style [if lgtOn then enabledOpacity else disabledOpacity]
+                                  & set UI.id_ (buildID "all-lights" "tile")
+          ) #+
+          [ UI.div #. "light-caption small" #+ [string "All Lights"]
+          , UI.img #. "img-rounded" & set UI.src "static/svg/bridge_v2.svg"
+                                    & set UI.id_ (buildID "all-lights" "image")
+          , UI.div #. "text-center" #+
+            [ UI.h6 #+
+              [ UI.small #+ intersperse UI.br
+                [ string "Hue Bridge"
+                , string $ "Model " <> (_aeBC ^. bcModelID)
+                , string $ "IP "    <> (_aePC ^. pcBridgeIP)
+                , string $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
+                , string $ (show $ length lights) <> " Lights Connected"
+                ]
               ]
             ]
           ]
         ]
-      ]
+    -- Register click handler for turning all lights on / off
+    getElementByIdSafe window (buildID "all-lights" "image") >>= \case
+        Nothing    -> return ()
+        Just image ->
+            on UI.click image $ \_ -> do
+                -- Query current light state to see if we need to turn everything on or off
+                lgtOn <- anyLightsOn _aeLights
+                let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
+                -- Fire off a REST API call in another thread
+                --
+                -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
+                void . liftIO . async $
+                    -- Don't hang forever in this thread if
+                    -- the REST call fails, just trace & give up
+                    bridgeRequestTrace
+                        MethodPUT
+                        (_aePC ^. pcBridgeIP)
+                        (Just body)
+                        (_aePC ^. pcUserID)
+                        ("groups" </> "0" </> "action") -- Special group 0, all lights
     -- Create all light tiles
     --
     -- TODO: This of course duplicates some code from the update routines, maybe just
     --       build the skeleton here and let the updating set all actual state?
     --
     forM_ lights $ \(lightID, light) ->
-      let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.3"
+      let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
           brightPercent = printf "%.0f%%"
                             ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                               * 100 / 255 :: Float
                             )
           colorStr      = htmlColorFromRGB . colorFromLight $ light
       in  void $ element root #+
-            [ ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+            [ ( UI.div #. "thumbnail" & set style [opacity]
                                       & set UI.id_ (buildID lightID "tile")
               ) #+
               [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
@@ -165,6 +191,11 @@ setup AppEnv { .. } window = do
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
 
+anyLightsOn :: MonadIO m => TVar Lights -> m Bool
+anyLightsOn lights' =
+    liftIO . atomically $ HM.toList <$> readTVar lights'
+        >>= return . any (^. _2 . lgtState . lsOn)
+
 -- Update DOM elements with light update messages received
 --
 -- TODO: We don't handle addition / removal of lights or changes in properties like the
@@ -177,30 +208,44 @@ setup AppEnv { .. } window = do
 lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
 lightUpdateWorker window tchan = runUI window $ loop
   where
-    loop = do (liftIO . atomically $ readTChan tchan) >>=
-                \(lightID, update) -> case update of
-                  LU_OnOff s ->
-                      getElementByIdSafe window (buildID lightID "tile") >>= \case
-                        Just e  ->
-                          void $ return e & set style [("opacity", if s then "1.0" else "0.25")]
-                        Nothing -> return ()
-                  LU_Brightness brightness -> do
-                      let brightPercent = printf "%.0f%%"
-                                                 (fromIntegral brightness * 100 / 255 :: Float)
-                      getElementByIdSafe window (buildID lightID "brightness-bar") >>= \case
-                        Just e  ->
-                          void $ return e & set style [("width", brightPercent)]
-                        Nothing -> return ()
-                      getElementByIdSafe window (buildID lightID "brightness-text") >>= \case
-                        Just e  ->
-                          void $ return e & set UI.text brightPercent
-                        Nothing -> return ()
-                  LU_Color rgb ->
-                      getElementByIdSafe window (buildID lightID "image") >>= \case
-                        Just e  ->
-                          void $ return e & set style [("background", htmlColorFromRGB rgb)]
-                        Nothing -> return ()
-              loop
+    loop = do
+      (liftIO . atomically $ readTChan tchan) >>=
+        \(lightID, update) -> case update of
+          -- Light turned on / off
+          LU_OnOff s ->
+            getElementByIdSafe window (buildID lightID "tile") >>= \case
+              Just e  ->
+                void $ return e & set style [if s then enabledOpacity else disabledOpacity]
+              Nothing -> return ()
+          -- All lights off, grey out 'All Lights' tile
+          LU_LastOff ->
+            getElementByIdSafe window (buildID "all-lights" "tile") >>= \case
+              Just e  -> void $ return e & set style [disabledOpacity]
+              Nothing -> return ()
+          -- At least one light on, activate 'All Lights' tile
+          LU_FirstOn ->
+            getElementByIdSafe window (buildID "all-lights" "tile") >>= \case
+              Just e  -> void $ return e & set style [enabledOpacity]
+              Nothing -> return ()
+          -- Brightness change
+          LU_Brightness brightness -> do
+            let brightPercent = printf "%.0f%%"
+                                       (fromIntegral brightness * 100 / 255 :: Float)
+            getElementByIdSafe window (buildID lightID "brightness-bar") >>= \case
+              Just e  ->
+                void $ return e & set style [("width", brightPercent)]
+              Nothing -> return ()
+            getElementByIdSafe window (buildID lightID "brightness-text") >>= \case
+              Just e  ->
+                void $ return e & set UI.text brightPercent
+              Nothing -> return ()
+          -- Color change
+          LU_Color rgb ->
+            getElementByIdSafe window (buildID lightID "image") >>= \case
+              Just e  ->
+                void $ return e & set style [("background", htmlColorFromRGB rgb)]
+              Nothing -> return ()
+      loop
 
 -- Build a string for the id field in a light specific DOM object. Do this in one
 -- place as we need to locate them later when we want to update

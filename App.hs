@@ -72,6 +72,12 @@ fetchBridgeState = do
               writeChannel . LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255
           when (colorFromLight oldLight /= colorFromLight newLight) $
               writeChannel . LU_Color $ colorFromLight newLight
+    -- Did we turn the last light off or the first light on?
+    let numLightsOn = length . filter (^. _2 . lgtState . lsOn) . HM.toList
+    when (numLightsOn oldLights > 0 && numLightsOn newLights == 0) $
+        writeTChan tchan ("all-lights", LU_LastOff)
+    when (numLightsOn oldLights == 0 && numLightsOn newLights > 0) $
+        writeTChan tchan ("all-lights", LU_FirstOn)
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()

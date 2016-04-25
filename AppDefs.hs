@@ -20,6 +20,8 @@ type LightUpdateTChan = TChan (String, LightUpdate)
 data LightUpdate = LU_OnOff      !Bool
                  | LU_Brightness !Word8
                  | LU_Color      !(Float, Float, Float) -- RGB
+                 | LU_LastOff
+                 | LU_FirstOn
                    deriving Show
 
 -- Application state
