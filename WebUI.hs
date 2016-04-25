@@ -7,7 +7,6 @@ module WebUI ( webUIStart
              ) where
 
 import Text.Printf
-import Data.Word
 import Data.Monoid
 import Data.List
 import Data.Maybe
@@ -19,7 +18,6 @@ import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Graphics.UI.Threepenny as UI
-import Control.Exception
 import Graphics.UI.Threepenny.Core
 import System.FilePath
 
@@ -147,11 +145,7 @@ setup AppEnv { .. } window = do
                 [ ( UI.div #. "progress-bar progress-bar-info"
                             & set style [("width", brightPercent)]
                             & set UI.id_ (buildID lightID "brightness-bar")
-                  ) #+
-                  [ UI.small #+
-                    [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
-                    ]
-                  ]
+                  )
                 ]
               ]
             ]
@@ -184,29 +178,18 @@ setup AppEnv { .. } window = do
                                     ("lights" </> lightID </> "state")
         -- Change brightness bright clicking the left / right side of the brightness bar
         getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
-            on UI.mousedown image $ \(mx, _) -> do
-                -- Query current light state so we know what the relative brightness is
-                curLights <- liftIO . atomically $ readTVar _aeLights
-                case HM.lookup lightID curLights of
-                    Nothing    -> return ()
-                    Just light ->
-                        -- Construct and perform REST API call
-                        let brightness    = fromIntegral $
-                                                light ^. lgtState . lsBrightness . non 0 :: Int
-                            change        = -- Click on left part to decrement, right part to
-                                            -- increment. Same step size as Hue dimmer switch
-                                            if mx < 50 then (-30) else 30
-                            newBrightness = fromIntegral .
-                                                max 0 . min 255 $ brightness + change :: Word8
-                            body          = HM.fromList[("bri" :: String, newBrightness)]
-                         in do void . liftIO . async $
-                                   bridgeRequestTrace
-                                       MethodPUT
-                                       (_aePC ^. pcBridgeIP)
-                                       (Just body)
-                                       (_aePC ^. pcUserID)
-                                       ("lights" </> lightID </> "state")
-                               --atomically $ writeTChan
+            on UI.mousedown image $ \(mx, _) ->
+                -- Construct and perform REST API call
+                let change = -- Click on left part to decrement, right part to increment
+                             if mx < 50 then (-25) else 25 :: Int
+                    body   = HM.fromList[("bri_inc" :: String, change)]
+                 in do void . liftIO . async $
+                           bridgeRequestTrace
+                               MethodPUT
+                               (_aePC ^. pcBridgeIP)
+                               (Just body)
+                               (_aePC ^. pcUserID)
+                               ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
@@ -246,12 +229,9 @@ lightUpdateWorker window tchan = runUI window $ loop
               void $ return e & set style [enabledOpacity]
           -- Brightness change
           LU_Brightness brightness -> do
-            let brightPercent = printf "%.0f%%"
-                                       (fromIntegral brightness * 100 / 255 :: Float)
+            let brightPercent = printf "%.0f%%" (fromIntegral brightness * 100 / 255 :: Float)
             getElementByIdSafe window (buildID lightID "brightness-bar") >>= \e ->
               void $ return e & set style [("width", brightPercent)]
-            getElementByIdSafe window (buildID lightID "brightness-text") >>= \e ->
-              void $ return e & set UI.text brightPercent
           -- Color change
           LU_Color rgb ->
             getElementByIdSafe window (buildID lightID "image") >>= \e ->
