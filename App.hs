@@ -48,10 +48,12 @@ fetchBridgeState = do
     userID   <- use $ asPC . pcUserID
     -- Request all light information
     (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
-    -- Go over all the lights
+    -- Fetch old state, store new one (TODO: Do everything after this line as one transaction?)
     ltvar <- use asLights
-    tchan <- use asUpdate
     oldLights <- liftIO . atomically $ readTVar ltvar
+    liftIO . atomically . writeTVar ltvar $ newLights
+    -- Go over all the lights
+    tchan <- use asUpdate
     forM_ (HM.toList newLights) $ \(lightID, newLight) -> do
       case HM.lookup lightID oldLights of
         Nothing       -> return () -- TODO: New light, we don't do anything here yet
@@ -64,8 +66,6 @@ fetchBridgeState = do
               writeChannel (lightID, LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255)
           when (colorFromLight oldLight /= colorFromLight newLight) $
               writeChannel (lightID, LU_Color $ colorFromLight newLight)
-    -- Store new light state
-    liftIO . atomically . writeTVar ltvar $ newLights
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()
