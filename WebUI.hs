@@ -17,6 +17,7 @@ import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
 import Control.Monad.IO.Class
 import qualified Graphics.UI.Threepenny as UI
+import Control.Exception
 import Graphics.UI.Threepenny.Core
 import System.FilePath
 
@@ -58,55 +59,77 @@ setup AppEnv { .. } window = do
     -- void $ getBody window #+
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
 
+    -- Root element where we insert all tiles
+    root <- getElementByIdSafe window "lights" >>= \case
+        Nothing   -> liftIO . throwIO . userError $ "Root 'lights' element missing"
+        Just root -> return root
     -- Lights, display sorted by name
     lights <- liftIO . atomically
                    $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
                   <$> readTVar _aeLights
+    -- 'All Lights' tile
+    void $ element root #+
+      [ ( UI.div #. "thumbnail" & set style [("opacity", "1.0")]
+                                & set UI.id_ (buildID "all-lights" "tile")
+        ) #+
+        [ UI.div #. "light-caption small" #+ [string "All Lights"]
+        , UI.img #. "img-rounded" & set UI.src "static/svg/bridge_v2.svg"
+                                  & set UI.id_ (buildID "all-lights" "image")
+        , UI.div #. "text-center" #+
+          [ UI.h6 #+
+            [ UI.small #+ intersperse UI.br
+              [ string "Hue Bridge"
+              , string $ "Model " <> (_aeBC ^. bcModelID)
+              , string $ "IP "    <> (_aePC ^. pcBridgeIP)
+              , string $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
+              , string $ (show $ length lights) <> " Lights Connected"
+              ]
+            ]
+          ]
+        ]
+      ]
     -- Create all light tiles
     --
     -- TODO: This of course duplicates some code from the update routines, maybe just
     --       build the skeleton here and let the updating set all actual state?
     --
-    getElementByIdSafe window "lights" >>= \case
-      Nothing   -> return ()
-      Just root ->
-          forM_ lights $ \(lightID, light) ->
-            let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.25"
-                brightPercent = printf "%.0f%%"
-                                  ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                                    * 100 / 255 :: Float
-                                  )
-                colorStr      = htmlColorFromRGB . colorFromLight $ light
-            in  void $ element root #+
-                  [ ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
-                                            & set UI.id_ (buildID lightID "tile")
-                    ) #+
-                    [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
-                    , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
-                                              & set UI.src (iconFromLM $ light ^. lgtModelID)
-                                              & set UI.id_ (buildID lightID "image")
-                    , UI.div #. "text-center" #+
-                      [ UI.h6 #+
-                        [ UI.small #+
-                          [ string $ (show $ light ^. lgtModelID)
-                          , UI.br
-                          , string $ (show $ light ^. lgtType)
-                          ]
-                        ]
-                      ]
-                    , UI.div #. "small text-center" #+ [string "Brightness"]
-                    , UI.div #. "progress" #+
-                      [ ( UI.div #. "progress-bar progress-bar-info"
-                                  & set style [("width", brightPercent)]
-                                  & set UI.id_ (buildID lightID "brightness-bar")
-                        ) #+
-                        [ UI.small #+
-                          [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
-                          ]
-                        ]
-                      ]
+    forM_ lights $ \(lightID, light) ->
+      let opacity       = if light ^. lgtState ^. lsOn then "1.0" else "0.3"
+          brightPercent = printf "%.0f%%"
+                            ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                              * 100 / 255 :: Float
+                            )
+          colorStr      = htmlColorFromRGB . colorFromLight $ light
+      in  void $ element root #+
+            [ ( UI.div #. "thumbnail" & set style [("opacity", opacity)]
+                                      & set UI.id_ (buildID lightID "tile")
+              ) #+
+              [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+              , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
+                                        & set UI.src (iconFromLM $ light ^. lgtModelID)
+                                        & set UI.id_ (buildID lightID "image")
+              , UI.div #. "text-center" #+
+                [ UI.h6 #+
+                  [ UI.small #+
+                    [ string $ (show $ light ^. lgtModelID)
+                    , UI.br
+                    , string $ (show $ light ^. lgtType)
                     ]
                   ]
+                ]
+              , UI.div #. "small text-center" #+ [string "Brightness"]
+              , UI.div #. "progress" #+
+                [ ( UI.div #. "progress-bar progress-bar-info"
+                            & set style [("width", brightPercent)]
+                            & set UI.id_ (buildID lightID "brightness-bar")
+                  ) #+
+                  [ UI.small #+
+                    [ string brightPercent & set UI.id_ (buildID lightID "brightness-text")
+                    ]
+                  ]
+                ]
+              ]
+            ]
     -- Register click handlers for each light image to switch them on / off
     --
     -- TODO: Add UI and handlers for changing color and brightness
@@ -138,7 +161,7 @@ setup AppEnv { .. } window = do
                                         (_aePC ^. pcUserID)
                                         ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
-    updateWorker <- liftIO $ async $ lightUpdateWorker window tchan
+    updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
 
