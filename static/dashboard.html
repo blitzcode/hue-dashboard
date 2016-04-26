@@ -23,7 +23,7 @@
     {
         float: left;
         width: 110px;
-        min-height: 234px;
+        min-height: 235px;
         margin: 0px 5px 5px 0px;
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
@@ -35,6 +35,12 @@
         padding-bottom: 5px;
         height: 7ex;
         overflow: hidden;
+    }
+    .light-display .light-caption-group-header
+    {
+        color: black;
+        background: #ddd;
+        border-radius: 0px 0px 6px 6px;
     }
     .light-display .img-rounded
     {
@@ -101,6 +107,26 @@
   <div style="margin-left: 10px; margin-right: 10px;" role="main">
     <div class="thumbnails light-display" id="lights">
       <!--
+      <div class="thumbnail" style="opacity: 1.0;">
+        <div class="light-caption small" style="">Group Switch<br/>Kinderzimmer</div>
+        <img class="img-rounded" style="background: white;" src="static/svg/hds.svg"/>
+        <div class="text-center">
+          <h6>
+            <small>
+               3 Lights
+              <br/>
+              (Grouped by Prefix)
+            </small>
+          </h6>
+        </div>
+        <div class="small text-center">Brightness</div>
+          <div class="progress-label-container">
+            <div class="glyphicon glyphicon-minus minus-label">
+            </div>
+            <div class="glyphicon glyphicon-plus plus-label">
+            </div>
+          </div>
+      </div>
       <div class="thumbnail" style="opacity: 1.0;">
         <div class="light-caption small">All Lights</div>
         <img class="img-rounded" src="static/svg/bridge_v2.svg"/>

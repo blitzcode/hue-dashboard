@@ -66,17 +66,20 @@ setup AppEnv { .. } window = do
 
     -- Root element where we insert all tiles
     root <- getElementByIdSafe window "lights"
-    -- Lights, display sorted by name
-    lights <- liftIO . atomically
-                   $ (sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList)
-                  <$> readTVar _aeLights
+    -- Read all lights and light groups, display sorted by name. Light IDs in the group are
+    -- already sorted by name
+    (lights, lightGroups) <- liftIO . atomically $
+        (,) <$> readTVar _aeLights
+            <*> ( (sortBy (compare `Data.Function.on` fst) . HM.toList)
+                  <$> readTVar _aeLightGroups
+                )
     -- 'All Lights' tile
     anyLightsOn _aeLights >>= \lgtOn ->
       void $ element root #+
         [ ( UI.div #. "thumbnail" & set style [if lgtOn then enabledOpacity else disabledOpacity]
                                   & set UI.id_ (buildID "all-lights" "tile")
           ) #+
-          [ UI.div #. "light-caption small" #+ [string "All Lights"]
+          [ UI.div #. "light-caption light-caption-group-header small" #+ [string "All Lights"]
           , UI.img #. "img-rounded" & set UI.src "static/svg/bridge_v2.svg"
                                     & set UI.id_ (buildID "all-lights" "image")
           , UI.div #. "text-center" #+
@@ -108,95 +111,131 @@ setup AppEnv { .. } window = do
                     (Just body)
                     (_aePC ^. pcUserID)
                     ("groups" </> "0" </> "action") -- Special group 0, all lights
-    -- Create all light tiles
-    forM_ lights $ \(lightID, light) -> do
-      -- Build HTML for tile
-      --
-      -- TODO: This of course duplicates some code from the update routines, maybe just
-      --       build the skeleton here and let the updating set all actual state?
-      let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
-          brightPercent = printf "%.0f%%"
-                            ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                              * 100 / 255 :: Float
-                            )
-          colorStr      = htmlColorFromRGB . colorFromLight $ light
+    -- Create tiles for all light groups
+    forM_ lightGroups $ \(groupName, groupLightIDs) -> do
+      -- Build group switch tile for current light group
+      let groupID = "group-" <> groupName
+          opacity = enabledOpacity
        in void $ element root #+
             [ ( UI.div #. "thumbnail" & set style [opacity]
-                                      & set UI.id_ (buildID lightID "tile")
+                                      & set UI.id_ (buildID groupID "tile")
               ) #+
-              [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
-              , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
-                                        & set UI.src (iconFromLM $ light ^. lgtModelID)
-                                        & set UI.id_ (buildID lightID "image")
+              [ UI.div #. "light-caption light-caption-group-header small" #+
+                [ string "Group Switch"
+                , UI.br
+                , string groupName
+                ]
+              , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
+                                        & set UI.id_ (buildID groupID "image")
               , UI.div #. "text-center" #+
                 [ UI.h6 #+
                   [ UI.small #+
-                    [ string $ (show $ light ^. lgtModelID)
+                    [ string $ ((show $ length groupLightIDs) <> " Light(s)")
                     , UI.br
-                    , string $ (show $ light ^. lgtType)
+                    , string "(Grouped by Prefix)"
                     ]
                   ]
                 ]
               , UI.div #. "small text-center" #+ [string "Brightness"]
-              , ( UI.div #. "progress"
-                          & set UI.id_ (buildID lightID "brightness-container")
-                ) #+
-                [ ( UI.div #. "progress-label-container") #+
-                  [ UI.div #. "glyphicon glyphicon-minus minus-label"
-                  , UI.div #. "glyphicon glyphicon-plus plus-label"
-                  , UI.div #. "percentage-label" #+
-                    [ UI.small #+
-                      [ string brightPercent & set UI.id_ (buildID lightID "brightness-percentage")
-                      ]
-                    ]
-                  ]
-                , ( UI.div #. "progress-bar progress-bar-info"
-                            & set style [("width", brightPercent)]
-                            & set UI.id_ (buildID lightID "brightness-bar")
-                  )
+              , ( UI.div #. "progress-label-container" ) #+
+                [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                , UI.div #. "glyphicon glyphicon-plus plus-label"
                 ]
+
               ]
             ]
-      -- Register click handlers for the on / off and brightness controls. We make a REST
-      -- API call in another thread to change the state on the bridge. The call is fire &
-      -- forget, we don't retry in case of an error
-      --
-      -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
-      --
-      -- TODO: Add UI and handlers for changing color
-      --
-      -- Turn on / off by clicking the light symbol
-      getElementByIdSafe window (buildID lightID "image") >>= \image ->
-          on UI.click image $ \_ -> do
-              -- Query current light state to see if we need to turn it on or off
-              curLights <- liftIO . atomically $ readTVar _aeLights
-              case HM.lookup lightID curLights of
-                  Nothing         -> return ()
-                  Just lightOnOff ->
-                      -- Construct and perform REST API call
-                      let s    = lightOnOff ^. lgtState . lsOn
-                          body = HM.fromList[("on" :: String, if s then False else True)]
-                      in  void . liftIO . async $
-                              bridgeRequestTrace
-                                  MethodPUT
-                                  (_aePC ^. pcBridgeIP)
-                                  (Just body)
-                                  (_aePC ^. pcUserID)
-                                  ("lights" </> lightID </> "state")
-      -- Change brightness bright clicking the left / right side of the brightness bar
-      getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
-          on UI.mousedown image $ \(mx, _) ->
-              -- Construct and perform REST API call
-              let change = -- Click on left part to decrement, right part to increment
-                           if mx < 50 then (-25) else 25 :: Int
-                  body   = HM.fromList[("bri_inc" :: String, change)]
-               in do void . liftIO . async $
-                         bridgeRequestTrace
-                             MethodPUT
-                             (_aePC ^. pcBridgeIP)
-                             (Just body)
-                             (_aePC ^. pcUserID)
-                             ("lights" </> lightID </> "state")
+      -- Create all light tiles for the current light group
+      forM_ groupLightIDs $ \lightID -> case HM.lookup lightID lights of
+        Nothing    -> return ()
+        Just light -> do
+          -- Build HTML for tile
+          --
+          -- TODO: This of course duplicates some code from the update routines, maybe just
+          --       build the skeleton here and let the updating set all actual state?
+          let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
+              brightPercent = printf "%.0f%%"
+                                ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                                  * 100 / 255 :: Float
+                                )
+              colorStr      = htmlColorFromRGB . colorFromLight $ light
+           in void $ element root #+
+                [ ( UI.div #. "thumbnail" & set style [opacity]
+                                          & set UI.id_ (buildID lightID "tile")
+                  ) #+
+                  [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+                  , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
+                                            & set UI.src (iconFromLM $ light ^. lgtModelID)
+                                            & set UI.id_ (buildID lightID "image")
+                  , UI.div #. "text-center" #+
+                    [ UI.h6 #+
+                      [ UI.small #+
+                        [ string $ (show $ light ^. lgtModelID)
+                        , UI.br
+                        , string $ (show $ light ^. lgtType)
+                        ]
+                      ]
+                    ]
+                  , UI.div #. "small text-center" #+ [string "Brightness"]
+                  , ( UI.div #. "progress"
+                              & set UI.id_ (buildID lightID "brightness-container")
+                    ) #+
+                    [ ( UI.div #. "progress-label-container") #+
+                      [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                      , UI.div #. "glyphicon glyphicon-plus plus-label"
+                      , UI.div #. "percentage-label" #+
+                        [ UI.small #+
+                          [ string brightPercent & set UI.id_
+                                                       (buildID lightID "brightness-percentage")
+                          ]
+                        ]
+                      ]
+                    , ( UI.div #. "progress-bar progress-bar-info"
+                                & set style [("width", brightPercent)]
+                                & set UI.id_ (buildID lightID "brightness-bar")
+                      )
+                    ]
+                  ]
+                ]
+          -- Register click handlers for the on / off and brightness controls. We make a REST
+          -- API call in another thread to change the state on the bridge. The call is fire &
+          -- forget, we don't retry in case of an error
+          --
+          -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
+          --
+          -- TODO: Add UI and handlers for changing color
+          --
+          -- Turn on / off by clicking the light symbol
+          getElementByIdSafe window (buildID lightID "image") >>= \image ->
+              on UI.click image $ \_ -> do
+                  -- Query current light state to see if we need to turn it on or off
+                  curLights <- liftIO . atomically $ readTVar _aeLights
+                  case HM.lookup lightID curLights of
+                      Nothing         -> return ()
+                      Just lightOnOff ->
+                          -- Construct and perform REST API call
+                          let s    = lightOnOff ^. lgtState . lsOn
+                              body = HM.fromList[("on" :: String, if s then False else True)]
+                          in  void . liftIO . async $
+                                  bridgeRequestTrace
+                                      MethodPUT
+                                      (_aePC ^. pcBridgeIP)
+                                      (Just body)
+                                      (_aePC ^. pcUserID)
+                                      ("lights" </> lightID </> "state")
+          -- Change brightness bright clicking the left / right side of the brightness bar
+          getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
+              on UI.mousedown image $ \(mx, _) ->
+                  -- Construct and perform REST API call
+                  let change = -- Click on left part to decrement, right part to increment
+                               if mx < 50 then (-25) else 25 :: Int
+                      body   = HM.fromList[("bri_inc" :: String, change)]
+                   in do void . liftIO . async $
+                             bridgeRequestTrace
+                                 MethodPUT
+                                 (_aePC ^. pcBridgeIP)
+                                 (Just body)
+                                 (_aePC ^. pcUserID)
+                                 ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $

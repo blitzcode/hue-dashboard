@@ -41,8 +41,8 @@ main =
         -- TChan for propagating light updates
         _aeBroadcast <- atomically $ newBroadcastTChan
         -- Launch application
-        run AppEnv { _aePC     = newCfg
-                   , _aeBC     = bridgeConfig
+        run AppEnv { _aePC = newCfg
+                   , _aeBC = bridgeConfig
                    , ..
                    }
 
