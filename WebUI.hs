@@ -21,6 +21,7 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import System.FilePath
 
+import Util
 import Trace
 import HueJSON
 import HueREST
@@ -114,37 +115,45 @@ setup AppEnv { .. } window = do
     -- Create tiles for all light groups
     forM_ lightGroups $ \(groupName, groupLightIDs) -> do
       -- Build group switch tile for current light group
-      grpOn <- anyLightsInGroupOn groupName _aeLightGroups _aeLights
       let groupID = "group-" <> groupName
-          opacity = if grpOn then enabledOpacity else disabledOpacity
-       in void $ element root #+
-            [ ( UI.div #. "thumbnail" & set style [opacity]
-                                      & set UI.id_ (buildID groupID "tile")
-              ) #+
-              [ UI.div #. "light-caption light-caption-group-header small" #+
-                [ string "Group Switch"
-                , UI.br
-                , string groupName
-                ]
-              , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
-                                        & set UI.id_ (buildID groupID "image")
-              , UI.div #. "text-center" #+
-                [ UI.h6 #+
-                  [ UI.small #+
-                    [ string $ ((show $ length groupLightIDs) <> " Light(s)")
-                    , UI.br
-                    , string "(Grouped by Prefix)"
-                    ]
+      anyLightsInGroupOn groupName _aeLightGroups _aeLights >>= \grpOn ->
+        void $ element root #+
+          [ ( UI.div #. "thumbnail" & set style [if grpOn then enabledOpacity else disabledOpacity]
+                                    & set UI.id_ (buildID groupID "tile")
+            ) #+
+            [ UI.div #. "light-caption light-caption-group-header small" #+
+              [ string "Group Switch"
+              , UI.br
+              , string groupName
+              ]
+            , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
+                                      & set UI.id_ (buildID groupID "image")
+            , UI.div #. "text-center" #+
+              [ UI.h6 #+
+                [ UI.small #+
+                  [ string $ ((show $ length groupLightIDs) <> " Light(s)")
+                  , UI.br
+                  , string "(Grouped by Prefix)"
                   ]
                 ]
-              , UI.div #. "small text-center" #+ [string "Brightness"]
-              , ( UI.div #. "progress-label-container" ) #+
-                [ UI.div #. "glyphicon glyphicon-minus minus-label"
-                , UI.div #. "glyphicon glyphicon-plus plus-label"
-                ]
-
               ]
+            , UI.div #. "small text-center" #+ [string "Brightness"]
+            , ( UI.div #. "progress-label-container" ) #+
+              [ UI.div #. "glyphicon glyphicon-minus minus-label"
+              , UI.div #. "glyphicon glyphicon-plus plus-label"
+              ]
+
             ]
+          ]
+      -- Register click handler for turning group lights on / off
+      getElementByIdSafe window (buildID groupID "image") >>= \image ->
+          on UI.click image $ \_ -> do
+              -- Query current group light state to see if we need to turn group on or off
+              grpOn <- anyLightsInGroupOn groupName _aeLightGroups _aeLights
+              lightsSwitchOnOff (_aePC ^. pcBridgeIP)
+                                (_aePC ^. pcUserID)
+                                groupLightIDs
+                                (not grpOn)
       -- Create all light tiles for the current light group
       forM_ groupLightIDs $ \lightID -> case HM.lookup lightID lights of
         Nothing    -> return ()
@@ -212,35 +221,45 @@ setup AppEnv { .. } window = do
                   curLights <- liftIO . atomically $ readTVar _aeLights
                   case HM.lookup lightID curLights of
                       Nothing         -> return ()
-                      Just lightOnOff ->
-                          -- Construct and perform REST API call
-                          let s    = lightOnOff ^. lgtState . lsOn
-                              body = HM.fromList[("on" :: String, if s then False else True)]
-                          in  void . liftIO . async $
-                                  bridgeRequestTrace
-                                      MethodPUT
-                                      (_aePC ^. pcBridgeIP)
-                                      (Just body)
-                                      (_aePC ^. pcUserID)
-                                      ("lights" </> lightID </> "state")
+                      Just lightOnOff -> lightsSwitchOnOff (_aePC ^. pcBridgeIP)
+                                                           (_aePC ^. pcUserID)
+                                                           [lightID]
+                                                           (not $ lightOnOff ^. lgtState . lsOn)
           -- Change brightness bright clicking the left / right side of the brightness bar
           getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
               on UI.mousedown image $ \(mx, _) ->
                   -- Construct and perform REST API call
-                  let change = -- Click on left part to decrement, right part to increment
-                               if mx < 50 then (-25) else 25 :: Int
-                      body   = HM.fromList[("bri_inc" :: String, change)]
-                   in do void . liftIO . async $
-                             bridgeRequestTrace
-                                 MethodPUT
-                                 (_aePC ^. pcBridgeIP)
-                                 (Just body)
-                                 (_aePC ^. pcUserID)
-                                 ("lights" </> lightID </> "state")
+                  lightsChangeBrightness (_aePC ^. pcBridgeIP)
+                                         (_aePC ^. pcUserID)
+                                         [lightID]
+                                         -- Click on left part decrements, right part increments
+                                         (if mx < 50 then (-25) else 25)
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
+
+lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
+lightsSwitchOnOff bridgeIP userID lightIDs onOff =
+    void . liftIO . async $
+        forM_ lightIDs $ \lightID ->
+            bridgeRequestTrace
+                MethodPUT
+                bridgeIP
+                (Just $ HM.fromList [("on" :: String, onOff)])
+                userID
+                ("lights" </> lightID </> "state")
+
+lightsChangeBrightness :: MonadIO m => IPAddress -> String -> [String] -> Int -> m ()
+lightsChangeBrightness bridgeIP userID lightIDs change =
+    void . liftIO . async $
+        forM_ lightIDs $ \lightID ->
+            bridgeRequestTrace
+                MethodPUT
+                bridgeIP
+                (Just $ HM.fromList [("bri_inc" :: String, change)])
+                userID
+                ("lights" </> lightID </> "state")
 
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 
