@@ -164,12 +164,14 @@ setup AppEnv { .. } window = do
           on UI.click brightness $ \_ -> do
               lightsChangeBrightness (_aePC ^. pcBridgeIP)
                                      (_aePC ^. pcUserID)
+                                     _aeLights
                                      groupLightIDs
                                      (-brightnessChange)
       getElementByIdSafe window (buildID groupID "brightness-plus") >>= \brightness ->
           on UI.click brightness $ \_ -> do
               lightsChangeBrightness (_aePC ^. pcBridgeIP)
                                      (_aePC ^. pcUserID)
+                                     _aeLights
                                      groupLightIDs
                                      brightnessChange
       -- Create all light tiles for the current light group
@@ -249,6 +251,7 @@ setup AppEnv { .. } window = do
                   -- Construct and perform REST API call
                   lightsChangeBrightness (_aePC ^. pcBridgeIP)
                                          (_aePC ^. pcUserID)
+                                         _aeLights
                                          [lightID]
                                          -- Click on left part decrements, right part increments
                                          (if mx < 50 then (-brightnessChange) else brightnessChange)
@@ -268,10 +271,14 @@ lightsSwitchOnOff bridgeIP userID lightIDs onOff =
                 userID
                 ("lights" </> lightID </> "state")
 
-lightsChangeBrightness :: MonadIO m => IPAddress -> String -> [String] -> Int -> m ()
-lightsChangeBrightness bridgeIP userID lightIDs change =
+lightsChangeBrightness :: MonadIO m => IPAddress -> String -> TVar Lights -> [String] -> Int -> m ()
+lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
+    -- First check which of the lights we got are turned on. Changing the brightness
+    -- of a light in the off state will just result in an error response
+    lights <- liftIO . atomically $ readTVar lights'
+    let onLightIDs = filter (maybe False (^. lgtState . lsOn) . flip HM.lookup lights) lightIDs
     void . liftIO . async $
-        forM_ lightIDs $ \lightID ->
+        forM_ onLightIDs $ \lightID ->
             bridgeRequestTrace
                 MethodPUT
                 bridgeIP
