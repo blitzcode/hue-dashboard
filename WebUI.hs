@@ -36,6 +36,10 @@ enabledOpacity, disabledOpacity :: (String, String)
 enabledOpacity  = ("opacity", "1.0")
 disabledOpacity = ("opacity", "0.3")
 
+-- Amount of brightness changed when any brightness widget is used
+brightnessChange :: Int
+brightnessChange = 25
+
 webUIStart :: MonadIO m => AppEnv -> m ()
 webUIStart ae = do
     -- Start server
@@ -140,9 +144,10 @@ setup AppEnv { .. } window = do
             , UI.div #. "small text-center" #+ [string "Brightness"]
             , ( UI.div #. "progress-label-container" ) #+
               [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                        & set UI.id_ (buildID groupID "brightness-minus")
               , UI.div #. "glyphicon glyphicon-plus plus-label"
+                        & set UI.id_ (buildID groupID "brightness-plus")
               ]
-
             ]
           ]
       -- Register click handler for turning group lights on / off
@@ -154,6 +159,19 @@ setup AppEnv { .. } window = do
                                 (_aePC ^. pcUserID)
                                 groupLightIDs
                                 (not grpOn)
+      -- Register click handler for changing group brightness
+      getElementByIdSafe window (buildID groupID "brightness-minus") >>= \brightness ->
+          on UI.click brightness $ \_ -> do
+              lightsChangeBrightness (_aePC ^. pcBridgeIP)
+                                     (_aePC ^. pcUserID)
+                                     groupLightIDs
+                                     (-brightnessChange)
+      getElementByIdSafe window (buildID groupID "brightness-plus") >>= \brightness ->
+          on UI.click brightness $ \_ -> do
+              lightsChangeBrightness (_aePC ^. pcBridgeIP)
+                                     (_aePC ^. pcUserID)
+                                     groupLightIDs
+                                     brightnessChange
       -- Create all light tiles for the current light group
       forM_ groupLightIDs $ \lightID -> case HM.lookup lightID lights of
         Nothing    -> return ()
@@ -233,7 +251,7 @@ setup AppEnv { .. } window = do
                                          (_aePC ^. pcUserID)
                                          [lightID]
                                          -- Click on left part decrements, right part increments
-                                         (if mx < 50 then (-25) else 25)
+                                         (if mx < 50 then (-brightnessChange) else brightnessChange)
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
