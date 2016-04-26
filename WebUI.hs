@@ -98,11 +98,9 @@ setup AppEnv { .. } window = do
             -- Query current light state to see if we need to turn everything on or off
             lgtOn <- anyLightsOn _aeLights
             let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
-            -- Fire off a REST API call in another thread
+            -- Fire & forget REST API call in another thread
             -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
             void . liftIO . async $
-                -- Don't hang forever in this thread if
-                -- the REST call fails, just trace & give up
                 bridgeRequestTrace
                     MethodPUT
                     (_aePC ^. pcBridgeIP)
@@ -110,18 +108,18 @@ setup AppEnv { .. } window = do
                     (_aePC ^. pcUserID)
                     ("groups" </> "0" </> "action") -- Special group 0, all lights
     -- Create all light tiles
-    --
-    -- TODO: This of course duplicates some code from the update routines, maybe just
-    --       build the skeleton here and let the updating set all actual state?
-    --
-    forM_ lights $ \(lightID, light) ->
+    forM_ lights $ \(lightID, light) -> do
+      -- Build HTML for tile
+      --
+      -- TODO: This of course duplicates some code from the update routines, maybe just
+      --       build the skeleton here and let the updating set all actual state?
       let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
           brightPercent = printf "%.0f%%"
                             ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                               * 100 / 255 :: Float
                             )
           colorStr      = htmlColorFromRGB . colorFromLight $ light
-      in  void $ element root #+
+       in void $ element root #+
             [ ( UI.div #. "thumbnail" & set style [opacity]
                                       & set UI.id_ (buildID lightID "tile")
               ) #+
@@ -158,47 +156,46 @@ setup AppEnv { .. } window = do
                 ]
               ]
             ]
-    -- Register click handlers for the on / off and brightness controls. We make a REST
-    -- API call in another thread to change the state on the bridge. The call is fire &
-    -- forget, we don't retry in case of an error
-    --
-    -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
-    --
-    -- TODO: Add UI and handlers for changing color
-    --
-    forM_ lights $ \(lightID, _) -> do
-        -- Turn on / off by clicking the light symbol
-        getElementByIdSafe window (buildID lightID "image") >>= \image ->
-            on UI.click image $ \_ -> do
-                -- Query current light state to see if we need to turn it on or off
-                curLights <- liftIO . atomically $ readTVar _aeLights
-                case HM.lookup lightID curLights of
-                    Nothing    -> return ()
-                    Just light ->
-                        -- Construct and perform REST API call
-                        let s    = light ^. lgtState . lsOn
-                            body = HM.fromList[("on" :: String, if s then False else True)]
-                        in  void . liftIO . async $
-                                bridgeRequestTrace
-                                    MethodPUT
-                                    (_aePC ^. pcBridgeIP)
-                                    (Just body)
-                                    (_aePC ^. pcUserID)
-                                    ("lights" </> lightID </> "state")
-        -- Change brightness bright clicking the left / right side of the brightness bar
-        getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
-            on UI.mousedown image $ \(mx, _) ->
-                -- Construct and perform REST API call
-                let change = -- Click on left part to decrement, right part to increment
-                             if mx < 50 then (-25) else 25 :: Int
-                    body   = HM.fromList[("bri_inc" :: String, change)]
-                 in do void . liftIO . async $
-                           bridgeRequestTrace
-                               MethodPUT
-                               (_aePC ^. pcBridgeIP)
-                               (Just body)
-                               (_aePC ^. pcUserID)
-                               ("lights" </> lightID </> "state")
+      -- Register click handlers for the on / off and brightness controls. We make a REST
+      -- API call in another thread to change the state on the bridge. The call is fire &
+      -- forget, we don't retry in case of an error
+      --
+      -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
+      --
+      -- TODO: Add UI and handlers for changing color
+      --
+      -- Turn on / off by clicking the light symbol
+      getElementByIdSafe window (buildID lightID "image") >>= \image ->
+          on UI.click image $ \_ -> do
+              -- Query current light state to see if we need to turn it on or off
+              curLights <- liftIO . atomically $ readTVar _aeLights
+              case HM.lookup lightID curLights of
+                  Nothing         -> return ()
+                  Just lightOnOff ->
+                      -- Construct and perform REST API call
+                      let s    = lightOnOff ^. lgtState . lsOn
+                          body = HM.fromList[("on" :: String, if s then False else True)]
+                      in  void . liftIO . async $
+                              bridgeRequestTrace
+                                  MethodPUT
+                                  (_aePC ^. pcBridgeIP)
+                                  (Just body)
+                                  (_aePC ^. pcUserID)
+                                  ("lights" </> lightID </> "state")
+      -- Change brightness bright clicking the left / right side of the brightness bar
+      getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
+          on UI.mousedown image $ \(mx, _) ->
+              -- Construct and perform REST API call
+              let change = -- Click on left part to decrement, right part to increment
+                           if mx < 50 then (-25) else 25 :: Int
+                  body   = HM.fromList[("bri_inc" :: String, change)]
+               in do void . liftIO . async $
+                         bridgeRequestTrace
+                             MethodPUT
+                             (_aePC ^. pcBridgeIP)
+                             (Just body)
+                             (_aePC ^. pcUserID)
+                             ("lights" </> lightID </> "state")
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
