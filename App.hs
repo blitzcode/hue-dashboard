@@ -50,27 +50,34 @@ _traceBridgeState = do
 -- Build light groups from name prefixes
 buildLightGroups :: Lights -> LightGroups
 buildLightGroups lights =
-    let lightIDAndName' = -- Build (light ID, light name) list
-                          HM.toList lights & traversed . _2 %~ (^. lgtName)
-        lightIDAndName  = -- Sort by name
-                          sortBy (compare `Data.Function.on` snd) lightIDAndName'
-        groupByPrefix   = -- Group by first word of the name, giving [[(light ID, light name)]]
-                          flip groupBy lightIDAndName $ \(_, nameA) (_, nameB) ->
-                              case (words nameA, words nameB) of
-                                  (prefixA:_, prefixB:_) -> prefixA == prefixB
-                                  _                      -> False
-        lightGroups     = -- Build 'LightGroups' hashmap
-                          HM.fromList . flip map groupByPrefix $ \lightGroup ->
-                              case lightGroup of
-                                  []          -> ("<NoGroup>", [])
-                                  (_, name):_ ->
-                                      ( -- Extract prefix from first light
-                                        case words name of
-                                            prefix:_ -> prefix
-                                            _        -> "<NoName>"
-                                      , -- Extract list of light IDs
-                                        map fst lightGroup
-                                      )
+    let lightIDAndName'   = -- Build (light ID, light name) list
+                            HM.toList lights & traversed . _2 %~ (^. lgtName)
+        lightIDAndName    = -- Sort by name
+                            sortBy (compare `Data.Function.on` snd) lightIDAndName'
+        groupByPrefix     = -- Group by first word of the name, giving [[(light ID, light name)]]
+                            flip groupBy lightIDAndName $ \(_, nameA) (_, nameB) ->
+                                case (words nameA, words nameB) of
+                                    (prefixA:_, prefixB:_) -> prefixA == prefixB
+                                    _                      -> False
+        stripSingletonGrp = -- Remove all groups with only one member
+                            filter (\g -> length g > 1) groupByPrefix
+        singletons        = -- Create new group containing all singleton groups
+                            concat . filter (\g -> length g == 1) $ groupByPrefix
+        lightGroups'      = -- Build 'LightGroups' hashmap
+                            HM.fromList . flip map stripSingletonGrp $ \lightGroup ->
+                                case lightGroup of
+                                    []          -> ("<NoGroup>", [])
+                                    (_, name):_ ->
+                                        ( -- Extract prefix from first light
+                                          case words name of
+                                              prefix:_ -> prefix
+                                              _        -> "<NoName>"
+                                        , -- Extract list of light IDs
+                                          map fst lightGroup
+                                        )
+        lightGroups       = -- Add singleton groups back in as single 'No Group' group. The
+                            -- Unicode quotation marks should also ensure this sorts dead last
+                            HM.insert "“No Group”" (map fst singletons) lightGroups'
     in lightGroups
 
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
