@@ -114,8 +114,9 @@ setup AppEnv { .. } window = do
     -- Create tiles for all light groups
     forM_ lightGroups $ \(groupName, groupLightIDs) -> do
       -- Build group switch tile for current light group
+      grpOn <- anyLightsInGroupOn groupName _aeLightGroups _aeLights
       let groupID = "group-" <> groupName
-          opacity = enabledOpacity
+          opacity = if grpOn then enabledOpacity else disabledOpacity
        in void $ element root #+
             [ ( UI.div #. "thumbnail" & set style [opacity]
                                       & set UI.id_ (buildID groupID "tile")
@@ -241,10 +242,20 @@ setup AppEnv { .. } window = do
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
 
+-- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
+
 anyLightsOn :: MonadIO m => TVar Lights -> m Bool
 anyLightsOn lights' =
     liftIO . atomically $ HM.toList <$> readTVar lights'
         >>= return . any (^. _2 . lgtState . lsOn)
+
+anyLightsInGroupOn :: MonadIO m => String -> TVar LightGroups -> TVar Lights -> m Bool
+anyLightsInGroupOn groupID groups' lights' = do
+    (groups, lights) <- liftIO . atomically $ (,) <$> readTVar groups' <*> readTVar lights'
+    case HM.lookup groupID groups of
+        Nothing          -> return False
+        Just groupLights -> return . or . map (^. lgtState . lsOn) .
+                                catMaybes . map (flip HM.lookup lights) $ groupLights
 
 -- Update DOM elements with light update messages received
 --
@@ -272,6 +283,14 @@ lightUpdateWorker window tchan = runUI window $ loop
           -- At least one light on, activate 'All Lights' tile
           LU_FirstOn ->
             getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->
+              void $ return e & set style [enabledOpacity]
+          -- All lights in a group off, grey out group switch tile
+          LU_GroupLastOff grp ->
+            getElementByIdSafe window (buildID ("group-" <> grp) "tile") >>= \e ->
+              void $ return e & set style [disabledOpacity]
+          -- At least one light in a group on, activate group switch tile
+          LU_GroupFirstOn grp ->
+            getElementByIdSafe window (buildID ("group-" <> grp) "tile") >>= \e ->
               void $ return e & set style [enabledOpacity]
           -- Brightness change
           LU_Brightness brightness -> do

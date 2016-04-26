@@ -18,9 +18,11 @@ import HueJSON
 type LightUpdateTChan = TChan (String, LightUpdate)
 
 -- Different updates to the displayed light state
-data LightUpdate = LU_OnOff      !Bool
-                 | LU_Brightness !Word8
-                 | LU_Color      !(Float, Float, Float) -- RGB
+data LightUpdate = LU_OnOff        !Bool
+                 | LU_Brightness   !Word8
+                 | LU_Color        !(Float, Float, Float) -- RGB
+                 | LU_GroupLastOff !String
+                 | LU_GroupFirstOn !String
                  | LU_LastOff
                  | LU_FirstOn
                    deriving Show

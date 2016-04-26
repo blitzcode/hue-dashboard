@@ -15,6 +15,7 @@ import Control.Monad.Reader
 import Control.Concurrent.STM
 import Control.Concurrent.Async
 import Data.List
+import Data.Maybe
 import Data.Function
 import Text.Printf
 
@@ -86,8 +87,7 @@ fetchBridgeState = do
   tvarGroups <- view aeLightGroups
   liftIO . atomically $ do
     -- Fetch old state, store new one
-    oldLights  <- readTVar tvarLights
-    _oldGroups <- readTVar tvarGroups
+    oldLights <- readTVar tvarLights
     writeTVar tvarLights $ newLights
     let newGroups = buildLightGroups newLights
     writeTVar tvarGroups $ newGroups
@@ -104,12 +104,25 @@ fetchBridgeState = do
               writeChannel . LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255
           when (colorFromLight oldLight /= colorFromLight newLight) $
               writeChannel . LU_Color $ colorFromLight newLight
+    -- Did we turn the last light in a group off or the first light in a group on?
+    forM_ (HM.toList newGroups) $ \(groupName, groupLights) -> do
+        let anyLightsOn lightState =
+                or . map (^. lgtState . lsOn) .
+                    catMaybes . map (flip HM.lookup lightState) $ groupLights
+            anyNewLightsOn = anyLightsOn newLights
+            anyOldLightsOn = anyLightsOn oldLights
+        when (anyOldLightsOn && not anyNewLightsOn) $
+            writeTChan broadcast ("", LU_GroupLastOff groupName)
+        when (not anyOldLightsOn && anyNewLightsOn) $
+            writeTChan broadcast ("", LU_GroupFirstOn groupName)
     -- Did we turn the last light off or the first light on?
-    let numLightsOn = length . filter (^. _2 . lgtState . lsOn) . HM.toList
-    when (numLightsOn oldLights > 0 && numLightsOn newLights == 0) $
-        writeTChan broadcast ("all-lights", LU_LastOff)
-    when (numLightsOn oldLights == 0 && numLightsOn newLights > 0) $
-        writeTChan broadcast ("all-lights", LU_FirstOn)
+    let anyLightsOn    = not . null . filter (^. _2 . lgtState . lsOn) . HM.toList
+        anyOldLightsOn = anyLightsOn oldLights
+        anyNewLightsOn = anyLightsOn newLights
+    when (anyOldLightsOn && not anyNewLightsOn) $
+        writeTChan broadcast ("", LU_LastOff)
+    when (not anyOldLightsOn && anyNewLightsOn) $
+        writeTChan broadcast ("", LU_FirstOn)
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()
