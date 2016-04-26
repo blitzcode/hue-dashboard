@@ -14,6 +14,8 @@ import Control.Monad
 import Control.Monad.Reader
 import Control.Concurrent.STM
 import Control.Concurrent.Async
+import Data.List
+import Data.Function
 import Text.Printf
 
 import Util
@@ -44,6 +46,32 @@ _traceBridgeState = do
                         (if light ^. lgtState . lsOn then "On" else "Off" :: String)
     liftIO $ putStrLn ""
 
+-- Build light groups from name prefixes
+buildLightGroups :: Lights -> LightGroups
+buildLightGroups lights =
+    let lightIDAndName' = -- Build (light ID, light name) list
+                          HM.toList lights & traversed . _2 %~ (^. lgtName)
+        lightIDAndName  = -- Sort by name
+                          sortBy (compare `Data.Function.on` snd) lightIDAndName'
+        groupByPrefix   = -- Group by first word of the name, giving [[(light ID, light name)]]
+                          flip groupBy lightIDAndName $ \(_, nameA) (_, nameB) ->
+                              case (words nameA, words nameB) of
+                                  (prefixA:_, prefixB:_) -> prefixA == prefixB
+                                  _                      -> False
+        lightGroups     = -- Build 'LightGroups' hashmap
+                          HM.fromList . flip map groupByPrefix $ \lightGroup ->
+                              case lightGroup of
+                                  []          -> ("<NoGroup>", [])
+                                  (_, name):_ ->
+                                      ( -- Extract prefix from first light
+                                        case words name of
+                                            prefix:_ -> prefix
+                                            _        -> "<NoName>"
+                                      , -- Extract list of light IDs
+                                        map fst lightGroup
+                                      )
+    in lightGroups
+
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
 fetchBridgeState :: AppIO ()
 fetchBridgeState = do
@@ -53,19 +81,23 @@ fetchBridgeState = do
   -- Request all light information
   (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
   -- Do all updating as a single transaction
-  tchan <- view aeBroadcast
-  ltvar <- view aeLights
+  broadcast  <- view aeBroadcast
+  tvarLights <- view aeLights
+  tvarGroups <- view aeLightGroups
   liftIO . atomically $ do
     -- Fetch old state, store new one
-    oldLights <- readTVar ltvar
-    writeTVar ltvar $ newLights
-    -- Go over all the lights
+    oldLights  <- readTVar tvarLights
+    _oldGroups <- readTVar tvarGroups
+    writeTVar tvarLights $ newLights
+    let newGroups = buildLightGroups newLights
+    writeTVar tvarGroups $ newGroups
+    -- Find all changes in the light state
     forM_ (HM.toList newLights) $ \(lightID, newLight) -> do
       case HM.lookup lightID oldLights of
         Nothing       -> return () -- TODO: New light, we don't do anything here yet
         Just oldLight -> do
           -- Compare state and broadcast changes
-          let writeChannel = writeTChan tchan . (lightID, )
+          let writeChannel = writeTChan broadcast . (lightID, )
           when (oldLight ^. lgtState . lsOn /= newLight ^. lgtState . lsOn) $
               writeChannel . LU_OnOff $ newLight ^. lgtState . lsOn
           when (oldLight ^. lgtState . lsBrightness /= newLight ^. lgtState . lsBrightness) $
@@ -75,9 +107,9 @@ fetchBridgeState = do
     -- Did we turn the last light off or the first light on?
     let numLightsOn = length . filter (^. _2 . lgtState . lsOn) . HM.toList
     when (numLightsOn oldLights > 0 && numLightsOn newLights == 0) $
-        writeTChan tchan ("all-lights", LU_LastOff)
+        writeTChan broadcast ("all-lights", LU_LastOff)
     when (numLightsOn oldLights == 0 && numLightsOn newLights > 0) $
-        writeTChan tchan ("all-lights", LU_FirstOn)
+        writeTChan broadcast ("all-lights", LU_FirstOn)
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()

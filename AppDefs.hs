@@ -7,6 +7,7 @@ import Control.Lens
 import Control.Monad.Reader
 import Control.Concurrent.STM
 import Data.Word
+import qualified Data.HashMap.Strict as HM
 
 import PersistConfig (PersistConfig)
 import HueJSON
@@ -24,12 +25,16 @@ data LightUpdate = LU_OnOff      !Bool
                  | LU_FirstOn
                    deriving Show
 
+type Lights      = HM.HashMap String Light    -- Light ID to light
+type LightGroups = HM.HashMap String [String] -- Group names to lists of light IDs
+
 -- Application state
 data AppEnv = AppEnv
-    { _aePC        :: !PersistConfig
-    , _aeBC        :: !BridgeConfig
-    , _aeLights    :: !(TVar Lights)
-    , _aeBroadcast :: !LightUpdateTChan
+    { _aePC          :: !PersistConfig
+    , _aeBC          :: !BridgeConfig
+    , _aeLights      :: !(TVar Lights)
+    , _aeLightGroups :: !(TVar LightGroups)
+    , _aeBroadcast   :: !LightUpdateTChan
     }
 
 makeLenses ''AppEnv

@@ -82,6 +82,7 @@ setup AppEnv { .. } window = do
           , UI.div #. "text-center" #+
             [ UI.h6 #+
               [ UI.small #+ intersperse UI.br
+                -- Also use this tile to show some information on the bridge
                 [ string "Hue Bridge"
                 , string $ "Model " <> (_aeBC ^. bcModelID)
                 , string $ "IP "    <> (_aePC ^. pcBridgeIP)

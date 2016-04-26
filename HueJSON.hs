@@ -9,7 +9,6 @@ import Data.Char
 import Data.Word
 import Data.Attoparsec.Text
 import qualified Data.Text as T
-import qualified Data.HashMap.Strict as HM
 import Control.Lens
 
 import Util
@@ -21,8 +20,6 @@ import Util
 -- Response from querying all lights
 --
 -- http://www.developers.meethue.com/documentation/lights-api#11_get_all_lights
-
-type Lights = HM.HashMap String Light
 
 data Light = Light { _lgtState             :: !LightState
                    , _lgtType              :: !ZLL_LightType
