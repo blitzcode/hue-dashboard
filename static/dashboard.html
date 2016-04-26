@@ -44,8 +44,38 @@
     {
         margin: 2px 0px 6px 0px;
     }
-    .light-display .progress-bar
+    .light-display .progress-label-container
     {
+        position: relative;
+        color: white;
+    }
+    .light-display .minus-label
+    {
+        position: absolute;
+        left: 3px;
+        top: 2px;
+        text-shadow: 0px 0px 1px #333;
+    }
+    .light-display .plus-label
+    {
+        position: absolute;
+        right: 3px;
+        top: 2px;
+        text-shadow: 0px 0px 1px #333;
+    }
+    .light-display .percentage-label
+    {
+        position: absolute;
+        text-align: center;
+        width: 100%;
+        margin-top: -1px;
+        text-shadow: 0px 0px 2px #333;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
   </style>
 </head>
@@ -102,9 +132,16 @@
         </div>
         <div class="small text-center">Brightness</div>
         <div class="progress">
-          <div class="progress-bar progress-bar-info" role="progressbar" style="width: 25%;">
-            <small>25%</small>
+          <div class="progress-label-container">
+            <div class="glyphicon glyphicon-minus minus-label">
+            </div>
+            <div class="glyphicon glyphicon-plus plus-label">
+            </div>
+            <div class="percentage-label">
+                <small>85%</small>
+            </div>
           </div>
+          <div class="progress-bar progress-bar-info" role="progressbar" style="width: 85%;"></div>
         </div>
       </div>
       -->

@@ -142,7 +142,16 @@ setup AppEnv { .. } window = do
               , ( UI.div #. "progress"
                           & set UI.id_ (buildID lightID "brightness-container")
                 ) #+
-                [ ( UI.div #. "progress-bar progress-bar-info"
+                [ ( UI.div #. "progress-label-container") #+
+                  [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                  , UI.div #. "glyphicon glyphicon-plus plus-label"
+                  , UI.div #. "percentage-label" #+
+                    [ UI.small #+
+                      [ string brightPercent & set UI.id_ (buildID lightID "brightness-percentage")
+                      ]
+                    ]
+                  ]
+                , ( UI.div #. "progress-bar progress-bar-info"
                             & set style [("width", brightPercent)]
                             & set UI.id_ (buildID lightID "brightness-bar")
                   )
@@ -232,6 +241,8 @@ lightUpdateWorker window tchan = runUI window $ loop
             let brightPercent = printf "%.0f%%" (fromIntegral brightness * 100 / 255 :: Float)
             getElementByIdSafe window (buildID lightID "brightness-bar") >>= \e ->
               void $ return e & set style [("width", brightPercent)]
+            getElementByIdSafe window (buildID lightID "brightness-percentage") >>= \e ->
+              void $ return e & set UI.text brightPercent
           -- Color change
           LU_Color rgb ->
             getElementByIdSafe window (buildID lightID "image") >>= \e ->
