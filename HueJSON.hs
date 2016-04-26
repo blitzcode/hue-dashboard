@@ -15,11 +15,7 @@ import Util
 
 -- Records, lenses and JSON instances for communication with a Hue bridge
 
--- TODO: Add representations for sensor data
-
--- Response from querying all lights
---
--- http://www.developers.meethue.com/documentation/lights-api#11_get_all_lights
+-- TODO: Add representations for sensor / scene data
 
 data Light = Light { _lgtState             :: !LightState
                    , _lgtType              :: !ZLL_LightType

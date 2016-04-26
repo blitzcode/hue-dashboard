@@ -134,6 +134,7 @@ fetchBridgeState = do
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()
 mainLoop = do
+    -- TODO: Stop / decrease polling when no clients are connected
     fetchBridgeState
     -- _traceBridgeState
     waitNSec 1

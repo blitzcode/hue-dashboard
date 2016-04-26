@@ -62,6 +62,9 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
 --       including things like a CTRL+C 'user interrupt'. This is poor practice, write
 --       specific handlers for the HTTP and JSON exceptions we care about
 
+-- TODO: Would be good to have an exception type to restart the entire server to recover
+--       from a bridge IP change or something like that
+
 -- Wrapper around bridgeRequest which traces errors and doesn't return anything, fire and forget
 bridgeRequestTrace :: forall m body. ( MonadIO m
                                      , MonadThrow m

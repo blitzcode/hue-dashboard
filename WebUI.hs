@@ -63,11 +63,23 @@ setup AppEnv { .. } window = do
 
     -- TODO: Bootrap's JS features need jQuery, but the version included in threepenny
     --       is too old to be supported. It seems we can't use any of the JS features in
-    --       Bootstrap until it is updated
+    --       Bootstrap until it is updated. Also see
+    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/127
     --
     -- Bootstrap JS, should be in the body
     -- void $ getBody window #+
     --     [mkElement "script" & set (attr "src") ("static/bootstrap/js/bootstrap.min.js")]
+
+    -- TODO: Page generation is very slow. Also see
+    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+
+    -- TODO: Websocket connection can easily get dropped on mobile devices, maybe we could
+    --       have some client side JS that just refreshes the page? Also see
+    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/130
+
+    -- TODO: Add tile for recalling scenes. Might be tricky, the scenes from the official
+    --       app only seem to be 'cached' on the bridge with incomplete names and duplicate
+    --       versions etc.
 
     -- Root element where we insert all tiles
     root <- getElementByIdSafe window "lights"
@@ -224,13 +236,9 @@ setup AppEnv { .. } window = do
                     ]
                   ]
                 ]
-          -- Register click handlers for the on / off and brightness controls. We make a REST
-          -- API call in another thread to change the state on the bridge. The call is fire &
-          -- forget, we don't retry in case of an error
+          -- Register click handlers for the on / off and brightness controls
           --
-          -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
-          --
-          -- TODO: Add UI and handlers for changing color
+          -- TODO: Add UI and handlers for changing color (also try color loop mode)
           --
           -- Turn on / off by clicking the light symbol
           getElementByIdSafe window (buildID lightID "image") >>= \image ->
@@ -257,6 +265,11 @@ setup AppEnv { .. } window = do
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
         cancel updateWorker
+
+-- We make a REST- API call in another thread to change the state on the bridge. The call
+-- is fire & forget, we don't retry in case of an error
+--
+-- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
 
 lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
 lightsSwitchOnOff bridgeIP userID lightIDs onOff =
@@ -306,7 +319,7 @@ anyLightsInGroupOn groupID groups' lights' = do
 --
 -- TODO: Because getElementById just freezes when we pass it a non-existent element, our
 --       entire worker thread will just freeze when we receive an update for a new light,
---       or one with a changed ID etc., very bad
+--       or one with a changed ID etc., very bad, see getElementByIdSafe
 --
 lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
 lightUpdateWorker window tchan = runUI window $ loop
@@ -355,7 +368,9 @@ buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 -- The getElementById function returns a Maybe, but actually just throws an exception if
 -- the element is not found. The exception is unfortunately a JS exception on the client,
 -- and our code just freezes / aborts without any helpful reason why the page couldn't be
--- generated. Until this is fixed in threepenny, we can only add support for tracing
+-- generated. Until this is fixed in threepenny, we can only add support for tracing. Also
+-- see https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+--
 getElementByIdSafe :: Window -> String -> UI Element
 getElementByIdSafe window elementID = do
     -- traceS TLInfo $ "getElementByIdSafe: " <> elementID

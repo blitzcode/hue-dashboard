@@ -18,10 +18,10 @@ import PersistConfig
 
 main :: IO ()
 main =
-    -- Setup tracing
+    -- Setup tracing (TODO: Also enable tracing into a log file?)
     withTrace Nothing True False True TLInfo $ do
         -- Load configuration (might not be there)
-        let configFile = "./config.yaml"
+        let configFile = "./config.yaml" -- TODO: Maybe use ~/.hue-dashboard for this?
         mbCfg <- loadConfig configFile
         -- Bridge connection and user ID
         bridgeIP <- discoverBridgeIP    $ view pcBridgeIP <$> mbCfg
