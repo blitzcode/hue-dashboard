@@ -142,11 +142,14 @@ setup AppEnv { .. } window = do
                 ]
               ]
             , UI.div #. "small text-center" #+ [string "Brightness"]
-            , ( UI.div #. "progress-label-container" ) #+
-              [ UI.div #. "glyphicon glyphicon-minus minus-label"
-                        & set UI.id_ (buildID groupID "brightness-minus")
-              , UI.div #. "glyphicon glyphicon-plus plus-label"
-                        & set UI.id_ (buildID groupID "brightness-plus")
+            , ( UI.div #. "progress"
+                        & set UI.id_ (buildID groupID "brightness-container")
+              ) #+
+              [ ( UI.div #. "progress-label-container") #+
+                [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                , UI.div #. "glyphicon glyphicon-plus plus-label"
+                ]
+              , UI.div #. "progress-bar progress-bar-info"
               ]
             ]
           ]
@@ -160,20 +163,15 @@ setup AppEnv { .. } window = do
                                 groupLightIDs
                                 (not grpOn)
       -- Register click handler for changing group brightness
-      getElementByIdSafe window (buildID groupID "brightness-minus") >>= \brightness ->
-          on UI.click brightness $ \_ -> do
+      getElementByIdSafe window (buildID groupID "brightness-container") >>= \image ->
+          on UI.mousedown image $ \(mx, _) ->
+              -- Construct and perform REST API call
               lightsChangeBrightness (_aePC ^. pcBridgeIP)
                                      (_aePC ^. pcUserID)
                                      _aeLights
                                      groupLightIDs
-                                     (-brightnessChange)
-      getElementByIdSafe window (buildID groupID "brightness-plus") >>= \brightness ->
-          on UI.click brightness $ \_ -> do
-              lightsChangeBrightness (_aePC ^. pcBridgeIP)
-                                     (_aePC ^. pcUserID)
-                                     _aeLights
-                                     groupLightIDs
-                                     brightnessChange
+                                     -- Click on left part decrements, right part increments
+                                     (if mx < 50 then (-brightnessChange) else brightnessChange)
       -- Create all light tiles for the current light group
       forM_ groupLightIDs $ \lightID -> case HM.lookup lightID lights of
         Nothing    -> return ()
