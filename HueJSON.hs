@@ -7,6 +7,7 @@ import Data.Aeson
 import Data.Monoid
 import Data.Char
 import Data.Word
+import Data.Time
 import Data.Attoparsec.Text
 import qualified Data.Text as T
 import Control.Lens
@@ -15,7 +16,7 @@ import Util
 
 -- Records, lenses and JSON instances for communication with a Hue bridge
 
--- TODO: Add representations for sensor / scene data
+-- TODO: Add representations for sensor data
 
 data Light = Light { _lgtState             :: !LightState
                    , _lgtType              :: !ZLL_LightType
@@ -159,6 +160,43 @@ instance Show LightModel where
     show LM_HueLightStripsPlus        = "Hue Light Strips Plus"
     show (LM_Unknown s)               = "Unknown (" <> s <> ")"
 
+-- Scenes
+--
+-- http://www.developers.meethue.com/documentation/scenes-api#41_get_all_scenes
+
+data Scene = Scene { _scName        :: !String
+                   , _scLights      :: ![String]
+                   , _scActive      :: !(Maybe Bool)
+                   , _scOwner       :: !(Maybe String)
+                   , _scRecycle     :: !(Maybe Bool)
+                   , _scLocked      :: !(Maybe Bool)
+                   , _scAppData     :: !(Maybe Object)
+                   , _scPicture     :: !(Maybe String)
+                   , _scLastUpdated :: !(Maybe UTCTime)
+                   , _scVersion     :: !(Maybe Int)
+                   } deriving Show
+
+-- Hue UTC strings miss the final Z, fails with the default parser
+parseHueTimeMaybe :: Maybe String -> Maybe UTCTime
+parseHueTimeMaybe Nothing = Nothing
+parseHueTimeMaybe (Just t) =
+    case parseTimeM True defaultTimeLocale "%FT%T" t of
+        Just d -> Just d
+        Nothing -> Nothing
+
+instance FromJSON Scene where
+    parseJSON (Object o) = Scene <$> o .:  "name"
+                                 <*> o .:  "lights"
+                                 <*> o .:? "active"
+                                 <*> o .:? "owner"
+                                 <*> o .:? "recycle"
+                                 <*> o .:? "locked"
+                                 <*> o .:? "appdata"
+                                 <*> o .:? "picture"
+                                 <*> (parseHueTimeMaybe <$> o .:? "lastupdated")
+                                 <*> o .:? "version"
+    parseJSON _ = fail "Expected object"
+
 -- Bridge configuration obtained from the api/config endpoint without a whitelisted user
 
 data BridgeConfigNoWhitelist = BridgeConfigNoWhitelist
@@ -275,4 +313,5 @@ makeLenses ''SWUpdate
 makeLenses ''PortalState
 makeLenses ''Light
 makeLenses ''LightState
+makeLenses ''Scene
 
