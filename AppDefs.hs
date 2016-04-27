@@ -29,6 +29,7 @@ data LightUpdate = LU_OnOff        !Bool
 
 type Lights      = HM.HashMap String Light    -- Light ID to light
 type LightGroups = HM.HashMap String [String] -- Group names to lists of light IDs
+type Scenes      = HM.HashMap String Scene    -- Scene ID to scene
 
 -- Application state
 data AppEnv = AppEnv
@@ -36,6 +37,7 @@ data AppEnv = AppEnv
     , _aeBC          :: !BridgeConfig
     , _aeLights      :: !(TVar Lights)
     , _aeLightGroups :: !(TVar LightGroups)
+    , _aeScenes      :: !Scenes
     , _aeBroadcast   :: !LightUpdateTChan
     }
 
