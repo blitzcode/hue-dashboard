@@ -3,11 +3,7 @@
 
 ### What's this?
 
-It's an application providing a web based dashboard for monitoring and controlling [Philips Hue lights](http://www2.meethue.com/en-XX).
-
-Hue Dashboard is implemented in Haskell, talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
-
-The project in its current form is rather basic, but all the essential code is there. The program discovers the Hue bridge and whitelists a user, stores that configuration, can query all light information and display a dashboard to users connecting to its web server. Lights can be switched on and off, have their brightness adjusted. There's also support for groups and scenes. The idea is that lights can be inspected and controlled on any device without installing an app. It's also simple to add new features like monitoring all bulbs for power consumption etc. Could be used to provide a custom dashboard on a cheap wall-mounted tablet. Probably best deployed on something like a Raspberry Pi. Work-in-progress.
+Hue Dashboard is a web application for comfortably controlling [Philips Hue lights](http://www2.meethue.com/en-XX) from any device with a browser.
 
 Accessing the web interface from an iPhone:
 
@@ -17,7 +13,21 @@ And the same on the iPad:
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-ipad.jpg)
 
-Also see [this project on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#hue-dashboard) for more information.
+### Features
+
+- Aims to be an ideal control panel for daily operation of your Hue lights
+- Works with any modern browser
+- Adjusting individual lights or the automatically created groups is comfortable both with a mouse or touch based input
+- Existing scenes are fetched from the bridge
+- All official Philips Hue lights are recognized and displayed with the appropriate graphics
+- The UI is done with vector graphics and looks crisp on retina displays
+- On-screen light status responds in real-time to changes with smooth animations and transitions
+
+### Implementation
+
+Hue Dashboard is implemented in [Haskell](http://www.haskell.org), talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
+
+Also see [the project page on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#hue-dashboard).
 
 ### What is Hue?
 
