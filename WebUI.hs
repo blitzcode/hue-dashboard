@@ -93,6 +93,36 @@ setup ae@AppEnv { .. } window =
     root <- liftUI $ getElementByIdSafe window "lights"
     -- 'All Lights' tile
     addAllLightsTile window root
+
+    {-
+    let nameKeyedScenes = -- Use the scene name as the key instead of the scene ID
+                          map (\(sceneID, scene) -> (scene ^. scName, (sceneID, scene)))
+                              $ HM.toList _aeScenes
+        nubScenes = -- Build 'name -> (sceneID, scene)' hashmap, resolve name
+                    -- collisions with the last update date
+                    flip HM.fromListWith nameKeyedScenes $ \sceneA sceneB ->
+                        case (compare `Data.Function.on` (^. _2 . scLastUpdated)) sceneA sceneB of
+                            EQ -> sceneA
+                            LT -> sceneB
+                            GT -> sceneA
+        recentScenes = -- List of scenes sorted by last update date
+                       reverse . sortBy (compare `Data.Function.on` (^. _2 . scLastUpdated)) .
+                           map snd $ HM.toList nubScenes
+        fixNames = -- Scene names are truncated and decorated when stored on the bridge,
+                   -- salvage what we can and extract the cleanest UI label for them
+                   recentScenes & traversed . _2 . scName %~ \sceneName ->
+                       (\nm -> if length nm == 16 then nm <> "…" else nm) .
+                           concat . intersperse " " . reverse $ case reverse $ words sceneName of
+                               xs@("0":"on":_)  -> drop 2 xs
+                               xs@("on":_)      -> drop 1 xs
+                               xs@("0":"off":_) -> drop 2 xs
+                               xs@("off":_)     -> drop 1 xs
+                               xs               -> xs
+
+    liftIO $ forM_ fixNames $ \(sceneID, scene) ->
+        printf "%s - %s - %s\n" sceneID (scene ^. scName) (show $ scene ^. scLastUpdated)
+    -}
+
     -- Create tiles for all light groups
     forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
       -- Build group switch tile for current light group
