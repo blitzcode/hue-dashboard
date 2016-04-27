@@ -10,7 +10,7 @@
   <link rel="icon" href="static/favicon.png">
   <!-- Bootstrap -->
   <link href="static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <link href="static/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
+  <!-- <link href="static/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet"> -->
   <!-- threepenny-gui -->
   <link rel="stylesheet" type="text/css" href="haskell.css"/>
   <script src="haskell.js"></script>
@@ -19,6 +19,11 @@
   </script>
   <!-- Our CSS -->
   <style>
+    .navbar-default
+    {
+        background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
+    }
     .light-display .thumbnail
     {
         float: left;
@@ -27,6 +32,7 @@
         margin: 0px 5px 5px 0px;
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, .075);
     }
     .light-display .light-caption
     {
