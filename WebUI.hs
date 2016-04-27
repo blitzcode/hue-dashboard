@@ -171,43 +171,80 @@ addLightTile light lightID window root = do
                             * 100 / 255 :: Float
                           )
         colorStr      = htmlColorFromRGB . colorFromLight $ light
+        colorSupport  = isColorLT $ light ^. lgtType
      in void $ element root #+
           [ ( UI.div #. "thumbnail" & set style [opacity]
                                     & set UI.id_ (buildID lightID "tile")
             ) #+
-            [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
-            , UI.img #. "img-rounded" & set style [ ("background", colorStr)]
-                                      & set UI.src (iconFromLM $ light ^. lgtModelID)
-                                      & set UI.id_ (buildID lightID "image")
-            , UI.div #. "text-center" #+
-              [ UI.h6 #+
-                [ UI.small #+
-                  [ string $ (show $ light ^. lgtModelID)
-                  , UI.br
-                  , string $ (show $ light ^. lgtType)
+            ( -- Caption and light icon
+              [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+              , UI.img #. "img-rounded" & set style [("background", colorStr)]
+                                        & set UI.src (iconFromLM $ light ^. lgtModelID)
+                                        & set UI.id_ (buildID lightID "image")
+              ] ++
+              -- Only add color picker elements for lights that support colors
+              ( if   not colorSupport
+                then []
+                else
+                  [ ( UI.div & set style [("display", "none")]
+                             & set UI.id_ (buildID lightID "color-picker-container")
+                    ) #+
+                    [ UI.div #. "color-picker-curtain"
+                              & set (attr "onclick") "this.parentNode.style.display = 'none'"
+                    , UI.img #. "color-picker-overlay" & set UI.src "static/color_picker.png"
+                    ]
+                  , ( UI.div #. "color-picker-button"
+                              & set (attr "onclick")
+                                    -- Click button to make color picker visible, but not
+                                    -- for lights that are off (entire tile is transparent)
+                                    --
+                                    -- TODO: Doesn't work when light is switched off while
+                                    --       the color picker is open, just move curtain
+                                    --       and overlay our of the tile
+                                    --
+                                    ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
+                                               " { getElementById('%s').style.display = 'block'; }"
+                                             )
+                                      (buildID lightID "tile")
+                                      (buildID lightID "color-picker-container")
+                                    )
+                    ) #+
+                    [ UI.div #. "glyphicon glyphicon-tint" & set style [("margin", "3px")]
+                    ]
                   ]
-                ]
-              ]
-            , UI.div #. "small text-center" #+ [string "Brightness"]
-            , ( UI.div #. "progress"
-                        & set UI.id_ (buildID lightID "brightness-container")
-              ) #+
-              [ ( UI.div #. "progress-label-container") #+
-                [ UI.div #. "glyphicon glyphicon-minus minus-label"
-                , UI.div #. "glyphicon glyphicon-plus plus-label"
-                , UI.div #. "percentage-label" #+
+              ) ++
+              -- Model and type text
+              [ UI.div #. "text-center" #+
+                [ UI.h6 #+
                   [ UI.small #+
-                    [ string brightPercent & set UI.id_
-                                                 (buildID lightID "brightness-percentage")
+                    [ string $ (show $ light ^. lgtModelID)
+                    , UI.br
+                    , string $ (show $ light ^. lgtType)
                     ]
                   ]
                 ]
-              , ( UI.div #. "progress-bar progress-bar-info"
-                          & set style [("width", brightPercent)]
-                          & set UI.id_ (buildID lightID "brightness-bar")
-                )
+                -- Brightness widget
+              , UI.div #. "small text-center" #+ [string "Brightness"]
+              , ( UI.div #. "progress"
+                          & set UI.id_ (buildID lightID "brightness-container")
+                ) #+
+                [ ( UI.div #. "progress-label-container") #+
+                  [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                  , UI.div #. "glyphicon glyphicon-plus plus-label"
+                  , UI.div #. "percentage-label" #+
+                    [ UI.small #+
+                      [ string brightPercent & set UI.id_
+                                                   (buildID lightID "brightness-percentage")
+                      ]
+                    ]
+                  ]
+                , ( UI.div #. "progress-bar progress-bar-info"
+                            & set style [("width", brightPercent)]
+                            & set UI.id_ (buildID lightID "brightness-bar")
+                  )
+                ]
               ]
-            ]
+            )
           ]
     -- Register click handlers for the on / off and brightness controls
     --

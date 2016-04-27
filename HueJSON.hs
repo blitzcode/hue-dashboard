@@ -1,5 +1,5 @@
 
-{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards, LambdaCase #-}
 
 module HueJSON where
 
@@ -99,6 +99,11 @@ instance Show ZLL_LightType where
     show LT_ColorLight            = "Color Light"
     show LT_ExtendedColorLight    = "Extended Color Light"
     show LT_ColorTemperatureLight = "Color Temperature Light"
+
+isColorLT :: ZLL_LightType -> Bool
+isColorLT = \case LT_ColorLight         -> True
+                  LT_ExtendedColorLight -> True
+                  _                     -> False
 
 -- Light model
 --
