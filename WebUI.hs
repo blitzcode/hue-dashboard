@@ -18,11 +18,9 @@ import Control.Monad
 import Control.Monad.Reader
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-import System.FilePath
 
 import Trace
 import HueJSON
-import HueREST
 import LightColor
 import AppDefs
 import PersistConfig
@@ -78,10 +76,6 @@ setup ae@AppEnv { .. } window =
     --       have some client side JS that just refreshes the page? Also see
     --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/130
 
-    -- TODO: Add tile for recalling scenes. Might be tricky, the scenes from the official
-    --       app only seem to be 'cached' on the bridge with incomplete names and duplicate
-    --       versions etc.
-
     -- Read all lights and light groups, display sorted by name. Light IDs in the group are
     -- already sorted by name
     (lights, lightGroupsList) <- liftIO . atomically $
@@ -93,36 +87,8 @@ setup ae@AppEnv { .. } window =
     root <- liftUI $ getElementByIdSafe window "lights"
     -- 'All Lights' tile
     addAllLightsTile window root
-
-    {-
-    let nameKeyedScenes = -- Use the scene name as the key instead of the scene ID
-                          map (\(sceneID, scene) -> (scene ^. scName, (sceneID, scene)))
-                              $ HM.toList _aeScenes
-        nubScenes = -- Build 'name -> (sceneID, scene)' hashmap, resolve name
-                    -- collisions with the last update date
-                    flip HM.fromListWith nameKeyedScenes $ \sceneA sceneB ->
-                        case (compare `Data.Function.on` (^. _2 . scLastUpdated)) sceneA sceneB of
-                            EQ -> sceneA
-                            LT -> sceneB
-                            GT -> sceneA
-        recentScenes = -- List of scenes sorted by last update date
-                       reverse . sortBy (compare `Data.Function.on` (^. _2 . scLastUpdated)) .
-                           map snd $ HM.toList nubScenes
-        fixNames = -- Scene names are truncated and decorated when stored on the bridge,
-                   -- salvage what we can and extract the cleanest UI label for them
-                   recentScenes & traversed . _2 . scName %~ \sceneName ->
-                       (\nm -> if length nm == 16 then nm <> "…" else nm) .
-                           concat . intersperse " " . reverse $ case reverse $ words sceneName of
-                               xs@("0":"on":_)  -> drop 2 xs
-                               xs@("on":_)      -> drop 1 xs
-                               xs@("0":"off":_) -> drop 2 xs
-                               xs@("off":_)     -> drop 1 xs
-                               xs               -> xs
-
-    liftIO $ forM_ fixNames $ \(sceneID, scene) ->
-        printf "%s - %s - %s\n" sceneID (scene ^. scName) (show $ scene ^. scLastUpdated)
-    -}
-
+    -- Scenes tile
+    addScenesTile window root
     -- Create tiles for all light groups
     forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
       -- Build group switch tile for current light group
@@ -138,6 +104,61 @@ setup ae@AppEnv { .. } window =
 
 -- TODO: The tile building code below duplicates some code from the update routines, maybe just
 --       build the skeleton here and let the updating set all actual state?
+
+addScenesTile :: Window -> Element -> WebEnvUI ()
+addScenesTile window root = do
+  AppEnv { .. } <- ask
+  let sceneBttnID sceneID =
+        -- DOM ID from scene ID
+        "scene-activate-bttn-" <> sceneID
+      nameKeyedScenes =
+          -- Use the scene name as the key instead of the scene ID
+          map (\(sceneID, scene) -> (scene ^. scName, (sceneID, scene)))
+              $ HM.toList _aeScenes
+      nubScenes =
+          -- Build 'name -> (sceneID, scene)' hashmap, resolve name
+          -- collisions with the last update date
+          flip HM.fromListWith nameKeyedScenes $ \sceneA sceneB ->
+              case (compare `Data.Function.on` (^. _2 . scLastUpdated)) sceneA sceneB of
+                  EQ -> sceneA
+                  LT -> sceneB
+                  GT -> sceneA
+      recentScenes =
+          -- List of scenes sorted by last update date
+          reverse . sortBy (compare `Data.Function.on` (^. _2 . scLastUpdated)) .
+              map snd $ HM.toList nubScenes
+      fixNames =
+          -- Scene names are truncated and decorated when stored on the bridge,
+          -- salvage what we can and extract the cleanest UI label for them
+          recentScenes & traversed . _2 . scName %~ \sceneName ->
+              (\nm -> if length nm == 16 then nm <> "…" else nm) . take 16 .
+                  concat . intersperse " " . reverse $ case reverse $ words sceneName of
+                      xs@("0":"on":_)  -> drop 2 xs
+                      xs@("on":_)      -> drop 1 xs
+                      xs@("0":"off":_) -> drop 2 xs
+                      xs@("off":_)     -> drop 1 xs
+                      xs               -> xs
+      topScenes = take 8 fixNames
+  -- Build scenes tile
+  void . liftUI $ element root #+
+    [ UI.div #. "thumbnail" #+
+      [ UI.div #. "light-caption light-caption-group-header small" #+ [string "Recent Scenes"]
+      , UI.div #. "btn-group-vertical btn-group-xs scene-btn-group" #+
+        ( flip map topScenes $ \(sceneID, scene) ->
+            ( UI.button #. "btn btn-scene" & set UI.id_ (sceneBttnID sceneID)
+            ) #+
+            [ UI.small #+ [string $ scene ^. scName]
+            ]
+        )
+      ]
+    ]
+  -- Register click handlers for activating the scenes
+  liftUI . forM_ topScenes $ \(sceneID, _) ->
+      getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
+          on UI.click bttn $ \_ ->
+              recallScene (_aePC ^. pcBridgeIP)
+                          (_aePC ^. pcUserID)
+                          sceneID
 
 addLightTile :: Light -> String -> Window -> Element -> WebEnvUI ()
 addLightTile light lightID window root = do
@@ -311,17 +332,10 @@ addAllLightsTile window root = do
           on UI.click image $ \_ -> do
               -- Query current light state to see if we need to turn everything on or off
               lights <- liftIO . atomically $ readTVar _aeLights
-              let lgtOn = anyLightsOn lights
-              let body = HM.fromList[("on" :: String, if lgtOn then False else True)]
               -- Fire & forget REST API call in another thread
-              -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
-              void . liftIO . async $
-                  bridgeRequestTrace
-                      MethodPUT
-                      (_aePC ^. pcBridgeIP)
-                      (Just body)
-                      (_aePC ^. pcUserID)
-                      ("groups" </> "0" </> "action") -- Special group 0, all lights
+              switchAllLights (_aePC ^. pcBridgeIP)
+                              (_aePC ^. pcUserID)
+                              (not $ anyLightsOn lights)
 
 -- Update DOM elements with light update messages received
 --

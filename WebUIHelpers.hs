@@ -65,7 +65,7 @@ iconFromLM lm = basePath </> fn <.> ext
 
 -- We make a REST- API call in another thread to change the state on the bridge. The call
 -- is fire & forget, we don't retry in case of an error
---
+
 -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
 
 lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
@@ -93,6 +93,31 @@ lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
                 (Just $ HM.fromList [("bri_inc" :: String, change)])
                 userID
                 ("lights" </> lightID </> "state")
+
+-- http://www.developers.meethue.com/documentation/groups-api#253_body_example
+
+recallScene :: MonadIO m => IPAddress -> String -> String -> m ()
+recallScene bridgeIP userID sceneID =
+    void . liftIO . async $
+        bridgeRequestTrace
+            MethodPUT
+            bridgeIP
+            (Just $ HM.fromList [("scene" :: String, sceneID)])
+            userID
+            ("groups/0/action")
+
+-- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
+
+switchAllLights :: MonadIO m => IPAddress -> String -> Bool -> m ()
+switchAllLights bridgeIP userID onOff =
+    let body = HM.fromList[("on" :: String, onOff)]
+    in  void . liftIO . async $
+            bridgeRequestTrace
+                MethodPUT
+                bridgeIP
+                (Just body)
+                userID
+                ("groups" </> "0" </> "action") -- Special group 0, all lights
 
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 
