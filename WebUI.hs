@@ -171,7 +171,7 @@ addLightTile light lightID window root = do
                           ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                             * 100 / 255 :: Float
                           )
-        colorStr      = htmlColorFromRGB . colorFromLight $ light
+        colorStr      = htmlColorFromRGB . rgbFromLight $ light
         colorSupport  = isColorLT $ light ^. lgtType
     void $ element root #+
       [ ( UI.div #. "thumbnail" & set style [opacity]
@@ -279,10 +279,20 @@ addLightTile light lightID window root = do
                     margin = 10
                     mx     = mx' - margin
                     my     = my' - margin
-                in  when (mx >= 0 && mx < wdh && my >= 0 && my < hgt) $ do
+                in  -- Look up color in color picker image, convert to XY and make the REST call
+                    when (mx >= 0 && mx < wdh && my >= 0 && my < hgt) $
                         let (JP.PixelRGBA8 r g b _) = JP.pixelAt _aeColorPickerImg mx my
-                        traceS TLInfo $ printf "(%i, %i, %i)" r g b
-                        return ()
+                            (xyX, xyY)              = rgbToXY ( fromIntegral r / 255
+                                                              , fromIntegral g / 255
+                                                              , fromIntegral b / 255
+                                                              )
+                                                              (light ^. lgtModelID)
+                        in  lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                             (_aePC ^. pcUserID)
+                                             _aeLights
+                                             [lightID]
+                                             xyX
+                                             xyY
 
 -- Build group switch tile for current light group
 addGroupSwitchTile :: String -> [String] -> Window -> Element -> WebEnvUI ()

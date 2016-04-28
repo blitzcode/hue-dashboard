@@ -1,5 +1,6 @@
 
-module LightColor ( colorFromLight
+module LightColor ( rgbFromLight
+                  , rgbToXY
                   , htmlColorFromRGB
                   ) where
 
@@ -9,11 +10,13 @@ import Control.Lens
 
 import HueJSON
 
--- Compute a normalized RGB triplet for the given light
+-- Color conversions between RGB and the parameters the Hue API understands
 --
 -- http://www.developers.meethue.com/documentation/color-conversions-rgb-xy
-colorFromLight :: Light -> (Float, Float, Float)
-colorFromLight light
+
+-- Compute a normalized RGB triplet for the given light
+rgbFromLight :: Light -> (Float, Float, Float)
+rgbFromLight light
     | hasXY =
           let -- XYZ conversion
               x = xyX
@@ -67,6 +70,27 @@ colorFromLight light
         xy         = light ^. lgtState . lsXY
         hasXY      = isJust xy
         [xyX, xyY] = xy ^. non [0, 0]
+
+-- Compute an XY value for the given light model from an normalized RGB triplet
+--
+-- TODO: We currently ignore the light model parameter and rely on the bridge to
+--       clamp XY values outside the color gamut for the given light
+--
+rgbToXY :: (Float, Float, Float) -> LightModel -> (Float, Float)
+rgbToXY (r, g, b) _ =
+    let -- Gamma correction
+        rGamma = if r > 0.04045 then ((r + 0.055) / (1 + 0.055)) ** 2.4 else r / 12.92
+        gGamma = if g > 0.04045 then ((g + 0.055) / (1 + 0.055)) ** 2.4 else g / 12.92
+        bGamma = if b > 0.04045 then ((b + 0.055) / (1 + 0.055)) ** 2.4 else b / 12.92
+        -- D65 wide gamut conversion
+        xX = rGamma * 0.664511 + gGamma * 0.154324 + bGamma * 0.162028;
+        yY = rGamma * 0.283881 + gGamma * 0.668433 + bGamma * 0.047685;
+        zZ = rGamma * 0.000088 + gGamma * 0.072310 + bGamma * 0.986039;
+        -- XY
+        xyzSum = xX + yY + zZ
+    in  if   xyzSum == 0
+        then (0, 0)
+        else (xX / xyzSum, yY / xyzSum)
 
 -- Convert a normalized RGB triplet into an HTML color string
 htmlColorFromRGB :: (Float, Float, Float) -> String
