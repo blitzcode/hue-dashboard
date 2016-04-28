@@ -8,6 +8,7 @@ import Control.Monad.Reader
 import Control.Concurrent.STM
 import Data.Word
 import qualified Data.HashMap.Strict as HM
+import qualified Codec.Picture as JP
 
 import PersistConfig (PersistConfig)
 import HueJSON
@@ -33,12 +34,13 @@ type Scenes      = HM.HashMap String Scene    -- Scene ID to scene
 
 -- Application state
 data AppEnv = AppEnv
-    { _aePC          :: !PersistConfig
-    , _aeBC          :: !BridgeConfig
-    , _aeLights      :: !(TVar Lights)
-    , _aeLightGroups :: !(TVar LightGroups)
-    , _aeScenes      :: !Scenes
-    , _aeBroadcast   :: !LightUpdateTChan
+    { _aePC             :: !PersistConfig
+    , _aeBC             :: !BridgeConfig
+    , _aeLights         :: !(TVar Lights)
+    , _aeLightGroups    :: !(TVar LightGroups)
+    , _aeScenes         :: !Scenes
+    , _aeBroadcast      :: !LightUpdateTChan
+    , _aeColorPickerImg :: !(JP.Image JP.PixelRGBA8)
     }
 
 makeLenses ''AppEnv

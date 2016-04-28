@@ -40,7 +40,7 @@ buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
 -- see https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
 getElementByIdSafe :: Window -> String -> UI Element
 getElementByIdSafe window elementID = do
-    -- traceS TLInfo $ "getElementByIdSafe: " <> elementID
+    -- liftIO . putStrLn $ "getElementByIdSafe: " <> elementID
     fromJust <$> getElementById window elementID
 
 iconFromLM :: LightModel -> FilePath

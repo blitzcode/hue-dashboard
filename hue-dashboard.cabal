@@ -33,7 +33,8 @@ executable hue-dashboard
                     hostname,
                     threepenny-gui,
                     stm,
-                    async
+                    async,
+                    JuicyPixels
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 

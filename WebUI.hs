@@ -18,6 +18,7 @@ import Control.Monad
 import Control.Monad.Reader
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
+import qualified Codec.Picture as JP
 
 import Trace
 import HueJSON
@@ -246,10 +247,8 @@ addLightTile light lightID window root = do
               )
             ]
           ]
-    -- Register click handlers for the on / off and brightness controls
-    --
-    -- TODO: Add UI and handlers for changing color (also try color loop mode)
-    --
+        )
+      ]
     -- Turn on / off by clicking the light symbol
     getElementByIdSafe window (buildID lightID "image") >>= \image ->
         on UI.click image $ \_ -> do
@@ -271,6 +270,19 @@ addLightTile light lightID window root = do
                                    [lightID]
                                    -- Click on left part decrements, right part increments
                                    (if mx < 50 then (-brightnessChange) else brightnessChange)
+    -- Respond to clicks on the color picker
+    when colorSupport $
+        getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
+            on UI.mousedown image $ \(mx', my') ->
+                let wdh    = JP.imageWidth  _aeColorPickerImg
+                    hgt    = JP.imageHeight _aeColorPickerImg
+                    margin = 10
+                    mx     = mx' - margin
+                    my     = my' - margin
+                in  when (mx >= 0 && mx < wdh && my >= 0 && my < hgt) $ do
+                        let (JP.PixelRGBA8 r g b _) = JP.pixelAt _aeColorPickerImg mx my
+                        traceS TLInfo $ printf "(%i, %i, %i)" r g b
+                        return ()
 
 -- Build group switch tile for current light group
 addGroupSwitchTile :: String -> [String] -> Window -> Element -> WebEnvUI ()
