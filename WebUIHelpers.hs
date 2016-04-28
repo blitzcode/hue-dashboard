@@ -143,10 +143,10 @@ switchAllLights bridgeIP userID onOff =
 anyLightsOn :: Lights -> Bool
 anyLightsOn lights = any (^. _2 . lgtState . lsOn) $ HM.toList lights
 
-anyLightsInGroupOn :: String -> LightGroups -> Lights -> Bool
-anyLightsInGroupOn groupID groups lights =
+anyLightsInGroup :: String -> LightGroups -> Lights -> (Light -> Bool) -> Bool
+anyLightsInGroup groupID groups lights condition =
     case HM.lookup groupID groups of
         Nothing          -> False
-        Just groupLights -> or . map (^. lgtState . lsOn) .
-                                catMaybes . map (flip HM.lookup lights) $ groupLights
+        Just groupLights ->
+            or . map condition . catMaybes . map (flip HM.lookup lights) $ groupLights
 

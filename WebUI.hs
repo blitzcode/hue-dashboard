@@ -184,38 +184,9 @@ addLightTile light lightID window root = do
                                     & set UI.id_ (buildID lightID "image")
           ] ++
           -- Only add color picker elements for lights that support colors
-          ( if   not colorSupport
-            then []
-            else
-              [ ( UI.div & set style [("display", "none")]
-                         & set UI.id_ (buildID lightID "color-picker-container")
-                ) #+
-                [ UI.div #. "color-picker-curtain"
-                          & set (attr "onclick") "this.parentNode.style.display = 'none'"
-                , UI.img #. "color-picker-overlay"
-                          & set UI.src "static/color_picker.png"
-                          & set UI.id_ (buildID lightID "color-picker-overlay")
-                ]
-              , ( UI.div #. "color-picker-button"
-                          & set (attr "onclick")
-                                -- Click button to make color picker visible, but not
-                                -- for lights that are turned off (opacity < 1)
-                                --
-                                -- TODO: Glitches when a light is switched off while
-                                --       the color picker is open, just move curtain
-                                --       and overlay out of the tile so their opacity
-                                --       is not affected
-                                --
-                                ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
-                                           " { getElementById('%s').style.display = 'block'; }"
-                                         )
-                                  (buildID lightID "tile")
-                                  (buildID lightID "color-picker-container")
-                                )
-                ) #+
-                [ UI.div #. "glyphicon glyphicon-tint" & set style [("margin", "3px")]
-                ]
-              ]
+          ( if   colorSupport
+            then addColorPicker lightID
+            else []
           ) ++
           -- Model and type text
           [ UI.div #. "text-center" #+
@@ -273,74 +244,131 @@ addLightTile light lightID window root = do
     -- Respond to clicks on the color picker
     when colorSupport $
         getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
-            on UI.mousedown image $ \(mx', my') ->
-                let wdh    = JP.imageWidth  _aeColorPickerImg
-                    hgt    = JP.imageHeight _aeColorPickerImg
-                    margin = 10
-                    mx     = mx' - margin
-                    my     = my' - margin
-                in  -- Look up color in color picker image, convert to XY and make the REST call
-                    when (mx >= 0 && mx < wdh && my >= 0 && my < hgt) $
-                        let (JP.PixelRGBA8 r g b _) = JP.pixelAt _aeColorPickerImg mx my
-                            (xyX, xyY)              = rgbToXY ( fromIntegral r / 255
-                                                              , fromIntegral g / 255
-                                                              , fromIntegral b / 255
-                                                              )
-                                                              (light ^. lgtModelID)
-                        in  lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                             (_aePC ^. pcUserID)
-                                             _aeLights
-                                             [lightID]
-                                             xyX
-                                             xyY
+            on UI.mousedown image $ \(mx, my) ->
+                case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
+                    Nothing         -> return ()
+                    Just (xyX, xyY) ->
+                        lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                         (_aePC ^. pcUserID)
+                                         _aeLights
+                                         [lightID]
+                                         xyX
+                                         xyY
+
+-- Get XY color from mouse click coordinates over the color picker image. Return Nothing
+-- when the click was on the margin
+xyFromColorPickerCoordinates :: JP.Image JP.PixelRGBA8
+                            -> Int
+                            -> Int
+                            -> LightModel
+                            -> Maybe (Float, Float)
+xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
+    let wdh    = JP.imageWidth  colorPickerImg
+        hgt    = JP.imageHeight colorPickerImg
+        margin = 10 -- There's a margin around the image on the website
+        mx     = mx' - margin
+        my     = my' - margin
+    in  -- Look up color in color picker image, convert to XY
+        if   mx >= 0 && mx < wdh && my >= 0 && my < hgt
+        then let (JP.PixelRGBA8 r g b _) = JP.pixelAt colorPickerImg mx my
+             in Just $ rgbToXY ( fromIntegral r / 255
+                               , fromIntegral g / 255
+                               , fromIntegral b / 255
+                                )
+                              lm
+        else Nothing
+
+addColorPicker :: String -> [UI Element]
+addColorPicker grpOrLgtID =
+  [ ( UI.div & set style [("display", "none")]
+             & set UI.id_ (buildID grpOrLgtID "color-picker-container")
+    ) #+
+    [ UI.div #. "color-picker-curtain"
+              & set (attr "onclick") "this.parentNode.style.display = 'none'"
+    , UI.img #. "color-picker-overlay"
+              & set UI.src "static/color_picker.png"
+              & set UI.id_ (buildID grpOrLgtID "color-picker-overlay")
+    ]
+  , ( UI.div #. "color-picker-button"
+              & set (attr "onclick")
+                    -- Click button to make color picker visible, but not
+                    -- for tiles that are turned off (opacity < 1)
+                    --
+                    -- TODO: Glitches when a tile is switched off while
+                    --       the color picker is open, just move curtain
+                    --       and overlay out of the tile so their opacity
+                    --       is not affected
+                    --
+                    ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
+                               " { getElementById('%s').style.display = 'block'; }"
+                             )
+                      (buildID grpOrLgtID "tile")
+                      (buildID grpOrLgtID "color-picker-container")
+                    )
+    ) #+
+    [ UI.div #. "glyphicon glyphicon-tint" & set style [("margin", "3px")]
+    ]
+  ]
 
 -- Build group switch tile for current light group
 addGroupSwitchTile :: String -> [String] -> Window -> Element -> WebEnvUI ()
 addGroupSwitchTile groupName groupLightIDs window root = do
   AppEnv { .. } <- ask
-  let groupID                 = "group-" <> groupName
-      queryAnyLightsInGroupOn =
+  let groupID                         = "group-" <> groupName
+      queryAnyLightsInGroup condition =
         (liftIO . atomically $ (,) <$> readTVar _aeLights <*> readTVar _aeLightGroups)
-          >>= \(lights, lightGroups) -> return $ anyLightsInGroupOn groupName lightGroups lights
+          >>= \(lights, lightGroups) -> return $
+            anyLightsInGroup groupName lightGroups lights condition
   liftUI $ do
+    grpHasColor <- queryAnyLightsInGroup (^. lgtType . to isColorLT)
     -- Tile
-    queryAnyLightsInGroupOn >>= \grpOn ->
+    queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
       void $ element root #+
         [ ( UI.div #. "thumbnail" & set style [if grpOn then enabledOpacity else disabledOpacity]
                                   & set UI.id_ (buildID groupID "tile")
           ) #+
-          [ UI.div #. "light-caption light-caption-group-header small" #+
-            [ string "Group Switch"
-            , UI.br
-            , string groupName
-            ]
-          , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
-                                    & set UI.id_ (buildID groupID "image")
-          , UI.div #. "text-center" #+
-            [ UI.h6 #+
-              [ UI.small #+
-                [ string $ ((show $ length groupLightIDs) <> " Light(s)")
-                , UI.br
-                , string "(Grouped by Prefix)"
+          ( -- Caption and switch icon
+            [ UI.div #. "light-caption light-caption-group-header small" #+
+              [ string "Group Switch"
+              , UI.br
+              , string groupName
+              ]
+            , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
+                                      & set UI.id_ (buildID groupID "image")
+            ] ++
+            -- Only add color picker elements for lights that support colors
+            ( if   grpHasColor
+              then addColorPicker groupID
+              else []
+            ) ++
+            -- Group description
+            [ UI.div #. "text-center" #+
+              [ UI.h6 #+
+                [ UI.small #+
+                  [ string $ ((show $ length groupLightIDs) <> " Light(s)")
+                  , UI.br
+                  , string "(Grouped by Prefix)"
+                  ]
                 ]
               ]
-            ]
-          , ( UI.div #. "progress"
-                      & set UI.id_ (buildID groupID "brightness-container")
-            ) #+
-            [ ( UI.div #. "progress-label-container") #+
-              [ UI.div #. "glyphicon glyphicon-minus minus-label"
-              , UI.div #. "glyphicon glyphicon-plus plus-label"
+              -- Brightness widget
+            , ( UI.div #. "progress"
+                        & set UI.id_ (buildID groupID "brightness-container")
+              ) #+
+              [ ( UI.div #. "progress-label-container") #+
+                [ UI.div #. "glyphicon glyphicon-minus minus-label"
+                , UI.div #. "glyphicon glyphicon-plus plus-label"
+                ]
+              , UI.div #. "progress-bar progress-bar-info"
               ]
-            , UI.div #. "progress-bar progress-bar-info"
             ]
-          ]
+          )
         ]
     -- Register click handler for turning group lights on / off
     getElementByIdSafe window (buildID groupID "image") >>= \image ->
         on UI.click image $ \_ -> do
             -- Query current group light state to see if we need to turn group on or off
-            queryAnyLightsInGroupOn >>= \grpOn ->
+            queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
                 lightsSwitchOnOff (_aePC ^. pcBridgeIP)
                                   (_aePC ^. pcUserID)
                                   groupLightIDs
@@ -355,6 +383,22 @@ addGroupSwitchTile groupName groupLightIDs window root = do
                                    groupLightIDs
                                    -- Click on left part decrements, right part increments
                                    (if mx < 50 then (-brightnessChange) else brightnessChange)
+    -- Respond to clicks on the color picker
+    when grpHasColor $
+        getElementByIdSafe window (buildID groupID "color-picker-overlay") >>= \image ->
+            on UI.mousedown image $ \(mx, my) ->
+                -- TODO: We have to specify a single light type for the color conversion,
+                --       but we potentially set many different lights. Do a custom
+                --       conversion for each color light in the group
+                case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
+                    Nothing         -> return ()
+                    Just (xyX, xyY) ->
+                        lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                         (_aePC ^. pcUserID)
+                                         _aeLights
+                                         groupLightIDs
+                                         xyX
+                                         xyY
 
 -- Tile for controlling all lights, also displays some bridge information
 addAllLightsTile :: Window -> Element -> WebEnvUI ()
