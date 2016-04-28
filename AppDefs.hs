@@ -7,7 +7,6 @@ import Control.Lens
 import Control.Monad.Reader
 import Control.Concurrent.STM
 import Data.Word
-import qualified Data.HashMap.Strict as HM
 import qualified Codec.Picture as JP
 
 import PersistConfig (PersistConfig)
@@ -27,10 +26,6 @@ data LightUpdate = LU_OnOff        !Bool
                  | LU_LastOff
                  | LU_FirstOn
                    deriving Show
-
-type Lights      = HM.HashMap String Light    -- Light ID to light
-type LightGroups = HM.HashMap String [String] -- Group names to lists of light IDs
-type Scenes      = HM.HashMap String Scene    -- Scene ID to scene
 
 -- Application state
 data AppEnv = AppEnv

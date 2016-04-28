@@ -10,6 +10,7 @@ import Data.Word
 import Data.Time
 import Data.Attoparsec.Text
 import qualified Data.Text as T
+import qualified Data.HashMap.Strict as HM
 import Control.Lens
 
 import Util
@@ -309,6 +310,12 @@ instance FromJSON PortalState where
                     <*> o .: "outgoing"
                     <*> o .: "communication"
     parseJSON _ = fail "Expected object"
+
+-- Some helper types for receiving lists / maps of the exported objects
+
+type Lights      = HM.HashMap String Light    -- Light ID to light
+type LightGroups = HM.HashMap String [String] -- Group names to lists of light IDs
+type Scenes      = HM.HashMap String Scene    -- Scene ID to scene
 
 -- Lenses
 

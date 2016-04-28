@@ -5,22 +5,24 @@ module WebUIHelpers where
 
 import Data.Monoid
 import Data.Maybe
-import Data.Aeson (ToJSON)
 import qualified Data.HashMap.Strict as HM
-import Control.Concurrent.STM
-import Control.Concurrent.Async
 import Control.Lens hiding ((<.>))
-import Control.Monad
 import Control.Monad.Reader
 import Graphics.UI.Threepenny.Core
-import System.FilePath
 
-import Util
 import HueJSON
-import HueREST
-import AppDefs
+import AppDefs (AppEnv)
 
--- Some utility functions split out from the WebUI module
+-- Some utility functions split out from the WebUI / TileBuilding modules
+
+-- Opacities used for enabled and disabled elements
+enabledOpacity, disabledOpacity :: (String, String)
+enabledOpacity  = ("opacity", "1.0")
+disabledOpacity = ("opacity", "0.3")
+
+-- Amount of brightness changed when any brightness widget is used
+brightnessChange :: Int
+brightnessChange = 25 -- Relative to 255
 
 -- Run a reader with the application environment on top of the UI monad
 type WebEnvUI = ReaderT AppEnv UI
@@ -43,100 +45,6 @@ getElementByIdSafe :: Window -> String -> UI Element
 getElementByIdSafe window elementID = do
     -- liftIO . putStrLn $ "getElementByIdSafe: " <> elementID
     fromJust <$> getElementById window elementID
-
-iconFromLM :: LightModel -> FilePath
-iconFromLM lm = basePath </> fn <.> ext
-  where
-    basePath = "static/svg"
-    ext      = "svg"
-    fn       = case lm of LM_HueBulbA19                -> "white_and_color_e27"
-                          LM_HueSpotBR30               -> "br30"
-                          LM_HueSpotGU10               -> "gu10"
-                          LM_HueLightStrips            -> "lightstrip"
-                          LM_HueLivingColorsIris       -> "iris"
-                          LM_HueLivingColorsBloom      -> "bloom"
-                          LM_LivingColorsGen3Iris      -> "iris"
-                          LM_LivingColorsGen3BloomAura -> "bloom"
-                          LM_HueA19Lux                 -> "white_e27"
-                          LM_ColorLightModule          -> "white_and_color_e27"
-                          LM_ColorTemperatureModule    -> "white_e27"
-                          LM_HueGo                     -> "go"
-                          LM_HueLightStripsPlus        -> "lightstrip"
-                          LM_Unknown _                 -> "white_e27"
-
--- We make a REST- API call in another thread to change the state on the bridge. The call
--- is fire & forget, we don't retry in case of an error
-
--- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
-
-lightsSetState :: (MonadIO m, ToJSON body) => IPAddress -> String -> [String] -> body -> m ()
-lightsSetState bridgeIP userID lightIDs body =
-    void . liftIO . async $
-        forM_ lightIDs $ \lightID ->
-            bridgeRequestTrace
-                MethodPUT
-                bridgeIP
-                (Just body)
-                userID
-                ("lights" </> lightID </> "state")
-
-lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
-lightsSwitchOnOff bridgeIP userID lightIDs onOff =
-    lightsSetState bridgeIP userID lightIDs $ HM.fromList [("on" :: String, onOff)]
-
-lightsChangeBrightness :: MonadIO m
-                       => IPAddress
-                       -> String
-                       -> TVar Lights
-                       -> [String]
-                       -> Int
-                       -> m ()
-lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
-    -- First check which of the lights we got are turned on. Changing the brightness
-    -- of a light in the off state will just result in an error response
-    lights <- liftIO . atomically $ readTVar lights'
-    let onLightIDs = filter (maybe False (^. lgtState . lsOn) . flip HM.lookup lights) lightIDs
-    lightsSetState bridgeIP userID onLightIDs $ HM.fromList [("bri_inc" :: String, change)]
-
-lightsSetColorXY :: MonadIO m
-                 => IPAddress
-                 -> String
-                 -> TVar Lights
-                 -> [String]
-                 -> Float
-                 -> Float
-                 -> m ()
-lightsSetColorXY bridgeIP userID lights' lightIDs xyX xyY = do
-    -- Can only change the color of lights which are turned on and support this feature
-    lights <- liftIO . atomically $ readTVar lights'
-    let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
-    let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
-    lightsSetState bridgeIP userID onAndColIDs $ HM.fromList [("xy" :: String, [xyX, xyY])]
-
--- http://www.developers.meethue.com/documentation/groups-api#253_body_example
-
-recallScene :: MonadIO m => IPAddress -> String -> String -> m ()
-recallScene bridgeIP userID sceneID =
-    void . liftIO . async $
-        bridgeRequestTrace
-            MethodPUT
-            bridgeIP
-            (Just $ HM.fromList [("scene" :: String, sceneID)])
-            userID
-            ("groups/0/action")
-
--- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
-
-switchAllLights :: MonadIO m => IPAddress -> String -> Bool -> m ()
-switchAllLights bridgeIP userID onOff =
-    let body = HM.fromList[("on" :: String, onOff)]
-    in  void . liftIO . async $
-            bridgeRequestTrace
-                MethodPUT
-                bridgeIP
-                (Just body)
-                userID
-                ("groups" </> "0" </> "action") -- Special group 0, all lights
 
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 
