@@ -71,6 +71,12 @@ lightsSetColorXY bridgeIP userID lights' lightIDs xyX xyY = do
 
 -- http://www.developers.meethue.com/documentation/groups-api#253_body_example
 
+-- TODO: Version 1 scenes take a long time to have the state changes reported back from
+--       the bridge, see
+--
+--       http://www.developers.meethue.com/content/
+--           bug-delay-reporting-changed-light-state-when-recalling-scenes
+
 recallScene :: MonadIO m => IPAddress -> String -> String -> m ()
 recallScene bridgeIP userID sceneID =
     void . liftIO . async $
