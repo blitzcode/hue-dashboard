@@ -306,8 +306,7 @@ addColorPicker grpOrLgtID =
                       (buildID grpOrLgtID "color-picker-container")
                     )
     ) #+
-    [ UI.div #. "glyphicon glyphicon-tint" & set style [("margin", "3px")]
-    ]
+    [ UI.div #. "glyphicon glyphicon-tint color-picker-tint-icon" ]
   ]
 
 -- Build group switch tile for current light group
