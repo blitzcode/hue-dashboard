@@ -28,7 +28,7 @@
     {
         float: left;
         width: 110px;
-        min-height: 235px;
+        height: 217px;
         margin: 0px 5px 5px 0px;
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
@@ -56,7 +56,7 @@
     }
     .light-display .progress
     {
-        margin: 2px 0px 6px 0px;
+        margin: 13px 0px 6px 0px;
         cursor: pointer;
     }
     .light-display .progress-label-container
@@ -68,14 +68,14 @@
     {
         position: absolute;
         left: 3px;
-        top: 2px;
+        top: 3px;
         text-shadow: 0px 0px 1px #333;
     }
     .light-display .plus-label
     {
         position: absolute;
         right: 3px;
-        top: 2px;
+        top: 3px;
         text-shadow: 0px 0px 1px #333;
     }
     .light-display .percentage-label
@@ -96,7 +96,7 @@
     {
         width: 110px;
         left: -6px;
-        margin-top: 10px;
+        margin-top: 4px;
     }
     .light-display .btn-scene
     {
@@ -179,7 +179,7 @@
     <div class="thumbnails light-display" id="lights">
       <!--
       <div class="thumbnail" style="opacity: 1.0;">
-        <div class="light-caption small" style="">Group Switch<br/>Kinderzimmer</div>
+        <div class="light-caption light-caption-group-header small" style="">Group Switch<br/>Kinderzimmer</div>
         <img class="img-rounded" style="background: white;" src="static/svg/hds.svg"/>
         <div class="text-center">
           <h6>
@@ -190,23 +190,21 @@
             </small>
           </h6>
         </div>
-        <div class="small text-center">Brightness</div>
-          <div class="progress-label-container">
-            <div class="glyphicon glyphicon-minus minus-label">
-            </div>
-            <div class="glyphicon glyphicon-plus plus-label">
-            </div>
+        <div class="progress-label-container">
+          <div class="glyphicon glyphicon-minus minus-label">
           </div>
+          <div class="glyphicon glyphicon-plus plus-label">
+          </div>
+        </div>
       </div>
       -->
       <!--
       <div class="thumbnail" style="opacity: 1.0;">
-        <div class="light-caption small">All Lights</div>
+        <div class="light-caption light-caption-group-header small">All Lights</div>
         <img class="img-rounded" src="static/svg/bridge_v2.svg"/>
         <div class="text-center">
           <h6>
             <small>
-              Hue Bridge<br/>
               Model BSB002<br/>
               IP 192.168.1.197<br/>
               API v1.13.0<br/>
@@ -236,7 +234,6 @@
             </small>
           </h6>
         </div>
-        <div class="small text-center">Brightness</div>
         <div class="progress">
           <div class="progress-label-container">
             <div class="glyphicon glyphicon-minus minus-label">
