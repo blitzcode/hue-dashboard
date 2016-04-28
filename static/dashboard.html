@@ -16,6 +16,30 @@
   <script src="haskell.js"></script>
   <script type="text/javascript" charset="utf-8">
     Haskell.initFFI();
+
+    // Terrible hack to work around this bug:
+    //
+    // https://github.com/HeinrichApfelmus/threepenny-gui/issues/130
+    //
+    // Basically, do a few things to detect the conditions under which our websocket
+    // would normally get dropped and refresh. This is mostly an issue on iOS devices,
+    // and desktop browsers like Safari seem to have issues with setInterval()
+    if (navigator.userAgent.match(/(iPhone|iPod|iPad)/i))
+    {
+        window.lastAliveTick = (new Date()).getTime();
+        function myTimer() {
+            var curAliveTick = (new Date()).getTime();
+            if (curAliveTick - window.lastAliveTick > 5000)
+            {
+                //window.alert('stale');
+                window.location.reload(true);
+            }
+            window.lastAliveTick = curAliveTick;
+        }
+        window.addEventListener('pagehide', function () { window.lastAliveTick = 0; });
+        window.addEventListener('unload', function () { window.lastAliveTick = 0; });
+        setInterval(myTimer, 1000);
+    }
   </script>
   <!-- Our CSS -->
   <style>
