@@ -50,7 +50,9 @@ addLightTile light lightID window root = do
                                 & set UI.id_ (buildID lightID "tile")
         ) #+
         ( -- Caption and light icon
-          [ UI.div #. "light-caption small" #+ [string $ light ^. lgtName]
+          [ ( UI.div #. "light-caption small" & set UI.id_ (buildID lightID "caption")
+            ) #+
+            [string $ light ^. lgtName]
           , UI.img #. "img-rounded" & set style [("background", colorStr)]
                                     & set UI.src (iconFromLM $ light ^. lgtModelID)
                                     & set UI.id_ (buildID lightID "image")
@@ -92,6 +94,12 @@ addLightTile light lightID window root = do
           ]
         )
       ]
+    -- Have light blink once after clicking the caption
+    getElementByIdSafe window (buildID lightID "caption") >>= \caption ->
+        on UI.click caption $ \_ -> do
+            lightsBreatheCycle (_aePC ^. pcBridgeIP)
+                               (_aePC ^. pcUserID)
+                               [lightID]
     -- Turn on / off by clicking the light symbol
     getElementByIdSafe window (buildID lightID "image") >>= \image ->
         on UI.click image $ \_ -> do
@@ -165,7 +173,9 @@ addGroupSwitchTile groupName groupLightIDs window root = do
                                   & set UI.id_ (buildID groupID "tile")
           ) #+
           ( -- Caption and switch icon
-            [ UI.div #. "light-caption light-caption-group-header small" #+
+            [ ( UI.div #. "light-caption light-caption-group-header small"
+                    & set UI.id_ (buildID groupID "caption")
+              ) #+
               [ string "Group Switch"
               , UI.br
               , string groupName
@@ -201,6 +211,12 @@ addGroupSwitchTile groupName groupLightIDs window root = do
             ]
           )
         ]
+    -- Have light blink once after clicking the caption
+    getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
+        on UI.click caption $ \_ -> do
+            lightsBreatheCycle (_aePC ^. pcBridgeIP)
+                               (_aePC ^. pcUserID)
+                               groupLightIDs
     -- Register click handler for turning group lights on / off
     getElementByIdSafe window (buildID groupID "image") >>= \image ->
         on UI.click image $ \_ -> do

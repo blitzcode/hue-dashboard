@@ -1,6 +1,7 @@
 
 module WebUIREST ( lightsSetState
                  , lightsSwitchOnOff
+                 , lightsBreatheCycle
                  , lightsChangeBrightness
                  , lightsSetColorXY
                  , recallScene
@@ -36,9 +37,14 @@ lightsSetState bridgeIP userID lightIDs body =
                 userID
                 ("lights" </> lightID </> "state")
 
+
 lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
 lightsSwitchOnOff bridgeIP userID lightIDs onOff =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("on" :: String, onOff)]
+
+lightsBreatheCycle :: MonadIO m => IPAddress -> String -> [String] ->  m ()
+lightsBreatheCycle bridgeIP userID lightIDs =
+    lightsSetState bridgeIP userID lightIDs $ HM.fromList [("alert" :: String, "select" :: String)]
 
 lightsChangeBrightness :: MonadIO m
                        => IPAddress
