@@ -1,6 +1,7 @@
 
 module LightColor ( rgbFromLight
                   , rgbToXY
+                  , htmlColorFromLight
                   , htmlColorFromRGB
                   ) where
 
@@ -91,6 +92,14 @@ rgbToXY (r, g, b) _ =
     in  if   xyzSum == 0
         then (0, 0)
         else (xX / xyzSum, yY / xyzSum)
+
+-- Get an HTML background color string from a light. Return a colorful gradient if the
+-- light is in 'colorloop' mode
+htmlColorFromLight :: Light -> String
+htmlColorFromLight light =
+   if   (light ^. lgtState . lsEffect == Just "colorloop")
+   then "linear-gradient(to bottom right, rgb(255,100,100), rgb(100,200,100), rgb(100,100,255))"
+   else htmlColorFromRGB $ rgbFromLight light
 
 -- Convert a normalized RGB triplet into an HTML color string
 htmlColorFromRGB :: (Float, Float, Float) -> String

@@ -20,7 +20,6 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 
 import Trace
-import LightColor
 import AppDefs
 import WebUIHelpers
 import WebUITileBuilding
@@ -135,8 +134,8 @@ lightUpdateWorker window tchan = runUI window $ loop
             getElementByIdSafe window (buildID lightID "brightness-percentage") >>= \e ->
               void $ return e & set UI.text brightPercent
           -- Color change
-          LU_Color rgb ->
+          LU_Color col ->
             getElementByIdSafe window (buildID lightID "image") >>= \e ->
-              void $ return e & set style [("background", htmlColorFromRGB rgb)]
+              void $ return e & set style [("background", col)]
       loop
 

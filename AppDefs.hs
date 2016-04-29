@@ -20,7 +20,7 @@ type LightUpdateTChan = TChan (String, LightUpdate)
 -- Different updates to the displayed light state
 data LightUpdate = LU_OnOff        !Bool
                  | LU_Brightness   !Word8
-                 | LU_Color        !(Float, Float, Float) -- RGB
+                 | LU_Color        !String -- HTML color string
                  | LU_GroupLastOff !String
                  | LU_GroupFirstOn !String
                  | LU_LastOff
@@ -35,7 +35,7 @@ data AppEnv = AppEnv
     , _aeLightGroups    :: !(TVar LightGroups)
     , _aeScenes         :: !Scenes
     , _aeBroadcast      :: !LightUpdateTChan
-    , _aeColorPickerImg :: !(JP.Image JP.PixelRGBA8)
+    , _aeColorPickerImg :: !(JP.Image JP.PixelRGB8)
     }
 
 makeLenses ''AppEnv

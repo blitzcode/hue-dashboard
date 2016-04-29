@@ -19,6 +19,7 @@ And the same on the iPad:
 - Works with any modern browser
 - Adjusting individual lights or the automatically created groups is comfortable both with a mouse or touch based input
 - Existing scenes are fetched from the bridge
+- Supports putting lights in a 'color loop' mode where they cycle between all available colors
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - The UI is done with vector graphics and looks crisp on retina displays
 - On-screen light status responds in real-time to changes with smooth animations and transitions

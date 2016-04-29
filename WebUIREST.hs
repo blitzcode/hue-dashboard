@@ -1,14 +1,18 @@
 
+{-# LANGUAGE OverloadedStrings, OverloadedLists #-}
+
 module WebUIREST ( lightsSetState
                  , lightsSwitchOnOff
                  , lightsBreatheCycle
+                 , lightsColorLoop
                  , lightsChangeBrightness
                  , lightsSetColorXY
                  , recallScene
                  , switchAllLights
                  ) where
 
-import Data.Aeson (ToJSON)
+import Data.Aeson
+import Data.Vector ()
 import qualified Data.HashMap.Strict as HM
 import Control.Concurrent.STM
 import Control.Concurrent.Async
@@ -37,7 +41,6 @@ lightsSetState bridgeIP userID lightIDs body =
                 userID
                 ("lights" </> lightID </> "state")
 
-
 lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
 lightsSwitchOnOff bridgeIP userID lightIDs onOff =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("on" :: String, onOff)]
@@ -45,6 +48,20 @@ lightsSwitchOnOff bridgeIP userID lightIDs onOff =
 lightsBreatheCycle :: MonadIO m => IPAddress -> String -> [String] ->  m ()
 lightsBreatheCycle bridgeIP userID lightIDs =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("alert" :: String, "select" :: String)]
+
+-- Turn on the color loop effect for the specified lights
+lightsColorLoop :: MonadIO m => IPAddress -> String -> TVar Lights -> [String] ->  m ()
+lightsColorLoop bridgeIP userID lights' lightIDs = do
+    -- Can only change the color of lights which are turned on and support this feature
+    lights <- liftIO . atomically $ readTVar lights'
+    let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
+    let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
+    lightsSetState bridgeIP userID onAndColIDs $
+        HM.fromList [ ("effect" :: String, String "colorloop")
+                      -- The effect uses the current saturation, make sure it
+                      -- is at maximum or we might not see much color change
+                    , ("sat" :: String, Number $ fromIntegral (254 :: Int))
+                    ]
 
 lightsChangeBrightness :: MonadIO m
                        => IPAddress
@@ -73,7 +90,15 @@ lightsSetColorXY bridgeIP userID lights' lightIDs xyX xyY = do
     lights <- liftIO . atomically $ readTVar lights'
     let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
     let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
-    lightsSetState bridgeIP userID onAndColIDs $ HM.fromList [("xy" :: String, [xyX, xyY])]
+    lightsSetState bridgeIP userID onAndColIDs $
+        HM.fromList [ -- Make sure 'colorloop' is disabled
+                      --
+                      -- TODO: This doesn't always seem to work, maybe we need to first
+                      --       disable the color loop, then send the new color command?
+                      --
+                      ("effect", String "none")
+                    , ("xy" :: String, Array [Number $ realToFrac xyX, Number $ realToFrac xyY])
+                    ]
 
 -- http://www.developers.meethue.com/documentation/groups-api#253_body_example
 

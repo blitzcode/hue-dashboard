@@ -34,7 +34,8 @@ executable hue-dashboard
                     threepenny-gui,
                     stm,
                     async,
-                    JuicyPixels
+                    JuicyPixels,
+                    vector
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 

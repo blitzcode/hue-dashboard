@@ -43,7 +43,7 @@ addLightTile light lightID window root = do
                           ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                             * 100 / 255 :: Float
                           )
-        colorStr      = htmlColorFromRGB . rgbFromLight $ light
+        colorStr      = htmlColorFromLight light
         colorSupport  = isColorLT $ light ^. lgtType
     void $ element root #+
       [ ( UI.div #. "thumbnail" & set style [opacity]
@@ -126,8 +126,13 @@ addLightTile light lightID window root = do
         getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
             on UI.mousedown image $ \(mx, my) ->
                 case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
-                    Nothing         -> return ()
-                    Just (xyX, xyY) ->
+                    CPR_Margin          -> return ()
+                    CPR_EnableColorLoop ->
+                        lightsColorLoop (_aePC ^. pcBridgeIP)
+                                        (_aePC ^. pcUserID)
+                                        _aeLights
+                                        [lightID]
+                    CPR_XY xyX xyY      ->
                         lightsSetColorXY (_aePC ^. pcBridgeIP)
                                          (_aePC ^. pcUserID)
                                          _aeLights
@@ -174,7 +179,7 @@ addGroupSwitchTile groupName groupLightIDs window root = do
           ) #+
           ( -- Caption and switch icon
             [ ( UI.div #. "light-caption light-caption-group-header small"
-                    & set UI.id_ (buildID groupID "caption")
+                        & set UI.id_ (buildID groupID "caption")
               ) #+
               [ string "Group Switch"
               , UI.br
@@ -244,8 +249,13 @@ addGroupSwitchTile groupName groupLightIDs window root = do
                 --       but we potentially set many different lights. Do a custom
                 --       conversion for each color light in the group
                 case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
-                    Nothing         -> return ()
-                    Just (xyX, xyY) ->
+                    CPR_Margin          -> return ()
+                    CPR_EnableColorLoop ->
+                        lightsColorLoop (_aePC ^. pcBridgeIP)
+                                        (_aePC ^. pcUserID)
+                                        _aeLights
+                                        groupLightIDs
+                    CPR_XY xyX xyY      ->
                         lightsSetColorXY (_aePC ^. pcBridgeIP)
                                          (_aePC ^. pcUserID)
                                          _aeLights
@@ -346,28 +356,35 @@ addScenesTile window root = do
                           (_aePC ^. pcUserID)
                           sceneID
 
--- Get XY color from mouse click coordinates over the color picker image. Return Nothing
--- when the click was on the margin
-xyFromColorPickerCoordinates :: JP.Image JP.PixelRGBA8
+data ColorPickerResult = CPR_Margin          -- Click on the margin
+                       | CPR_EnableColorLoop -- Click on the 'Enable Color Loop' button
+                       | CPR_XY Float Float  -- Clicked on the color / color temperature parts, XY
+
+-- Classify results from a click on the color picker image
+xyFromColorPickerCoordinates :: JP.Image JP.PixelRGB8
                              -> Int
                              -> Int
                              -> LightModel
-                             -> Maybe (Float, Float)
+                             -> ColorPickerResult
 xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
     let wdh    = JP.imageWidth  colorPickerImg
         hgt    = JP.imageHeight colorPickerImg
         margin = 10 -- There's a margin around the image on the website
+        button = 40 -- The 'Enable Color Loop' button is on the bottom
         mx     = mx' - margin
         my     = my' - margin
-    in  -- Look up color in color picker image, convert to XY
-        if   mx >= 0 && mx < wdh && my >= 0 && my < hgt
-        then let (JP.PixelRGBA8 r g b _) = JP.pixelAt colorPickerImg mx my
-             in Just $ rgbToXY ( fromIntegral r / 255
-                               , fromIntegral g / 255
-                               , fromIntegral b / 255
-                               )
-                       lm
-        else Nothing
+    in  case () of
+            _ | mx < 0 || my < 0 || mx >= wdh || my >= hgt -> CPR_Margin
+              | my >= hgt - button                         -> CPR_EnableColorLoop
+              | otherwise                                  ->
+                    -- Look up color in color picker image, convert to XY
+                    let (JP.PixelRGB8 r g b) = JP.pixelAt colorPickerImg mx my
+                        (xyX, xyY)           = rgbToXY ( fromIntegral r / 255
+                                                       , fromIntegral g / 255
+                                                       , fromIntegral b / 255
+                                                       )
+                                               lm
+                    in  CPR_XY xyX xyY
 
 -- Add color picker and 'tint' button
 addColorPicker :: String -> [UI Element]

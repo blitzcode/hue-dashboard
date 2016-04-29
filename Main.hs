@@ -48,10 +48,10 @@ main =
         _aeBroadcast <- atomically $ newBroadcastTChan
         -- Load color picker image
         _aeColorPickerImg <- JP.readPng "static/color_picker.png" >>= \case
-            Right (JP.ImageRGBA8 image) -> do traceS TLInfo $ "Loaded color picker image"
-                                              return image
-            Right _                     -> traceAndThrow $ "Color picker image wrong format"
-            Left err                    -> traceAndThrow $ "Can't load color picker image: " <> err
+            Right (JP.ImageRGB8 image) -> do traceS TLInfo $ "Loaded color picker image"
+                                             return image
+            Right _                    -> traceAndThrow $ "Color picker image wrong format"
+            Left err                   -> traceAndThrow $ "Can't load color picker image: " <> err
         -- Launch application
         run AppEnv { _aePC = newCfg
                    , _aeBC = bridgeConfig
