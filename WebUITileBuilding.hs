@@ -278,7 +278,7 @@ addAllLightsTile window root = do
 addScenesTile :: Window -> Element -> WebEnvUI ()
 addScenesTile window root = do
   AppEnv { .. } <- ask
-  let sceneBttnID sceneID =
+  let sceneBttnID sceneID = -- TODO: Move this logic to where the scenes are fetched
         -- DOM ID from scene ID
         "scene-activate-bttn-" <> sceneID
       nameKeyedScenes =

@@ -13,7 +13,7 @@ import Graphics.UI.Threepenny.Core
 import HueJSON
 import AppDefs (AppEnv)
 
--- Some utility functions split out from the WebUI / TileBuilding modules
+-- Some utility functions split out from the WebUI / WebUITileBuilding modules
 
 -- Opacities used for enabled and disabled elements
 enabledOpacity, disabledOpacity :: (String, String)
