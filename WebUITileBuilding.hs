@@ -20,6 +20,8 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import qualified Codec.Picture as JP
 import System.FilePath
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 
 import HueJSON
 import LightColor
@@ -30,21 +32,54 @@ import WebUIREST
 
 -- Code for building the individual tiles making up our user interface
 
--- TODO: This duplicates some code from the update routines, maybe just
---       build the skeleton here and let the updating set all actual state?
-
-addLightTile :: Light -> String -> Window -> Element -> WebEnvUI ()
-addLightTile light lightID window root = do
+addLightTile :: Light -> String -> Window -> PageBuilder ()
+addLightTile light lightID window = do
   AppEnv { .. } <- ask
-  liftUI $ do
-    -- Build tile
-    let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
-        brightPercent = printf "%.0f%%"
-                          ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                            * 100 / 255 :: Float
-                          )
-        colorStr      = htmlColorFromLight light
-        colorSupport  = isColorLT $ light ^. lgtType
+  -- Build tile
+  let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
+      brightPercent = printf "%.0f&#37;" -- TODO: %-sign breaks everything...
+                        ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                          * 100 / 255 :: Float
+                        ) :: String
+      colorStr      = htmlColorFromLight light
+      colorSupport  = isColorLT $ light ^. lgtType
+  addPageTile $
+    H.div H.! A.class_ "thumbnail"
+          H.! A.style (H.toValue $ "opacity: " <> show opacity <> ";")
+          H.! A.id (H.toValue $ buildID lightID "tile") $ do
+      -- Caption and light icon
+      H.div H.! A.class_ "light-caption small"
+            H.! A.id (H.toValue $ buildID lightID "caption") $
+              H.toHtml $ light ^. lgtName
+      H.img H.! A.class_ "img-rounded"
+            H.! A.style (H.toValue $ "background: " <> colorStr <> ";")
+            H.! A.src (H.toValue . iconFromLM $ light ^. lgtModelID)
+            H.! A.id (H.toValue $ buildID lightID "image")
+      -- Only add color picker elements for lights that support colors
+      when colorSupport $
+          addColorPicker lightID
+      -- Model type and text
+      H.div H.! A.class_ "text-center" $
+        H.h6 $
+          H.small $ do
+            H.toHtml . show $ light ^. lgtModelID
+            H.br
+            H.toHtml . show $ light ^. lgtType
+      -- Brightness widget
+      H.div H.! A.class_ "progress"
+            H.! A.id (H.toValue $ buildID lightID "brightness-container") $ do
+        H.div H.! A.class_ "progress-label-container" $ do
+          H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
+          H.div H.! A.class_ "glyphicon glyphicon-plus plus-label" $ return ()
+          H.div H.! A.class_ "percentage-label" $
+            H.small $
+              H.span H.! A.id (H.toValue $ buildID lightID "brightness-percentage") $
+                H.toHtml brightPercent
+        H.div H.! A.class_ "progress-bar progress-bar-info"
+              H.! A.style (H.toValue $ "width: " <> brightPercent <> ";")
+              H.! A.id (H.toValue $ buildID lightID "brightness-bar")
+              $ return ()
+    {-
     void $ element root #+
       [ ( UI.div #. "thumbnail" & set style [opacity]
                                 & set UI.id_ (buildID lightID "tile")
@@ -94,51 +129,53 @@ addLightTile light lightID window root = do
           ]
         )
       ]
-    -- Have light blink once after clicking the caption
-    getElementByIdSafe window (buildID lightID "caption") >>= \caption ->
-        on UI.click caption $ \_ -> do
-            lightsBreatheCycle (_aePC ^. pcBridgeIP)
-                               (_aePC ^. pcUserID)
-                               [lightID]
-    -- Turn on / off by clicking the light symbol
-    getElementByIdSafe window (buildID lightID "image") >>= \image ->
-        on UI.click image $ \_ -> do
-            -- Query current light state to see if we need to turn it on or off
-            curLights <- liftIO . atomically $ readTVar _aeLights
-            case HM.lookup lightID curLights of
-                Nothing         -> return ()
-                Just lightOnOff -> lightsSwitchOnOff (_aePC ^. pcBridgeIP)
-                                                     (_aePC ^. pcUserID)
-                                                     [lightID]
-                                                     (not $ lightOnOff ^. lgtState . lsOn)
-    -- Change brightness bright clicking the left / right side of the brightness bar
-    getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
-        on UI.mousedown image $ \(mx, _) ->
-            -- Construct and perform REST API call
-            lightsChangeBrightness (_aePC ^. pcBridgeIP)
-                                   (_aePC ^. pcUserID)
-                                   _aeLights
-                                   [lightID]
-                                   -- Click on left part decrements, right part increments
-                                   (if mx < 50 then (-brightnessChange) else brightnessChange)
-    -- Respond to clicks on the color picker
-    when colorSupport $
-        getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
-            on UI.mousedown image $ \(mx, my) ->
-                case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
-                    CPR_Margin          -> return ()
-                    CPR_EnableColorLoop ->
-                        lightsColorLoop (_aePC ^. pcBridgeIP)
-                                        (_aePC ^. pcUserID)
-                                        _aeLights
-                                        [lightID]
-                    CPR_XY xyX xyY      ->
-                        lightsSetColorXY (_aePC ^. pcBridgeIP)
+    -}
+  addPageUIAction $ do
+     -- Have light blink once after clicking the caption
+     getElementByIdSafe window (buildID lightID "caption") >>= \caption ->
+         on UI.click caption $ \_ -> do
+             lightsBreatheCycle (_aePC ^. pcBridgeIP)
+                                (_aePC ^. pcUserID)
+                                [lightID]
+     -- Turn on / off by clicking the light symbol
+     getElementByIdSafe window (buildID lightID "image") >>= \image ->
+         on UI.click image $ \_ -> do
+             -- Query current light state to see if we need to turn it on or off
+             curLights <- liftIO . atomically $ readTVar _aeLights
+             case HM.lookup lightID curLights of
+                 Nothing         -> return ()
+                 Just lightOnOff -> lightsSwitchOnOff (_aePC ^. pcBridgeIP)
+                                                      (_aePC ^. pcUserID)
+                                                      [lightID]
+                                                      (not $ lightOnOff ^. lgtState . lsOn)
+     -- Change brightness bright clicking the left / right side of the brightness bar
+     getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
+         on UI.mousedown image $ \(mx, _) ->
+             -- Construct and perform REST API call
+             lightsChangeBrightness (_aePC ^. pcBridgeIP)
+                                    (_aePC ^. pcUserID)
+                                    _aeLights
+                                    [lightID]
+                                    -- Click on left part decrements, right part increments
+                                    (if mx < 50 then (-brightnessChange) else brightnessChange)
+     -- Respond to clicks on the color picker
+     when colorSupport $
+         getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
+             on UI.mousedown image $ \(mx, my) ->
+                 case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
+                     CPR_Margin          -> return ()
+                     CPR_EnableColorLoop ->
+                         lightsColorLoop (_aePC ^. pcBridgeIP)
                                          (_aePC ^. pcUserID)
                                          _aeLights
                                          [lightID]
-                                         xyX
-                                         xyY
+                     CPR_XY xyX xyY      ->
+                         lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                          (_aePC ^. pcUserID)
+                                          _aeLights
+                                          [lightID]
+                                          xyX
+                                          xyY
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext
@@ -161,116 +198,161 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_Unknown _                 -> "white_e27"
 
 -- Build group switch tile for current light group
-addGroupSwitchTile :: String -> [String] -> Window -> Element -> WebEnvUI ()
-addGroupSwitchTile groupName groupLightIDs window root = do
+addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
+addGroupSwitchTile groupName groupLightIDs window = do
   AppEnv { .. } <- ask
   let groupID                         = "group-" <> groupName
       queryAnyLightsInGroup condition =
         (liftIO . atomically $ (,) <$> readTVar _aeLights <*> readTVar _aeLightGroups)
           >>= \(lights, lightGroups) -> return $
             anyLightsInGroup groupName lightGroups lights condition
-  liftUI $ do
-    grpHasColor <- queryAnyLightsInGroup (^. lgtType . to isColorLT)
-    -- Tile
-    queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
-      void $ element root #+
-        [ ( UI.div #. "thumbnail" & set style [if grpOn then enabledOpacity else disabledOpacity]
-                                  & set UI.id_ (buildID groupID "tile")
-          ) #+
-          ( -- Caption and switch icon
-            [ ( UI.div #. "light-caption light-caption-group-header small"
-                        & set UI.id_ (buildID groupID "caption")
-              ) #+
-              [ string "Group Switch"
-              , UI.br
-              , string groupName
-              ]
-            , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
-                                      & set UI.id_ (buildID groupID "image")
-            ] ++
-            -- Only add color picker elements for lights that support colors
-            ( if   grpHasColor
-              then addColorPicker groupID
-              else []
-            ) ++
-            -- Group description
-            [ UI.div #. "text-center" #+
-              [ UI.h6 #+
-                [ UI.small #+
-                  [ string $ ((show $ length groupLightIDs) <> " Light(s)")
-                  , UI.br
-                  , string "(Grouped by Prefix)"
-                  ]
+  grpHasColor <- queryAnyLightsInGroup (^. lgtType . to isColorLT)
+  -- Tile
+  queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
+    addPageTile $
+      H.div H.! A.class_ "thumbnail"
+            H.! A.style ( H.toValue $ "opacity: "
+                            <> show (if grpOn then enabledOpacity else disabledOpacity)
+                            <> ";"
+                        )
+            H.! A.id (H.toValue $ buildID groupID "tile") $ do
+        -- Caption and switch icon
+        H.div H.! A.class_ "light-caption light-caption-group-header small"
+              H.! A.id (H.toValue $ buildID groupID "caption") $ do
+                "Group Switch"
+                H.br
+                H.toHtml groupName
+        H.img H.! A.class_ "img-rounded"
+              H.! A.src "static/svg/hds.svg"
+              H.! A.id (H.toValue $ buildID groupID "image")
+        -- Only add color picker elements for lights that support colors
+        when grpHasColor $
+            addColorPicker groupID
+        -- Group description
+        H.div H.! A.class_ "text-center" $
+          H.h6 $
+            H.small $ do
+              H.toHtml $ ((show $ length groupLightIDs) <> " Light(s)")
+              H.br
+              "(Grouped by Prefix)"
+        -- Brightness widget
+        H.div H.! A.class_ "progress"
+              H.! A.id (H.toValue $ buildID groupID "brightness-container") $ do
+          H.div H.! A.class_ "progress-label-container" $ do
+            H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
+            H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
+          H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
+      {-
+      [ ( UI.div #. "thumbnail" & set style [if grpOn then enabledOpacity else disabledOpacity]
+                                & set UI.id_ (buildID groupID "tile")
+        ) #+
+        ( -- Caption and switch icon
+          [ ( UI.div #. "light-caption light-caption-group-header small"
+                      & set UI.id_ (buildID groupID "caption")
+            ) #+
+            [ string "Group Switch"
+            , UI.br
+            , string groupName
+            ]
+          , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
+                                    & set UI.id_ (buildID groupID "image")
+          ] ++
+          -- Only add color picker elements for lights that support colors
+          ( if   grpHasColor
+            then addColorPicker groupID
+            else []
+          ) ++
+          -- Group description
+          [ UI.div #. "text-center" #+
+            [ UI.h6 #+
+              [ UI.small #+
+                [ string $ ((show $ length groupLightIDs) <> " Light(s)")
+                , UI.br
+                , string "(Grouped by Prefix)"
                 ]
-              ]
-              -- Brightness widget
-            , ( UI.div #. "progress"
-                        & set UI.id_ (buildID groupID "brightness-container")
-              ) #+
-              [ ( UI.div #. "progress-label-container") #+
-                [ UI.div #. "glyphicon glyphicon-minus minus-label"
-                , UI.div #. "glyphicon glyphicon-plus plus-label"
-                ]
-              , UI.div #. "progress-bar progress-bar-info"
               ]
             ]
-          )
-        ]
-    -- Have light blink once after clicking the caption
-    getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
-        on UI.click caption $ \_ -> do
-            lightsBreatheCycle (_aePC ^. pcBridgeIP)
-                               (_aePC ^. pcUserID)
-                               groupLightIDs
-    -- Register click handler for turning group lights on / off
-    getElementByIdSafe window (buildID groupID "image") >>= \image ->
-        on UI.click image $ \_ -> do
-            -- Query current group light state to see if we need to turn group on or off
-            queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
-                lightsSwitchOnOff (_aePC ^. pcBridgeIP)
-                                  (_aePC ^. pcUserID)
-                                  groupLightIDs
-                                  (not grpOn)
-    -- Register click handler for changing group brightness
-    getElementByIdSafe window (buildID groupID "brightness-container") >>= \image ->
-        on UI.mousedown image $ \(mx, _) ->
-            -- Construct and perform REST API call
-            lightsChangeBrightness (_aePC ^. pcBridgeIP)
-                                   (_aePC ^. pcUserID)
-                                   _aeLights
-                                   groupLightIDs
-                                   -- Click on left part decrements, right part increments
-                                   (if mx < 50 then (-brightnessChange) else brightnessChange)
-    -- Respond to clicks on the color picker
-    when grpHasColor $
-        getElementByIdSafe window (buildID groupID "color-picker-overlay") >>= \image ->
-            on UI.mousedown image $ \(mx, my) ->
-                -- TODO: We have to specify a single light type for the color conversion,
-                --       but we potentially set many different lights. Do a custom
-                --       conversion for each color light in the group
-                case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
-                    CPR_Margin          -> return ()
-                    CPR_EnableColorLoop ->
-                        lightsColorLoop (_aePC ^. pcBridgeIP)
-                                        (_aePC ^. pcUserID)
-                                        _aeLights
-                                        groupLightIDs
-                    CPR_XY xyX xyY      ->
-                        lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                         (_aePC ^. pcUserID)
-                                         _aeLights
-                                         groupLightIDs
-                                         xyX
-                                         xyY
+            -- Brightness widget
+          , ( UI.div #. "progress"
+                      & set UI.id_ (buildID groupID "brightness-container")
+            ) #+
+            [ ( UI.div #. "progress-label-container") #+
+              [ UI.div #. "glyphicon glyphicon-minus minus-label"
+              , UI.div #. "glyphicon glyphicon-plus plus-label"
+              ]
+            , UI.div #. "progress-bar progress-bar-info"
+            ]
+          ]
+        )
+      ]
+      -}
+  addPageUIAction $ do
+      -- Have light blink once after clicking the caption
+      getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
+          on UI.click caption $ \_ -> do
+              lightsBreatheCycle (_aePC ^. pcBridgeIP)
+                                 (_aePC ^. pcUserID)
+                                 groupLightIDs
+      -- Register click handler for turning group lights on / off
+      getElementByIdSafe window (buildID groupID "image") >>= \image ->
+          on UI.click image $ \_ -> do
+              -- Query current group light state to see if we need to turn group on or off
+              queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
+                  lightsSwitchOnOff (_aePC ^. pcBridgeIP)
+                                    (_aePC ^. pcUserID)
+                                    groupLightIDs
+                                    (not grpOn)
+      -- Register click handler for changing group brightness
+      getElementByIdSafe window (buildID groupID "brightness-container") >>= \image ->
+          on UI.mousedown image $ \(mx, _) ->
+              -- Construct and perform REST API call
+              lightsChangeBrightness (_aePC ^. pcBridgeIP)
+                                     (_aePC ^. pcUserID)
+                                     _aeLights
+                                     groupLightIDs
+                                     -- Click on left part decrements, right part increments
+                                     (if mx < 50 then (-brightnessChange) else brightnessChange)
+      -- Respond to clicks on the color picker
+      when grpHasColor $
+          getElementByIdSafe window (buildID groupID "color-picker-overlay") >>= \image ->
+              on UI.mousedown image $ \(mx, my) ->
+                  -- TODO: We have to specify a single light type for the color conversion,
+                  --       but we potentially set many different lights. Do a custom
+                  --       conversion for each color light in the group
+                  case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
+                      CPR_Margin          -> return ()
+                      CPR_EnableColorLoop ->
+                          lightsColorLoop (_aePC ^. pcBridgeIP)
+                                          (_aePC ^. pcUserID)
+                                          _aeLights
+                                          groupLightIDs
+                      CPR_XY xyX xyY      ->
+                          lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                           (_aePC ^. pcUserID)
+                                           _aeLights
+                                           groupLightIDs
+                                           xyX
+                                           xyY
+
+
+{-
+numbers n = \cont -> docTypeHtml $ do
+    H.head $ do
+        H.title "Natural numbers"
+    body $ do
+        p "A list of natural numbers:"
+        cont
+-}
 
 -- Tile for controlling all lights, also displays some bridge information
-addAllLightsTile :: Window -> Element -> WebEnvUI ()
-addAllLightsTile window root = do
+addAllLightsTile :: Window -> PageBuilder ()
+addAllLightsTile window = do
   AppEnv { .. } <- ask
   -- Build tile
   void $ do
     lights <- liftIO . atomically $ readTVar _aeLights
     let lgtOn = anyLightsOn lights
+    {-
     void . liftUI $ element root #+
       [ ( UI.div #. "thumbnail" & set style [if lgtOn then enabledOpacity else disabledOpacity]
                                 & set UI.id_ (buildID "all-lights" "tile")
@@ -290,8 +372,30 @@ addAllLightsTile window root = do
           ]
         ]
       ]
+    -}
+    addPageTile $
+      H.div H.! A.class_ "thumbnail"
+            H.! A.style ( H.toValue $ "opacity: "
+                            <> show (if lgtOn then enabledOpacity else disabledOpacity)
+                            <> ";"
+                        )
+            H.! A.id (H.toValue $ buildID "all-lights" "tile")
+        $ do H.div H.! A.class_ "light-caption light-caption-group-header small" $ "All Lights"
+             H.img H.! A.class_ "img-rounded"
+                   H.! A.src "static/svg/bridge_v2.svg"
+                   H.! A.id (H.toValue $ buildID "all-lights" "image")
+             H.div H.! A.class_ "text-center" $
+               H.h6 $
+                 H.small $
+                   sequence_ $ intersperse H.br 
+                     [ H.toHtml $ "Model " <> (_aeBC ^. bcModelID)
+                     , H.toHtml $ "IP "    <> (_aePC ^. pcBridgeIP)
+                     , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
+                     , H.toHtml $ (show $ length lights) <> " Lights Connected"
+                     ]
+
   -- Register click handler for turning all lights on / off
-  liftUI $ do
+  addPageUIAction $
       getElementByIdSafe window (buildID "all-lights" "image") >>= \image ->
           on UI.click image $ \_ -> do
               -- Query current light state to see if we need to turn everything on or off
@@ -301,8 +405,8 @@ addAllLightsTile window root = do
                               (_aePC ^. pcUserID)
                               (not $ anyLightsOn lights)
 
-addScenesTile :: Window -> Element -> WebEnvUI ()
-addScenesTile window root = do
+addScenesTile :: Window -> PageBuilder ()
+addScenesTile window = do
   AppEnv { .. } <- ask
   let sceneBttnID sceneID = -- TODO: Move this logic to where the scenes are fetched
         -- DOM ID from scene ID
@@ -336,6 +440,7 @@ addScenesTile window root = do
                       xs               -> xs
       topScenes = take 8 fixNames
   -- Build scenes tile
+  {-
   void . liftUI $ element root #+
     [ UI.div #. "thumbnail" #+
       [ UI.div #. "light-caption light-caption-group-header small" #+ [string "Recent Scenes"]
@@ -348,13 +453,23 @@ addScenesTile window root = do
         )
       ]
     ]
+  -}
+  addPageTile $
+    H.div H.! A.class_ "thumbnail" $ do
+      H.div H.! A.class_ "light-caption light-caption-group-header small" $ "Recent Scenes"
+      H.div H.! A.class_ "btn-group-vertical btn-group-xs scene-btn-group" $
+        forM_ topScenes $ \(sceneID, scene) ->
+          H.button H.! A.class_ "btn btn-scene"
+                   H.! A.id (H.toValue $ sceneBttnID sceneID) $
+                     H.small $ (H.toHtml $ scene ^. scName)
   -- Register click handlers for activating the scenes
-  liftUI . forM_ topScenes $ \(sceneID, _) ->
-      getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
-          on UI.click bttn $ \_ ->
-              recallScene (_aePC ^. pcBridgeIP)
-                          (_aePC ^. pcUserID)
-                          sceneID
+  addPageUIAction $ 
+      forM_ topScenes $ \(sceneID, _) ->
+          getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
+              on UI.click bttn $ \_ ->
+                  recallScene (_aePC ^. pcBridgeIP)
+                              (_aePC ^. pcUserID)
+                              sceneID
 
 data ColorPickerResult = CPR_Margin          -- Click on the margin
                        | CPR_EnableColorLoop -- Click on the 'Enable Color Loop' button
@@ -387,8 +502,36 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
                     in  CPR_XY xyX xyY
 
 -- Add color picker and 'tint' button
-addColorPicker :: String -> [UI Element]
-addColorPicker grpOrLgtID =
+addColorPicker :: String -> H.Html
+addColorPicker grpOrLgtID = do
+  H.div H.! A.style "display: none;"
+        H.! A.id (H.toValue $ buildID grpOrLgtID "color-picker-container") $ do
+    H.div H.! A.class_ "color-picker-curtain"
+          H.! A.onclick "this.parentNode.style.display = 'none'"
+          $ return ()
+    H.img H.! A.class_ "color-picker-overlay"
+          H.! A.src "static/color_picker.png"
+          H.! A.id (H.toValue $ buildID grpOrLgtID "color-picker-overlay")
+  H.div H.! A.class_ "color-picker-button"
+        H.! A.onclick 
+          -- Click button to make color picker visible, but not
+          -- for tiles that are turned off (opacity < 1)
+          --
+          -- TODO: Glitches when a tile is switched off while
+          --       the color picker is open, just move curtain
+          --       and overlay out of the tile so their opacity
+          --       is not affected
+          --
+          ( H.toValue $ ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
+                                   " { getElementById('%s').style.display = 'block'; }"
+                                 )
+                          (buildID grpOrLgtID "tile")
+                          (buildID grpOrLgtID "color-picker-container")
+                          :: String
+                        )
+          ) $
+    H.div H.! A.class_ "glyphicon glyphicon-tint color-picker-tint-icon" $ return ()
+{-
   [ ( UI.div & set style [("display", "none")]
              & set UI.id_ (buildID grpOrLgtID "color-picker-container")
     ) #+
@@ -417,4 +560,4 @@ addColorPicker grpOrLgtID =
     ) #+
     [ UI.div #. "glyphicon glyphicon-tint color-picker-tint-icon" ]
   ]
-
+-}

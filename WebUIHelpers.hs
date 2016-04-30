@@ -1,35 +1,48 @@
 
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
 
 module WebUIHelpers where
 
 import Data.Monoid
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
-import Control.Lens hiding ((<.>))
+import Control.Lens
 import Control.Monad.Reader
+import Control.Monad.State
 import Graphics.UI.Threepenny.Core
+import Text.Blaze.Html (Html)
 
 import HueJSON
 import AppDefs (AppEnv)
 
 -- Some utility functions split out from the WebUI / WebUITileBuilding modules
 
+-- We build our page in a monad stack that provides the application environment and a
+-- place to store all the event handlers and HTML elements that comprise it
+
+data Page = Page { _pgTiles     :: ![Html]  -- Functions to generate all the tiles in the page
+                 , _pgUIActions :: ![UI ()] -- Functions to register all event handlers etc.
+                                            -- once the page has been build
+                 }
+
+makeLenses ''Page
+
+type PageBuilder = StateT Page (ReaderT AppEnv IO)
+
+addPageTile :: MonadState Page m => Html -> m ()
+addPageTile tile = pgTiles %= (tile :)
+
+addPageUIAction :: MonadState Page m => UI () -> m ()
+addPageUIAction action = pgUIActions %= (action :)
+
 -- Opacities used for enabled and disabled elements
-enabledOpacity, disabledOpacity :: (String, String)
-enabledOpacity  = ("opacity", "1.0")
-disabledOpacity = ("opacity", "0.3")
+enabledOpacity, disabledOpacity :: Float
+enabledOpacity  = 1.0
+disabledOpacity = 0.3
 
 -- Amount of brightness changed when any brightness widget is used
 brightnessChange :: Int
 brightnessChange = 25 -- Relative to 255
-
--- Run a reader with the application environment on top of the UI monad
-type WebEnvUI = ReaderT AppEnv UI
-
--- Lift threepenny's UI monad into ours
-liftUI :: UI a -> WebEnvUI a
-liftUI = lift
 
 -- Build a string for the id field in a light specific DOM object. Do this in one
 -- place as we need to locate them later when we want to update

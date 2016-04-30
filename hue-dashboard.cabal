@@ -35,7 +35,8 @@ executable hue-dashboard
                     stm,
                     async,
                     JuicyPixels,
-                    vector
+                    vector,
+                    blaze-html
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 
