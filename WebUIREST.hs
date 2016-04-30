@@ -49,13 +49,18 @@ lightsBreatheCycle :: MonadIO m => IPAddress -> String -> [String] ->  m ()
 lightsBreatheCycle bridgeIP userID lightIDs =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("alert" :: String, "select" :: String)]
 
--- Turn on the color loop effect for the specified lights
-lightsColorLoop :: MonadIO m => IPAddress -> String -> TVar Lights -> [String] ->  m ()
-lightsColorLoop bridgeIP userID lights' lightIDs = do
-    -- Can only change the color of lights which are turned on and support this feature
+filterOnAndColor :: MonadIO m => TVar Lights -> [String] -> m [String]
+filterOnAndColor lights' lightIDs = do
     lights <- liftIO . atomically $ readTVar lights'
     let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
     let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
+    return onAndColIDs
+
+-- Turn on the color loop effect for the specified lights
+lightsColorLoop :: MonadIO m => IPAddress -> String -> TVar Lights -> [String] ->  m ()
+lightsColorLoop bridgeIP userID lights lightIDs = do
+    -- Can only change the color of lights which are turned on and support this feature
+    onAndColIDs <- filterOnAndColor lights lightIDs
     lightsSetState bridgeIP userID onAndColIDs $
         HM.fromList [ ("effect" :: String, String "colorloop")
                       -- The effect uses the current saturation, make sure it
@@ -85,11 +90,9 @@ lightsSetColorXY :: MonadIO m
                  -> Float
                  -> Float
                  -> m ()
-lightsSetColorXY bridgeIP userID lights' lightIDs xyX xyY = do
+lightsSetColorXY bridgeIP userID lights lightIDs xyX xyY = do
     -- Can only change the color of lights which are turned on and support this feature
-    lights <- liftIO . atomically $ readTVar lights'
-    let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
-    let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
+    onAndColIDs <- filterOnAndColor lights lightIDs
     lightsSetState bridgeIP userID onAndColIDs $
         HM.fromList [ -- Make sure 'colorloop' is disabled
                       --
