@@ -7,7 +7,8 @@ Hue Dashboard is a web application for comfortably controlling [Philips Hue ligh
 
 Accessing the web interface from an iPhone:
 
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone.jpg)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone-1.jpg)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone-2.jpg)
 
 And the same on the iPad:
 
