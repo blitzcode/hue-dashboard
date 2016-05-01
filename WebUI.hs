@@ -11,7 +11,6 @@ import Data.Monoid
 import Data.List
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
-import Data.Aeson
 import Control.Concurrent.STM
 import Control.Concurrent.Async
 import Control.Lens hiding ((#), set, (<.>), element)
@@ -20,7 +19,6 @@ import Control.Monad.Reader
 import Control.Monad.State
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
-import qualified Text.Blaze.Html5 as H
 import Text.Blaze.Html.Renderer.String
 
 import Trace
@@ -63,43 +61,29 @@ setup ae@AppEnv { .. } window = do
         addScenesTile window
         -- Create tiles for all light groups
         forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
-          -- Build group switch tile for current light group
-          addGroupSwitchTile groupName groupLightIDs window
-          -- Create all light tiles for the current light group
-          forM_ groupLightIDs $ \lightID -> case HM.lookup lightID lights of
-            Nothing    -> return ()
-            Just light -> addLightTile light lightID window
- 
-    -- Execute all HTML builders and get HTML code for the entire dynamic part of the
+            -- Build group switch tile for current light group
+            addGroupSwitchTile groupName groupLightIDs window
+            -- Create all light tiles for the current light group
+            forM_ groupLightIDs $ \lightID ->
+                case HM.lookup lightID lights of
+                    Nothing    -> return ()
+                    Just light -> addLightTile light lightID window
+    -- Execute all blaze HTML builders and get HTML code for the entire dynamic part of the
     -- page. We generate our HTML with blaze-html and insert it with a single FFI call
     -- instead of using threepenny's HTML combinators. The latter have some severe
     -- performance issues, see https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
-    let html = renderHtml . sequence_ . reverse $ page ^. pgTiles
-        escapedHtml = "\"" <> (concatMap (\c -> if c == '"' then "\\\"" else [c]) html) <> "\""
-        --escapedHTML = encode (html :: String)
-        --escapedHTML2 = map (\c -> if c == '"' then 'Q' else c) $ show html
-
-
-    --liftIO $ putStrLn $ show html
-    --forM_ (show html) $ \c -> liftIO $ printf "%s\n" [c]
-        
-
-{-
-    liftIO $ putStrLn html
-    liftIO . putStrLn $ show escapedHTML
-    liftIO . putStrLn $ escapedHTML2
--}
-
-    -- Insert generated HTML (TODO: We're using String for everything here)
-    runFunction . ffi $ "document.getElementById('lights').innerHTML = " <>
-        --(show html)
-        escapedHtml
-        --"<div class=\"thumbnail\" style=\"opacity: 1.0;\" id=\"light-all-lights-tile\"></div>"
-    -- Now that we build the page, execute all the UI actions to register event handlers 
+    let tilesHtml = renderHtml . sequence_ . reverse $ page ^. pgTiles
+    -- Insert generated HTML. Note that we use the string substitution feature of the
+    -- ffi function to actually insert our generated HTML. This places all the HTML
+    -- in double quotes at the point of insertion and \-escapes all quotes in the actual
+    -- HTML. Also, if we did not do it this way and escaped the string ourselves, any
+    -- %-sign in the HTML would trigger string substitution and the call would fail
+    --
+    -- TODO: We're using String for everything here, inefficient
+    --
+    runFunction $ ffi "document.getElementById('lights').innerHTML = %1" tilesHtml
+    -- Now that we build the page, execute all the UI actions to register event handlers
     sequence_ $ reverse $ page ^. pgUIActions
-
-    void $ getBody window #+ [string "Done!"]
-  
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
@@ -125,10 +109,8 @@ lightUpdateWorker window tchan = runUI window $ loop
           -- Light turned on / off
           LU_OnOff s ->
             getElementByIdSafe window (buildID lightID "tile") >>= \e ->
-                void $ return e & set style [ if   s
-                                              then enabledOpacityStyle
-                                              else disabledOpacityStyle
-                                            ]
+                void $ return e & set style
+                    [if s then enabledOpacityStyle else disabledOpacityStyle]
           -- All lights off, grey out 'All Lights' tile
           LU_LastOff ->
             getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->

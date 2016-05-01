@@ -37,7 +37,7 @@ addLightTile light lightID window = do
   AppEnv { .. } <- ask
   -- Build tile
   let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
-      brightPercent = printf "%.0f&#37;" -- TODO: %-sign breaks everything...
+      brightPercent = printf "%.0f%%"
                         ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                           * 100 / 255 :: Float
                         ) :: String
@@ -79,57 +79,6 @@ addLightTile light lightID window = do
               H.! A.style (H.toValue $ "width: " <> brightPercent <> ";")
               H.! A.id (H.toValue $ buildID lightID "brightness-bar")
               $ return ()
-    {-
-    void $ element root #+
-      [ ( UI.div #. "thumbnail" & set style [opacity]
-                                & set UI.id_ (buildID lightID "tile")
-        ) #+
-        ( -- Caption and light icon
-          [ ( UI.div #. "light-caption small" & set UI.id_ (buildID lightID "caption")
-            ) #+
-            [string $ light ^. lgtName]
-          , UI.img #. "img-rounded" & set style [("background", colorStr)]
-                                    & set UI.src (iconFromLM $ light ^. lgtModelID)
-                                    & set UI.id_ (buildID lightID "image")
-          ] ++
-          -- Only add color picker elements for lights that support colors
-          ( if   colorSupport
-            then addColorPicker lightID
-            else []
-          ) ++
-          -- Model and type text
-          [ UI.div #. "text-center" #+
-            [ UI.h6 #+
-              [ UI.small #+
-                [ string $ (show $ light ^. lgtModelID)
-                , UI.br
-                , string $ (show $ light ^. lgtType)
-                ]
-              ]
-            ]
-            -- Brightness widget
-          , ( UI.div #. "progress"
-                      & set UI.id_ (buildID lightID "brightness-container")
-            ) #+
-            [ ( UI.div #. "progress-label-container") #+
-              [ UI.div #. "glyphicon glyphicon-minus minus-label"
-              , UI.div #. "glyphicon glyphicon-plus plus-label"
-              , UI.div #. "percentage-label" #+
-                [ UI.small #+
-                  [ string brightPercent & set UI.id_
-                                               (buildID lightID "brightness-percentage")
-                  ]
-                ]
-              ]
-            , ( UI.div #. "progress-bar progress-bar-info"
-                        & set style [("width", brightPercent)]
-                        & set UI.id_ (buildID lightID "brightness-bar")
-              )
-            ]
-          ]
-        )
-      ]
-    -}
   addPageUIAction $ do
      -- Have light blink once after clicking the caption
      getElementByIdSafe window (buildID lightID "caption") >>= \caption ->
@@ -219,7 +168,7 @@ addGroupSwitchTile groupName groupLightIDs window = do
         -- Caption and switch icon
         H.div H.! A.class_ "light-caption light-caption-group-header small"
               H.! A.id (H.toValue $ buildID groupID "caption") $ do
-                "Group Switch"
+                (void "Group Switch")
                 H.br
                 H.toHtml groupName
         H.img H.! A.class_ "img-rounded"
@@ -242,50 +191,6 @@ addGroupSwitchTile groupName groupLightIDs window = do
             H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
             H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
           H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
-      {-
-      [ ( UI.div #. "thumbnail" & set style [if grpOn then enabledOpacity else disabledOpacity]
-                                & set UI.id_ (buildID groupID "tile")
-        ) #+
-        ( -- Caption and switch icon
-          [ ( UI.div #. "light-caption light-caption-group-header small"
-                      & set UI.id_ (buildID groupID "caption")
-            ) #+
-            [ string "Group Switch"
-            , UI.br
-            , string groupName
-            ]
-          , UI.img #. "img-rounded" & set UI.src "static/svg/hds.svg"
-                                    & set UI.id_ (buildID groupID "image")
-          ] ++
-          -- Only add color picker elements for lights that support colors
-          ( if   grpHasColor
-            then addColorPicker groupID
-            else []
-          ) ++
-          -- Group description
-          [ UI.div #. "text-center" #+
-            [ UI.h6 #+
-              [ UI.small #+
-                [ string $ ((show $ length groupLightIDs) <> " Light(s)")
-                , UI.br
-                , string "(Grouped by Prefix)"
-                ]
-              ]
-            ]
-            -- Brightness widget
-          , ( UI.div #. "progress"
-                      & set UI.id_ (buildID groupID "brightness-container")
-            ) #+
-            [ ( UI.div #. "progress-label-container") #+
-              [ UI.div #. "glyphicon glyphicon-minus minus-label"
-              , UI.div #. "glyphicon glyphicon-plus plus-label"
-              ]
-            , UI.div #. "progress-bar progress-bar-info"
-            ]
-          ]
-        )
-      ]
-      -}
   addPageUIAction $ do
       -- Have light blink once after clicking the caption
       getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
@@ -334,16 +239,6 @@ addGroupSwitchTile groupName groupLightIDs window = do
                                            xyX
                                            xyY
 
-
-{-
-numbers n = \cont -> docTypeHtml $ do
-    H.head $ do
-        H.title "Natural numbers"
-    body $ do
-        p "A list of natural numbers:"
-        cont
--}
-
 -- Tile for controlling all lights, also displays some bridge information
 addAllLightsTile :: Window -> PageBuilder ()
 addAllLightsTile window = do
@@ -352,48 +247,26 @@ addAllLightsTile window = do
   void $ do
     lights <- liftIO . atomically $ readTVar _aeLights
     let lgtOn = anyLightsOn lights
-    {-
-    void . liftUI $ element root #+
-      [ ( UI.div #. "thumbnail" & set style [if lgtOn then enabledOpacity else disabledOpacity]
-                                & set UI.id_ (buildID "all-lights" "tile")
-        ) #+
-        [ UI.div #. "light-caption light-caption-group-header small" #+ [string "All Lights"]
-        , UI.img #. "img-rounded" & set UI.src "static/svg/bridge_v2.svg"
-                                  & set UI.id_ (buildID "all-lights" "image")
-        , UI.div #. "text-center" #+
-          [ UI.h6 #+
-            [ UI.small #+ intersperse UI.br
-              [ string $ "Model " <> (_aeBC ^. bcModelID)
-              , string $ "IP "    <> (_aePC ^. pcBridgeIP)
-              , string $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
-              , string $ (show $ length lights) <> " Lights Connected"
-              ]
-            ]
-          ]
-        ]
-      ]
-    -}
     addPageTile $
       H.div H.! A.class_ "thumbnail"
             H.! A.style ( H.toValue $ "opacity: "
                             <> show (if lgtOn then enabledOpacity else disabledOpacity)
                             <> ";"
                         )
-            H.! A.id (H.toValue $ buildID "all-lights" "tile")
-        $ do H.div H.! A.class_ "light-caption light-caption-group-header small" $ "All Lights"
-             H.img H.! A.class_ "img-rounded"
-                   H.! A.src "static/svg/bridge_v2.svg"
-                   H.! A.id (H.toValue $ buildID "all-lights" "image")
-             H.div H.! A.class_ "text-center" $
-               H.h6 $
-                 H.small $
-                   sequence_ $ intersperse H.br 
-                     [ H.toHtml $ "Model " <> (_aeBC ^. bcModelID)
-                     , H.toHtml $ "IP "    <> (_aePC ^. pcBridgeIP)
-                     , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
-                     , H.toHtml $ (show $ length lights) <> " Lights Connected"
-                     ]
-
+            H.! A.id (H.toValue $ buildID "all-lights" "tile") $ do
+        H.div H.! A.class_ "light-caption light-caption-group-header small" $ "All Lights"
+        H.img H.! A.class_ "img-rounded"
+              H.! A.src "static/svg/bridge_v2.svg"
+              H.! A.id (H.toValue $ buildID "all-lights" "image")
+        H.div H.! A.class_ "text-center" $
+          H.h6 $
+            H.small $
+              sequence_ $ intersperse H.br
+                [ H.toHtml $ "Model " <> (_aeBC ^. bcModelID)
+                , H.toHtml $ "IP "    <> (_aePC ^. pcBridgeIP)
+                , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
+                , H.toHtml $ (show $ length lights) <> " Lights Connected"
+                ]
   -- Register click handler for turning all lights on / off
   addPageUIAction $
       getElementByIdSafe window (buildID "all-lights" "image") >>= \image ->
@@ -440,20 +313,6 @@ addScenesTile window = do
                       xs               -> xs
       topScenes = take 8 fixNames
   -- Build scenes tile
-  {-
-  void . liftUI $ element root #+
-    [ UI.div #. "thumbnail" #+
-      [ UI.div #. "light-caption light-caption-group-header small" #+ [string "Recent Scenes"]
-      , UI.div #. "btn-group-vertical btn-group-xs scene-btn-group" #+
-        ( flip map topScenes $ \(sceneID, scene) ->
-            ( UI.button #. "btn btn-scene" & set UI.id_ (sceneBttnID sceneID)
-            ) #+
-            [ UI.small #+ [string $ scene ^. scName]
-            ]
-        )
-      ]
-    ]
-  -}
   addPageTile $
     H.div H.! A.class_ "thumbnail" $ do
       H.div H.! A.class_ "light-caption light-caption-group-header small" $ "Recent Scenes"
@@ -463,7 +322,7 @@ addScenesTile window = do
                    H.! A.id (H.toValue $ sceneBttnID sceneID) $
                      H.small $ (H.toHtml $ scene ^. scName)
   -- Register click handlers for activating the scenes
-  addPageUIAction $ 
+  addPageUIAction $
       forM_ topScenes $ \(sceneID, _) ->
           getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
               on UI.click bttn $ \_ ->
@@ -513,7 +372,7 @@ addColorPicker grpOrLgtID = do
           H.! A.src "static/color_picker.png"
           H.! A.id (H.toValue $ buildID grpOrLgtID "color-picker-overlay")
   H.div H.! A.class_ "color-picker-button"
-        H.! A.onclick 
+        H.! A.onclick
           -- Click button to make color picker visible, but not
           -- for tiles that are turned off (opacity < 1)
           --
@@ -531,33 +390,4 @@ addColorPicker grpOrLgtID = do
                         )
           ) $
     H.div H.! A.class_ "glyphicon glyphicon-tint color-picker-tint-icon" $ return ()
-{-
-  [ ( UI.div & set style [("display", "none")]
-             & set UI.id_ (buildID grpOrLgtID "color-picker-container")
-    ) #+
-    [ UI.div #. "color-picker-curtain"
-              & set (attr "onclick") "this.parentNode.style.display = 'none'"
-    , UI.img #. "color-picker-overlay"
-              & set UI.src "static/color_picker.png"
-              & set UI.id_ (buildID grpOrLgtID "color-picker-overlay")
-    ]
-  , ( UI.div #. "color-picker-button"
-              & set (attr "onclick")
-                    -- Click button to make color picker visible, but not
-                    -- for tiles that are turned off (opacity < 1)
-                    --
-                    -- TODO: Glitches when a tile is switched off while
-                    --       the color picker is open, just move curtain
-                    --       and overlay out of the tile so their opacity
-                    --       is not affected
-                    --
-                    ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
-                               " { getElementById('%s').style.display = 'block'; }"
-                             )
-                      (buildID grpOrLgtID "tile")
-                      (buildID grpOrLgtID "color-picker-container")
-                    )
-    ) #+
-    [ UI.div #. "glyphicon glyphicon-tint color-picker-tint-icon" ]
-  ]
--}
+
