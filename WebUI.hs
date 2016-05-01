@@ -72,17 +72,22 @@ setup ae@AppEnv { .. } window = do
     -- page. We generate our HTML with blaze-html and insert it with a single FFI call
     -- instead of using threepenny's HTML combinators. The latter have some severe
     -- performance issues, see https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+    --
+    -- TODO: We're using String for everything here, inefficient
+    --
     let tilesHtml = renderHtml . sequence_ . reverse $ page ^. pgTiles
     -- Insert generated HTML. Note that we use the string substitution feature of the
     -- ffi function to actually insert our generated HTML. This places all the HTML
     -- in double quotes at the point of insertion and \-escapes all quotes in the actual
     -- HTML. Also, if we did not do it this way and escaped the string ourselves, any
     -- %-sign in the HTML would trigger string substitution and the call would fail
-    --
-    -- TODO: We're using String for everything here, inefficient
-    --
     runFunction $ ffi "document.getElementById('lights').innerHTML = %1" tilesHtml
     -- Now that we build the page, execute all the UI actions to register event handlers
+    --
+    -- TODO: Since we can't batch this, it'll still take up to a second to register
+    --       all of these handlers, see
+    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+    --
     sequence_ $ reverse $ page ^. pgUIActions
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
