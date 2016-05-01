@@ -166,6 +166,7 @@ addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs window = do
   AppEnv { .. } <- ask
   let groupID                         = "group-" <> groupName
+      numLights                       = length groupLightIDs
       queryAnyLightsInGroup condition =
         (liftIO . atomically $ (,) <$> readTVar _aeLights <*> readTVar _aeLightGroups)
           >>= \(lights, lightGroups) -> return $
@@ -196,9 +197,9 @@ addGroupSwitchTile groupName groupLightIDs window = do
         H.div H.! A.class_ "text-center" $
           H.h6 $
             H.small $ do
-              H.toHtml $ ((show $ length groupLightIDs) <> " Light(s)")
+              H.toHtml $ show numLights <> if numLights > 1 then " Lights" else " Light"
               H.br
-              "(Grouped by Prefix)"
+              "Grouped by Prefix"
         -- Brightness widget
         H.div H.! A.class_ "progress"
               H.! A.id (H.toValue $ buildID groupID "brightness-container") $ do
