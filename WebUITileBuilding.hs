@@ -37,7 +37,7 @@ addLightTile :: Light -> String -> Window -> PageBuilder ()
 addLightTile light lightID window = do
   AppEnv { .. } <- ask
   -- Build tile
-  let opacity       = if light ^. lgtState ^. lsOn then enabledOpacity else disabledOpacity
+  let opacity       = if light ^. lgtState . lsOn then enabledOpacity else disabledOpacity
       brightPercent = printf "%.0f%%"
                         ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                           * 100 / 255 :: Float
@@ -183,7 +183,7 @@ addGroupSwitchTile groupName groupLightIDs window = do
         -- Caption and switch icon
         H.div H.! A.class_ "light-caption light-caption-group-header small"
               H.! A.id (H.toValue $ buildID groupID "caption") $ do
-                (void "Group Switch")
+                void "Group Switch"
                 H.br
                 H.toHtml groupName
         H.img H.! A.class_ "img-rounded"
@@ -285,8 +285,8 @@ addAllLightsTile window = do
           H.h6 $
             H.small $
               sequence_ $ intersperse H.br
-                [ H.toHtml $ "Model " <> (_aeBC ^. bcModelID)
-                , H.toHtml $ "IP "    <> (_aePC ^. pcBridgeIP)
+                [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
+                , H.toHtml $ "IP "    <> _aePC ^. pcBridgeIP
                 , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
                 , H.toHtml $ (show $ length lights) <> " Lights Connected"
                 ]
