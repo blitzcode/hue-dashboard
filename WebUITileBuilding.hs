@@ -20,6 +20,7 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import qualified Codec.Picture as JP
 import System.FilePath
+import System.Random
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
@@ -112,19 +113,33 @@ addLightTile light lightID window = do
          getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
              on UI.mousedown image $ \(mx, my) ->
                  case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
-                     CPR_Margin          -> return ()
-                     CPR_EnableColorLoop ->
+                     CPR_Margin       -> return ()
+                     CPR_SetColorLoop ->
                          lightsColorLoop (_aePC ^. pcBridgeIP)
                                          (_aePC ^. pcUserID)
                                          _aeLights
                                          [lightID]
-                     CPR_XY xyX xyY      ->
+                     CPR_Random       -> do
+                         (xyX, xyY) <- liftIO getRandomXY
                          lightsSetColorXY (_aePC ^. pcBridgeIP)
                                           (_aePC ^. pcUserID)
                                           _aeLights
                                           [lightID]
                                           xyX
                                           xyY
+                     CPR_XY xyX xyY   ->
+                         lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                          (_aePC ^. pcUserID)
+                                          _aeLights
+                                          [lightID]
+                                          xyX
+                                          xyY
+
+getRandomXY :: IO (Float, Float)
+getRandomXY = do
+    let rnd8Bit = getStdRandom (randomR (0, 255)) :: IO Float
+    rgb <- (,,) <$> rnd8Bit <*> rnd8Bit <*> rnd8Bit
+    return $ rgbToXY rgb LM_HueBulbA19
 
 iconFromLM :: LightModel -> FilePath
 iconFromLM lm = basePath </> fn <.> ext
@@ -225,13 +240,21 @@ addGroupSwitchTile groupName groupLightIDs window = do
                   --       but we potentially set many different lights. Do a custom
                   --       conversion for each color light in the group
                   case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
-                      CPR_Margin          -> return ()
-                      CPR_EnableColorLoop ->
+                      CPR_Margin       -> return ()
+                      CPR_SetColorLoop ->
                           lightsColorLoop (_aePC ^. pcBridgeIP)
                                           (_aePC ^. pcUserID)
                                           _aeLights
                                           groupLightIDs
-                      CPR_XY xyX xyY      ->
+                      CPR_Random       -> do
+                          (xyX, xyY) <- liftIO getRandomXY
+                          lightsSetColorXY (_aePC ^. pcBridgeIP)
+                                           (_aePC ^. pcUserID)
+                                           _aeLights
+                                           groupLightIDs
+                                           xyX
+                                           xyY
+                      CPR_XY xyX xyY   ->
                           lightsSetColorXY (_aePC ^. pcBridgeIP)
                                            (_aePC ^. pcUserID)
                                            _aeLights
@@ -330,9 +353,10 @@ addScenesTile window = do
                               (_aePC ^. pcUserID)
                               sceneID
 
-data ColorPickerResult = CPR_Margin          -- Click on the margin
-                       | CPR_EnableColorLoop -- Click on the 'Enable Color Loop' button
-                       | CPR_XY Float Float  -- Clicked on the color / color temperature parts, XY
+data ColorPickerResult = CPR_Margin         -- Click on the margin
+                       | CPR_SetColorLoop   -- Click on the 'Set Color Loop' button
+                       | CPR_Random         -- Click on the 'Random' button
+                       | CPR_XY Float Float -- Clicked on the color / color temperature parts, XY
 
 -- Classify results from a click on the color picker image
 xyFromColorPickerCoordinates :: JP.Image JP.PixelRGB8
@@ -344,14 +368,15 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
     let wdh    = JP.imageWidth  colorPickerImg
         hgt    = JP.imageHeight colorPickerImg
         margin = 10 -- There's a margin around the image on the website
-        button = 40 -- The 'Enable Color Loop' button is on the bottom
         mx     = mx' - margin
         my     = my' - margin
     in  case () of
-            _ | mx < 0 || my < 0 || mx >= wdh || my >= hgt -> CPR_Margin
-              | my >= hgt - button                         -> CPR_EnableColorLoop
-              | otherwise                                  ->
-                    -- Look up color in color picker image, convert to XY
+            _ | mx < 0 || my < 0 || mx >= wdh || my >= hgt ->
+                    -- Outside of the image is certainly on the margin
+                    CPR_Margin
+              | my < 340 ->
+                    -- Inside the two color panels. Look up the color
+                    -- in the color picker image and convert to XY
                     let (JP.PixelRGB8 r g b) = JP.pixelAt colorPickerImg mx my
                         (xyX, xyY)           = rgbToXY ( fromIntegral r / 255
                                                        , fromIntegral g / 255
@@ -359,6 +384,15 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
                                                        )
                                                lm
                     in  CPR_XY xyX xyY
+              | my >= 350 && mx < 145 ->
+                    -- On the bottom left
+                    CPR_SetColorLoop
+              | my >= 350 && mx >= 155 ->
+                    -- On the botom right
+                    CPR_Random
+              | otherwise ->
+                    -- Margin between the buttons
+                    CPR_Margin
 
 -- Add color picker and 'tint' button
 addColorPicker :: String -> H.Html
