@@ -89,6 +89,8 @@ setup ae@AppEnv { .. } window = do
     --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
     --
     sequence_ $ reverse $ page ^. pgUIActions
+    -- We're done building the page, hide spinner
+    void $ getElementByIdSafe window "navbar-spinner" & set style [("display", "none")]
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
