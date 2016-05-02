@@ -24,6 +24,7 @@ And the same on the iPad:
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - The UI is done with vector graphics and looks crisp on retina displays
 - On-screen light status responds in real-time to changes with smooth animations and transitions
+- Server has been tested on OS X and Ubuntu, needs very little system resources to run
 
 ### Implementation
 
@@ -51,7 +52,7 @@ After startup connect to `localhost:8001` to view the dashboard. Be advised that
 
 # Compatibility
 
-This program was developed on OS X 10.10 with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.
+This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS) with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.
 
 The program traces a lot of information and all errors / warnings to the console, please look for any error messages if things don't work as expected.
 
