@@ -28,6 +28,8 @@ import Trace
 --
 -- http://www.developers.meethue.com/philips-hue-api
 
+-- TODO: Add 'Offline' mode, returning captured bridge responses
+
 data BridgeRequestMethod = MethodGET | MethodPOST | MethodPUT
                            deriving (Eq, Enum)
 

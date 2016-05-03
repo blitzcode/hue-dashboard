@@ -56,6 +56,10 @@ This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS) with 
 
 The program traces a lot of information and all errors / warnings to the console, please look for any error messages if things don't work as expected.
 
+# TODO
+
+There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts in future improvements.
+
 # Legal
 
 This program is published under the [MIT License](http://en.wikipedia.org/wiki/MIT_License).

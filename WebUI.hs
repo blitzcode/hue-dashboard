@@ -34,6 +34,7 @@ webUIStart ae = do
     let port = 8001
     traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
     liftIO . startGUI
+        -- TODO: Make port & interface user configurable
         defaultConfig { jsPort       = Just port
                       , jsAddr       = Just "0.0.0.0" -- All interfaces, not just loopback
                       , jsLog        = traceB TLInfo -- \_ -> return ()
@@ -54,6 +55,12 @@ setup ae@AppEnv { .. } window = do
                   <$> readTVar _aeLightGroups
                 )
     -- Run PageBuilder monad, build list of HTML constructors and UI actions (event handlers)
+    --
+    -- TODO: Show number of connected users
+    -- TODO: Add a 'Help' tile with basic instructions
+    -- TODO: Tile showing power / light usage over time
+    -- TODO: Add support for a 'dark mode' theme
+    --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
         addAllLightsTile window

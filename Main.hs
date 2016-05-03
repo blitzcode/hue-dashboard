@@ -17,6 +17,9 @@ import HueREST
 import HueSetup
 import PersistConfig
 
+-- TODO: Add command line interface for specifying port, interface,
+--       logging & tracing options etc...
+
 main :: IO ()
 main =
     -- Setup tracing (TODO: Also enable tracing into a log file?)

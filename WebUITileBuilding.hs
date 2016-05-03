@@ -99,6 +99,11 @@ addLightTile light lightID window = do
                                                       [lightID]
                                                       (not $ lightOnOff ^. lgtState . lsOn)
      -- Change brightness bright clicking the left / right side of the brightness bar
+     --
+     -- TODO: More precision (smaller increments) when controlling individual lights,
+     --       maybe also make the adjustment curve non-linear (more precision at the
+     --       beginning)
+     --
      getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
          on UI.mousedown image $ \(mx, _) ->
              -- Construct and perform REST API call
@@ -162,6 +167,10 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_Unknown _                 -> "white_e27"
 
 -- Build group switch tile for current light group
+--
+-- TODO: Create a 'group scene' system where the state of all lights
+--       in a group gets saved to a preset slot
+--
 addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs window = do
   AppEnv { .. } <- ask
@@ -248,6 +257,7 @@ addGroupSwitchTile groupName groupLightIDs window = do
                                           _aeLights
                                           groupLightIDs
                       CPR_Random       -> do
+                          -- TODO: Assign different random color to each light
                           (xyX, xyY) <- liftIO getRandomXY
                           lightsSetColorXY (_aePC ^. pcBridgeIP)
                                            (_aePC ^. pcUserID)
@@ -264,6 +274,9 @@ addGroupSwitchTile groupName groupLightIDs window = do
                                            xyY
 
 -- Tile for controlling all lights, also displays some bridge information
+--
+-- TODO: Maybe add controls for dimming / changing color of all lights?
+--
 addAllLightsTile :: Window -> PageBuilder ()
 addAllLightsTile window = do
   AppEnv { .. } <- ask
@@ -396,6 +409,10 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
                     CPR_Margin
 
 -- Add color picker and 'tint' button
+--
+-- TODO: Maybe add a brightness adjustment area to the color picker?
+-- TODO: Reduce height of central element in color picker (better for smaller screens)
+--
 addColorPicker :: String -> H.Html
 addColorPicker grpOrLgtID = do
   H.div H.! A.style "display: none;"
