@@ -60,6 +60,7 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add a 'Help' tile with basic instructions
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
+    -- TODO: Zoom buttons to make tiles larger / small
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile

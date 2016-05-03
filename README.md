@@ -58,7 +58,7 @@ The program traces a lot of information and all errors / warnings to the console
 
 # TODO
 
-There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts in future improvements.
+There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts for future improvements.
 
 # Legal
 
