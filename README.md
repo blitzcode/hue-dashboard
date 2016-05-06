@@ -24,7 +24,10 @@ And the same on the iPad:
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - The UI is done with vector graphics and looks crisp on retina displays
 - On-screen light status responds in real-time to changes with smooth animations and transitions
-- Server has been tested on OS X and Ubuntu and an Raspberry Pi, needs very little system resources to run
+- Server has been tested on OS X and Ubuntu, needs very little system resources to run
+- Can be deployed on an Raspberry Pi, even features a server control panel for shutdown / reboot
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-admin.png)
 
 ### Implementation
 

@@ -5,6 +5,7 @@ module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
                          , addAllLightsTile
                          , addScenesTile
+                         , addServerTile
                          ) where
 
 import Text.Printf
@@ -21,6 +22,7 @@ import Graphics.UI.Threepenny.Core
 import qualified Codec.Picture as JP
 import System.FilePath
 import System.Random
+import System.Process
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
@@ -442,4 +444,50 @@ addColorPicker grpOrLgtID = do
                         )
           ) $
     H.div H.! A.class_ "glyphicon glyphicon-tint color-picker-tint-icon" $ return ()
+
+-- Tile for shutting down / rebooting server
+addServerTile :: Window -> PageBuilder ()
+addServerTile window = do
+  AppEnv { .. } <- ask
+  -- Build tile
+  void $ do
+    addPageTile $
+      H.div H.! A.class_ "thumbnail" $ do
+        H.div H.! A.class_ "light-caption light-caption-group-header small"
+              H.! A.style "cursor: default;"
+              $ "Server"
+        H.img H.! A.class_ "img-rounded"
+              H.! A.src "static/svg/raspberrypi.svg"
+              H.! A.style "cursor: default;"
+        H.div H.! A.class_ "text-center" $ do
+          H.div H.! A.id "server-warning" $ do
+            H.h6 $
+              H.small $
+                "Administrative Options"
+            H.button H.! A.type_ "button"
+                     H.! A.class_ "btn btn-danger btn-sm"
+                     H.! A.onclick ( "getElementById('server-warning').style.display='none';" <>
+                                     "getElementById('server-danger-bttns').style.display='block';"
+                                   )
+                     $ "Show"
+          H.div H.! A.class_ "btn-group-vertical btn-group-sm"
+                H.! A.id "server-danger-bttns"
+                H.! A.style "display: none;" $ do
+            H.button H.! A.type_ "button"
+                     H.! A.class_ "btn btn-danger"
+                     H.! A.id "server-shutdown-bttn"
+                     $ "Shutdown"
+            H.button H.! A.type_ "button"
+                     H.! A.class_ "btn btn-danger"
+                     H.! A.id "server-reboot-bttn"
+                     $ "Reboot"
+  -- Register click handler for shutdown / reboot
+  addPageUIAction $
+      getElementByIdSafe window "server-shutdown-bttn" >>= \bttn ->
+          on UI.click bttn $ \_ -> do
+              liftIO $ callCommand "sudo shutdown now"
+  addPageUIAction $
+      getElementByIdSafe window "server-reboot-bttn" >>= \bttn ->
+          on UI.click bttn $ \_ -> do
+              liftIO $ callCommand "sudo shutdown -r now"
 

@@ -20,6 +20,8 @@ import Control.Monad.State
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import Text.Blaze.Html.Renderer.String
+import qualified System.Info as SI
+import Data.Char
 
 import Trace
 import AppDefs
@@ -79,6 +81,9 @@ setup ae@AppEnv { .. } window = do
                 case HM.lookup lightID lights of
                     Nothing    -> return ()
                     Just light -> addLightTile light lightID window
+        -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
+        when (isInfixOf "arm" $ map toLower SI.arch) $
+            addServerTile window
     -- Execute all blaze HTML builders and get HTML code for the entire dynamic part of the
     -- page. We generate our HTML with blaze-html and insert it with a single FFI call
     -- instead of using threepenny's HTML combinators. The latter have some severe

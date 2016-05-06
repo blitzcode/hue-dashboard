@@ -211,6 +211,26 @@
   <div style="margin-left: 10px; margin-right: 10px;" role="main">
     <div class="thumbnails light-display" id="lights">
       <!--
+      <div class="thumbnail">
+        <div class="light-caption light-caption-group-header small">Server</div>
+        <img class="img-rounded" src="static/svg/raspberrypi.svg"/>
+        <div class="text-center">
+          <div id="server-warning">
+            <h6>
+              <small>
+                 Administrative Options
+              </small>
+            </h6>
+            <button type="button" class="btn btn-danger btn-sm" onclick="getElementById('server-warning').style.display = 'none'; getElementById('server-danger-bttns').style.display = 'block'; ">Show</button>
+          </div>
+          <div class="btn-group-vertical btn-group-sm" id="server-danger-bttns" style="display: none;">
+            <button type="button" class="btn btn-danger">Shutdown</button>
+            <button type="button" class="btn btn-danger">Reboot</button>
+          </div>
+        </div>
+      </div>
+      -->
+      <!--
       <div class="thumbnail" style="opacity: 1.0;">
         <div class="light-caption light-caption-group-header small" style="">Group Switch<br/>Kinderzimmer</div>
         <img class="img-rounded" style="background: white;" src="static/svg/hds.svg"/>
