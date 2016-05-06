@@ -126,10 +126,9 @@ src/Stack/Constants.hs:291:7:
 Also see this [bug report](https://github.com/commercialhaskell/stack/issues/2096). The workaround is to invoke `cabal build` with `--ghc-options=-dynamic-too`.
 * Building stack will take a long time, similar suggestions for managing memory as for building the dependencies apply
 * A final `cabal install` to put Stack in the Cabal bin directory / path
-* Now we have a working Stack, time to build Hue Dashboard. Get the source with `git clone https://github.com/blitzcode/hue-dashboard.git`. This guide was written when `59a8c69647b3ec487f7a3c257f84edc8b061e16a` was the current revision, but it's probably best to try `HEAD`
+* Now we have a working Stack, time to build Hue Dashboard. Get the source with `git clone https://github.com/blitzcode/hue-dashboard.git`. This guide was written when `164729ef0d28e749ccbfd135f0e3ea5ced8ca8f1` was the current revision, but it's probably best to try `HEAD`
 * This time there's nothing really special to do, basically `stack build` should work. No special options required. Hue Dashboard itself builds relatively quickly, but the dependencies will require the same careful tweaking and babysitting as with building Stack
 * Once building is done, verify with `stack exec hue-dashboard` that everything works
-* If you want to remap the port Hue Dashboard uses to a standard 80, doing `sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 8001` will do the trick. Note that just executing this command will not persist the mapping across reboots
 * It's recommended to setup Hue Dashboard as a daemon so it automatically starts when the RPi is powered up. I used [daemontools](https://cr.yp.to/daemontools.html), also see [this](https://info-beamer.com/blog/running-info-beamer-in-production) great tutorial
 * Since moving the Hue Dashboard executable to a different location or invoking Stack from another user etc. can be a bit tricky at this point, using the following as then `run` script for the daemon might be easiest:
 ```
@@ -137,7 +136,7 @@ Also see this [bug report](https://github.com/commercialhaskell/stack/issues/209
 cd /home/pi/hue-dashboard/
 .stack-work/dist/arm-linux/Cabal-1.22.5.0/build/hue-dashboard/hue-dashboard 2>&1
 ```
-You could also restore the port mapping in that script.
+* On ARM machines Hue Dashboard display a 'Server' tile, allowing for shutdown and reboot of the Raspberry Pi without using SSH
 * This hopefully worked out all fine, be sure to file bug reports with the respective parts of the Haskell ecosystem to make sure it keeps getting easier
 
 # Legal
