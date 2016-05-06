@@ -135,6 +135,8 @@ fetchBridgeState = do
 mainLoop :: AppIO ()
 mainLoop = do
     -- TODO: Stop / decrease polling when no clients are connected
+    --       Currently impossible due to a bug in threepenny, see
+    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/133
     fetchBridgeState
     -- _traceBridgeState
     waitNSec =<< view (aeCmdLineOpts . cloPollInterval)
