@@ -137,7 +137,7 @@ mainLoop = do
     -- TODO: Stop / decrease polling when no clients are connected
     fetchBridgeState
     -- _traceBridgeState
-    waitNSec 1
+    waitNSec =<< view (aeCmdLineOpts . cloPollInterval)
     mainLoop
 
 -- Start up application

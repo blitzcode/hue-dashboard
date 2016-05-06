@@ -50,6 +50,26 @@ Like any Hue API application you'll have to authorize access to your bridge by p
 
 After startup connect to `localhost:8001` to view the dashboard. Be advised that the dashboard might also be visible to others on the network.
 
+There's also a range of command line options to customize behavior:
+
+```
+Usage: hue-dashboard [OPTION...]
+  -p PORT     --port=PORT              network port (default: 8001)
+              --localhost              only bind to localhost
+  -i SECONDS  --poll-interval=SECONDS  bridge poll interval (default: 1)
+  -t LEVEL    --trace-level=LEVEL      execution trace level (default: i)
+                                         n = none
+                                         e = errors only
+                                         w = warnings and errors
+                                         i = infos, warnings and errors
+              --trace-file=FILE        output file for execution trace (default: none)
+              --trace-no-color         no ANSI colors for trace output
+  -e          --trace-no-echo          disable echo execution trace to stdout
+              --trace-append           append execution trace file instead of overwriting
+              --trace-http             trace web server events
+  -h          --help                   print usage information
+```
+
 # Compatibility
 
 This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Raspbian) with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.

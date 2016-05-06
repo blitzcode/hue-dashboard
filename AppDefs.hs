@@ -36,9 +36,18 @@ data AppEnv = AppEnv
     , _aeScenes         :: !Scenes
     , _aeBroadcast      :: !LightUpdateTChan
     , _aeColorPickerImg :: !(JP.Image JP.PixelRGB8)
+    , _aeCmdLineOpts    :: !CmdLineOpts
+    }
+
+data CmdLineOpts = CmdLineOpts
+    { _cloPort          :: !Int
+    , _cloOnlyLocalhost :: !Bool
+    , _cloPollInterval  :: !Int
+    , _cloTraceHTTP     :: !Bool
     }
 
 makeLenses ''AppEnv
+makeLenses ''CmdLineOpts
 
 -- Our main application monad
 type AppT m = ReaderT AppEnv m

@@ -31,13 +31,16 @@ import WebUITileBuilding
 webUIStart :: MonadIO m => AppEnv -> m ()
 webUIStart ae = do
     -- Start server
-    let port = 8001
-    traceS TLInfo $ "Starting web server on all interfaces, port " <> show port
+    let port      = ae ^. aeCmdLineOpts . cloPort
+        interface | ae ^. aeCmdLineOpts . cloOnlyLocalhost = "localhost"
+                  | otherwise                              = "0.0.0.0"
+    traceS TLInfo $ printf "Starting web server on %s, port %s" (show interface) (show port)
     liftIO . startGUI
-        -- TODO: Make port & interface user configurable
         defaultConfig { jsPort       = Just port
-                      , jsAddr       = Just "0.0.0.0" -- All interfaces, not just loopback
-                      , jsLog        = traceB TLInfo -- \_ -> return ()
+                      , jsAddr       = Just interface
+                      , jsLog        = if   ae ^. aeCmdLineOpts . cloTraceHTTP
+                                       then traceB TLInfo
+                                       else \_ -> return ()
                       , jsStatic     = Just "static"
                       , jsCustomHTML = Just "dashboard.html"
                       }
