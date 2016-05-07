@@ -114,7 +114,7 @@ The server for Hue Dashboard needs to live somewhere, and a small ARM machine is
 ```
 Looks like a GHC bug, see [here](https://phabricator.haskell.org/D1599) and [here](https://ghc.haskell.org/trac/ghc/ticket/11205). To work around this we have to build everything with `--disable-library-stripping --disable-executable-stripping` and / or set `executable-stripping: False` + `library-stripping: False` in Cabal's `~/.cabal/config`.
 * Now with that in mind, we can install the dependencies with `cabal install --dependencies-only`
-* This will take a very long time and may or may not work immediately. The reason is that 1GB of memory is very little for building complex Haskell libraries and SD cards have very slow I/O. To control memory usage it can sometimes be enough to simply restart the build (all already build dependencies will not be rebuild, thankfully). There's also the option of controlling memory usage by compiling single threaded (`-j1`) and passing heap options to GHC (`--ghc-option=+RTS --ghc-option=-M500m --ghc-option=-RT`). It's best to babysit the build a bit, monitor with a tool like `htop` and restart / tweak options once it hits the 100MB swap file and everything grinds to a halt. But it should work, with a bit of patience.
+* This will take a very long time and may or may not work immediately. The reason is that 1GB of memory is very little for building complex Haskell libraries and SD cards have very slow I/O. To control memory usage it can sometimes be enough to simply restart the build (all already build dependencies will not be rebuild, thankfully). There's also the option of controlling memory usage by compiling single threaded (`-j1`) and passing heap options to GHC (`--ghc-option=+RTS --ghc-option=-M500m --ghc-option=-RTS`). It's best to babysit the build a bit, monitor with a tool like `htop` and restart / tweak options once it hits the 100MB swap file and everything grinds to a halt. But it should work, with a bit of patience.
 * Now we have the dependencies, we can build Stack. There's another bug to work around. The build will eventually fail with errors like these:
 ```
 Building stack-1.1.0...
@@ -131,7 +131,7 @@ Also see this [bug report](https://github.com/commercialhaskell/stack/issues/209
 * This time there's nothing really special to do, basically `stack build` should work. No special options required. Hue Dashboard itself builds relatively quickly, but the dependencies will require the same careful tweaking and babysitting as with building Stack
 * Once building is done, verify with `stack exec hue-dashboard` that everything works
 * It's recommended to setup Hue Dashboard as a daemon so it automatically starts when the RPi is powered up. I used [daemontools](https://cr.yp.to/daemontools.html), also see [this](https://info-beamer.com/blog/running-info-beamer-in-production) great tutorial
-* Since moving the Hue Dashboard executable to a different location or invoking Stack from another user etc. can be a bit tricky at this point, using the following as then `run` script for the daemon might be easiest:
+* Since moving the Hue Dashboard executable to a different location or invoking Stack from another user etc. can be a bit tricky at this point, using the following as the `run` script for the daemon might be easiest:
 ```
 #!/bin/sh
 cd /home/pi/hue-dashboard/
