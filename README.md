@@ -17,13 +17,16 @@ And the same on the iPad:
 ### Features
 
 - Aims to be an ideal control panel for daily operation of your Hue lights
+- No hierarchy, menu diving or anything like that; switching on the light should be fast & simple!
 - Works with any modern browser
-- Adjusting individual lights or the automatically created groups is comfortable both with a mouse or touch based input
-- Existing scenes are fetched from the bridge
+- Adjusting individual lights or the automatically created groups is comfortable both with a mouse and touch based input
+- Existing scenes created in other Hue applications are fetched from the bridge
 - Supports putting lights in a 'color loop' mode where they cycle between all available colors
+- Clicking a light / group caption makes the lamps blink (can be used as a crude form of communication!)
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - The UI is done with vector graphics and looks crisp on retina displays
 - On-screen light status responds in real-time to changes with smooth animations and transitions
+- Reliable enough to run 24/7 and be used by many people from many devices simultaneously
 - Server has been tested on OS X and Ubuntu, needs very little system resources to run
 - Can be deployed on an Raspberry Pi, even features a server control panel for shutdown / reboot
 
@@ -136,7 +139,7 @@ Also see this [bug report](https://github.com/commercialhaskell/stack/issues/209
 cd /home/pi/hue-dashboard/
 .stack-work/dist/arm-linux/Cabal-1.22.5.0/build/hue-dashboard/hue-dashboard 2>&1
 ```
-* On ARM machines Hue Dashboard display a 'Server' tile, allowing for shutdown and reboot of the Raspberry Pi without using SSH
+* On ARM machines Hue Dashboard displays a 'Server' tile, allowing for shutdown and reboot of the Raspberry Pi without using SSH
 * This hopefully worked out all fine, be sure to file bug reports with the respective parts of the Haskell ecosystem to make sure it keeps getting easier
 
 # Legal
