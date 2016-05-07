@@ -7,12 +7,12 @@ Hue Dashboard is a web application for comfortably controlling [Philips Hue ligh
 
 Accessing the web interface from an iPhone:
 
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone-1.jpg)
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-iphone-2.jpg)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-1.jpg)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-2.jpg)
 
 And the same on the iPad:
 
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-ipad.jpg)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ipad.jpg)
 
 ### Features
 
@@ -30,7 +30,7 @@ And the same on the iPad:
 - Server has been tested on OS X and Ubuntu, needs very little system resources to run
 - Can be deployed on an Raspberry Pi, even features a server control panel for shutdown / reboot
 
-![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/web-interface-admin.png)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-admin.png)
 
 ### Implementation
 
@@ -82,13 +82,11 @@ This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Ra
 
 The program traces a lot of information and all errors / warnings to the console, please look for any error messages if things don't work as expected.
 
-# TODO
-
-There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts for future improvements.
-
 # Raspberry Pi
 
-The server for Hue Dashboard needs to live somewhere, and a small ARM machine is an obvious choice if you don't already have a PC running 24/7 in your home. The state of Haskell on ARM is rather unsatisfactory at the moment, so here's a list of steps that worked for me. Hue Dashboard itself has very modest needs, the only real challenge is getting it build. Cross compiling or building on an emulator did not seem feasible, so this guide will focus on building on the actual Raspberry Pi.
+![Raspberry Pi](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/raspberry-pi.jpg)
+
+The server for Hue Dashboard needs to live somewhere, and a small ARM machine is an obvious choice if you don't already have a PC running 24/7 in your home. The state of Haskell on ARM is rather unsatisfactory at the moment, so here's a list of steps that worked for me. Hue Dashboard itself has very modest needs, the only real challenge is getting it build. It might be easier to build on an emulator like QEMU or perhaps by renting a cheap ARM VPS with more RAM, but this guide will focus on building on the actual Raspberry Pi.
 
 * This worked for an Raspbery Pi 3 Model B, other models may or may not give the same results
 * Prepare an SD card with `2016-03-18-raspbian-jessie-lite.img` as the OS image, download from [here](http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2016-03-18/) or current version [here](https://www.raspberrypi.org/downloads/raspbian/). See [this guide](https://www.raspberrypi.org/documentation/installation/installing-images/) for how to write the SD card. You want at least a 16GB card, Haskell builds are large
@@ -141,6 +139,10 @@ cd /home/pi/hue-dashboard/
 ```
 * On ARM machines Hue Dashboard displays a 'Server' tile, allowing for shutdown and reboot of the Raspberry Pi without using SSH
 * This hopefully worked out all fine, be sure to file bug reports with the respective parts of the Haskell ecosystem to make sure it keeps getting easier
+
+# TODO
+
+There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts for future improvements.
 
 # Legal
 
