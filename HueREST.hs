@@ -11,14 +11,11 @@ module HueREST ( BridgeRequestMethod(..)
                ) where
 
 import Control.Applicative
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Catch
 import Data.Aeson
 import Data.Monoid
-import qualified Data.ByteString.Char8 as B8
 import System.FilePath ((</>))
-import Network.HTTP.Client (isIpAddress)
 import Network.HTTP.Simple
 
 import Util
@@ -51,7 +48,6 @@ bridgeRequest :: forall m a body. (MonadIO m, MonadThrow m, FromJSON a, ToJSON b
               -> String
               -> m a
 bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
-    unless (isIpAddress $ B8.pack bridgeIP) $ fail "Invalid IP address"
     request' <- parseRequest $
                     show method <> " http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
     let request = case mbBody of
@@ -59,10 +55,6 @@ bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
                       Nothing -> request'
     response <- httpJSON request
     return (getResponseBody response :: a)
-
--- TODO: bridgeRequestTrace and bridgeRequestRetryTrace currently catch all exceptions,
---       including things like a CTRL+C 'user interrupt'. This is poor practice, write
---       specific handlers for the HTTP and JSON exceptions we care about
 
 -- TODO: Would be good to have an exception type to restart the entire server to recover
 --       from a bridge IP change or something like that
@@ -80,18 +72,27 @@ bridgeRequestTrace :: forall m body. ( MonadIO m
                         -> String
                         -> m ()
 bridgeRequestTrace method bridgeIP mbBody userID apiEndPoint = do
-    try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
-        Left (e :: SomeException) -> do
-            -- Network / IO / parsing error
-            traceS TLError $ "bridgeRequestTrace: Exception while contacting / processing '"
-                             <> apiEndPoint <> "' : " <> show e
-        Right err@(ResponseError { .. }) -> do
+    r <- (Just <$> bridgeRequest method bridgeIP mbBody userID apiEndPoint) `catches`
+           [ Handler $ \(e :: HttpException) -> do
+               -- Network / IO error
+               traceS TLError $ "bridgeRequestTrace: HTTP exception while contacting '"
+                                <> apiEndPoint <> "' : " <> show e
+               return Nothing
+           , Handler $ \(e :: JSONException) -> do
+               -- Parsing error
+               traceS TLError $ "bridgeRequestTrace: JSON exception while contacting '"
+                                <> apiEndPoint <> "' : " <> show e
+               return Nothing
+           ]
+    case r of
+        Just (ResponseOK (_ :: Value)) ->
+            -- Success
+            return ()
+        Just err@(ResponseError { .. }) -> do
             -- Got an error from the bridge
             traceS TLError $ "bridgeRequestTrace: Error response from '"
                              <> apiEndPoint <> "' : " <> show err
-        Right (ResponseOK (_ :: Value)) ->
-            -- Success
-            return ()
+        Nothing -> return ()
 
 -- Wrapper around bridgeRequest which traces errors and retries automatically
 bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
@@ -110,25 +111,34 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                         -> String
                         -> m a
 bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
-    try (bridgeRequest method bridgeIP mbBody userID apiEndPoint) >>= \case
-        -- TODO: It makes sense to retry if we have a connection error, but in case of
-        --       something like a parsing error or an access denied type response, an
-        --       endless retry loop might not do anything productive
-        Left (e :: SomeException) -> do
-            -- Network / IO / parsing error
-            traceS TLError $ "bridgeRequestRetryTrace: Exception while contacting / processing '"
-                             <> apiEndPoint <> "' (retry in 5s): " <> show e
-            waitNSec 5
-            retry
-        Right err@(ResponseError { .. }) -> do
+    -- TODO: It makes sense to retry if we have a connection error, but in case of
+    --       something like a parsing error or an access denied type response, an
+    --       endless retry loop might not do anything productive
+    r <- (Just <$> bridgeRequest method bridgeIP mbBody userID apiEndPoint) `catches`
+           [ Handler $ \(e :: HttpException) -> do
+               -- Network / IO error
+               traceS TLError $ "bridgeRequestRetryTrace: HTTP exception while contacting '"
+                                <> apiEndPoint <> "' (retry in 5s): " <> show e
+               return Nothing
+           , Handler $ \(e :: JSONException) -> do
+               -- Parsing error
+               traceS TLError $ "bridgeRequestRetryTrace: JSON exception while contacting '"
+                                <> apiEndPoint <> "' (retry in 5s): " <> show e
+               return Nothing
+           ]
+    case r of
+        Just (ResponseOK (val :: a)) ->
+            -- Success
+            return val
+        Just err@(ResponseError { .. }) -> do
             -- Got an error from the bridge
             traceS TLError $ "bridgeRequestRetryTrace: Error response from '"
                              <> apiEndPoint <> "' (retry in 5s): " <> show err
             waitNSec 5
             retry
-        Right (ResponseOK (val :: a)) -> do
-            -- Success
-            return val
+        Nothing -> do
+            waitNSec 5
+            retry
   where
     retry = bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint
 

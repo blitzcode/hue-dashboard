@@ -13,6 +13,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Catch
 import Control.Lens
 import Network.HostName
+import Network.HTTP.Simple
 
 import Util
 import Trace
@@ -33,11 +34,22 @@ discoverBridgeIP bridgeIP =
             -- requests we can make without having a whitelisted user, use it to verify
             -- that our IP points to a valid Hue bridge
             traceS TLInfo $ "Trying to verify bridge IP: " <> ip
-            try (bridgeRequest MethodGET ip noBody "no-user" "config") >>= \case
-                Left (e :: SomeException) -> do
-                    traceS TLError $ "Bad / stale bridge IP: " <> show e
-                    discoverBridgeIP Nothing
-                Right (cfg :: BridgeConfigNoWhitelist) -> do
+            (r :: Maybe BridgeConfigNoWhitelist) <-
+              (Just <$> bridgeRequest MethodGET ip noBody "no-user" "config") `catches`
+                [ Handler $ \(e :: HttpException) -> do
+                    -- Network / IO error
+                    traceS TLError $ "discoverBridgeIP: HTTP exception, bad / stale bridge IP: "
+                                     <> show e
+                    return Nothing
+                , Handler $ \(e :: JSONException) -> do
+                    -- Parsing error
+                    traceS TLError $ "discoverBridgeIP: JSON exception during bridge verify: '"
+                                     <> show e
+                    return Nothing
+                ]
+            case r of
+                Nothing  -> discoverBridgeIP Nothing
+                Just cfg -> do
                     traceS TLInfo $ "Success, basic bridge configuration:\n" <> (show cfg)
                     -- Obtained and traced basic configuration, check API version
                     case cfg ^. bcnwAPIVersion of
@@ -53,12 +65,24 @@ discoverBridgeIP bridgeIP =
         Nothing -> do
             -- No IP, run bridge discovery
             traceS TLInfo "Running bridge discovery using broker server..."
-            try queryBrokerServer >>= \case
-                Left (e :: SomeException) -> do
-                    traceS TLError $ "Bridge discovery failed (retry in 5s): " <> show e
+            r <- (Just <$> queryBrokerServer) `catches`
+                [ Handler $ \(e :: HttpException) -> do
+                    -- Network / IO error
+                    traceS TLError $ "discoverBridgeIP: HTTP exception while contacting broker: "
+                                     <> show e
+                    return Nothing
+                , Handler $ \(e :: JSONException) -> do
+                    -- Parsing error
+                    traceS TLError $ "discoverBridgeIP: JSON exception during broker query: '"
+                                     <> show e
+                    return Nothing
+                ]
+            case r of
+                Nothing -> do
+                    traceS TLError $ "Bridge discovery failed (retry in 5s)"
                     waitNSec 5
                     discoverBridgeIP Nothing
-                Right bridges ->
+                Just bridges -> do
                     if null bridges
                         then do traceS TLError "No bridge found (retry in 5s)"
                                 waitNSec 5
@@ -86,18 +110,28 @@ createUser bridgeIP userID =
         Just uid -> do
             -- Verify user ID by querying timezone list, which requires whitelisting
             traceS TLInfo $ "Trying to verify user ID: " <> uid
-            try (bridgeRequest MethodGET bridgeIP noBody uid "info/timezones") >>= \case
-                Left (e :: SomeException) -> do
-                    -- Network / IO / parsing error
-                    traceS TLError $ "Failed to verify user ID (retry in 5s): " <> show e
+            r <- (Just <$> bridgeRequest MethodGET bridgeIP noBody uid "info/timezones") `catches`
+                [ Handler $ \(e :: HttpException) -> do
+                    -- Network / IO error
+                    traceS TLError $ "createUser: HTTP exception during user verify: "
+                                     <> show e
+                    return Nothing
+                , Handler $ \(e :: JSONException) -> do
+                    -- Parsing error
+                    traceS TLError $ "createUser: JSON exception during user verify: '"
+                                     <> show e
+                    return Nothing
+                ]
+            case r of
+                Nothing  ->  do
+                    traceS TLError $ "Failed to verify user ID (retry in 5s)"
                     waitNSec 5
                     createUser bridgeIP (Just uid)
-                Right err@(ResponseError { .. }) -> do
+                Just err@(ResponseError { .. }) -> do
                     -- Got an error from the bridge, just create a fresh user ID
-                    traceS TLError $
-                        "Error response verifying user ID: " <> show err
+                    traceS TLError $ "Error response verifying user ID: " <> show err
                     createUser bridgeIP Nothing
-                Right (ResponseOK (_ :: [String])) -> do
+                Just (ResponseOK (_ :: [String])) -> do
                     -- Looks like we got our timezone list, user ID is whitelisted and verified
                     traceS TLInfo $ "User ID seems whitelisted"
                     return uid
@@ -110,13 +144,25 @@ createUser bridgeIP userID =
             let body = -- We use our application name and the host name, as recommended
                        HM.fromList ([("devicetype", "hue-dashboard#" <> host)] :: [(String, String)])
             traceS TLInfo $ "Creating new user ID: " <> show body
-            try (bridgeRequest MethodPOST bridgeIP (Just body) "" "") >>= \case
-                Left (e :: SomeException) -> do
+            r <- (Just <$> bridgeRequest MethodPOST bridgeIP (Just body) "" "") `catches`
+                [ Handler $ \(e :: HttpException) -> do
+                    -- Network / IO error
+                    traceS TLError $ "createUser: HTTP exception during user user create: "
+                                     <> show e
+                    return Nothing
+                , Handler $ \(e :: JSONException) -> do
+                    -- Parsing error
+                    traceS TLError $ "createUser: JSON exception during user user create: '"
+                                     <> show e
+                    return Nothing
+                ]
+            case r of
+                Nothing -> do
                     -- Network / IO / parsing error, retry
-                    traceS TLError $ "Failed to create user ID (retry in 5s): " <> show e
+                    traceS TLError $ "Failed to create user ID (retry in 5s)"
                     waitNSec 5
                     createUser bridgeIP Nothing
-                Right err@(ResponseError { .. }) -> do
+                Just err@(ResponseError { .. }) -> do
                     -- Error from the bridge, try again and alert user if we require the
                     -- link button on the bridge to be pressed
                     traceS TLError $
@@ -128,7 +174,7 @@ createUser bridgeIP userID =
                         _ -> return ()
                     waitNSec 5
                     createUser bridgeIP Nothing
-                Right (ResponseOK (UserNameResponse uid)) -> do
+                Just (ResponseOK (UserNameResponse uid)) -> do
                     -- We created the user, recurse to verify whitelisting
                     traceS TLInfo $ "Successfully created new user ID: " <> uid
                     createUser bridgeIP (Just uid)
