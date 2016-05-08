@@ -312,6 +312,8 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                                 . to (HS.member groupName)
                   writeTVar _aePC
                       $  pc
+                         -- Careful not to use 'non' here, would otherwise remove the
+                         -- entire user when removing the last HS entry, confusing...
                       &  pcUserData . at userID . _Just . udVisibleGroupNames
                       %~ (if grpShown then HS.delete groupName else HS.insert groupName)
                   return $

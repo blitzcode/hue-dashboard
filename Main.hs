@@ -90,10 +90,14 @@ main = do
         run AppEnv { .. }
 
 -- Every N seconds we wake up and see if the configuration data we want to persist has
--- been changed. If so, we write it to disk
+-- been changed. If so, we write it to disk to make sure we don't lose all data in case
+-- of a crash
 --
--- TODO: Is there a smarter way of doing this? Changes should be persisted quickly, but
---       data should not be written too frequently. Not too much CPU should be wasted either
+-- TODO: We should save on exit, but trying to save with a 'finally' has proven to be
+--       prone to data corruption. Not sure why, the main thread should wain in the
+--       withAsync on this one, but that doesn't seem to happen. We also have the risk
+--       of data corruption when being interrupted while saving at our interval, though.
+--       Not sure what the perfect solution is
 --
 pcWriterThread :: TVar PersistConfig -> IO ()
 pcWriterThread tvPC = loop defaultPersistConfig
@@ -101,9 +105,9 @@ pcWriterThread tvPC = loop defaultPersistConfig
           currentCfg <- atomically $ readTVar tvPC
           when (currentCfg /= lastCfg) $ do
               traceS TLInfo $ "Configuration data has changed in the last " <> show intervalSec <>
-                              "s, persisting to disk"
+                              "s, persisting to disk..."
               storeConfig configFilePath currentCfg
           waitNSec intervalSec
           loop currentCfg
-        intervalSec = 300
+        intervalSec = 600 -- 10min
 
