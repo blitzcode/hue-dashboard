@@ -171,7 +171,10 @@ iconFromLM lm = basePath </> fn <.> ext
 -- Build group switch tile for current light group
 --
 -- TODO: Create a 'group scene' system where the state of all lights
---       in a group gets saved to a preset slot
+--       in a group gets saved to a preset slot. Maybe add a tile
+--       for each scene?
+--
+-- TODO: Add show / hide button to make groups collapsible
 --
 addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs window = do
@@ -375,6 +378,9 @@ data ColorPickerResult = CPR_Margin         -- Click on the margin
                        | CPR_XY Float Float -- Clicked on the color / color temperature parts, XY
 
 -- Classify results from a click on the color picker image
+--
+-- TODO: Add support for color temperature lights
+--
 xyFromColorPickerCoordinates :: JP.Image JP.PixelRGB8
                              -> Int
                              -> Int

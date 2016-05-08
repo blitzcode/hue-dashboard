@@ -76,6 +76,8 @@ Usage: hue-dashboard [OPTION...]
   -h          --help                   print usage information
 ```
 
+The groups displayed are based on a prefix word. So 'Kitchen Ceiling' and 'Kitchen Table' will be put into the 'Kitchen' group. You might need to rename your lights to take full advantage of this feature.
+
 # Compatibility
 
 This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Raspbian) with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.
