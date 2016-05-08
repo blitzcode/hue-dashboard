@@ -29,7 +29,7 @@ data LightUpdate = LU_OnOff        !Bool
 
 -- Application state
 data AppEnv = AppEnv
-    { _aePC             :: !PersistConfig
+    { _aePC             :: !(TVar PersistConfig)
     , _aeBC             :: !BridgeConfig
     , _aeLights         :: !(TVar Lights)
     , _aeLightGroups    :: !(TVar LightGroups)

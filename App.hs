@@ -83,11 +83,12 @@ buildLightGroups lights =
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
 fetchBridgeState :: AppIO ()
 fetchBridgeState = do
-  -- Bridge
-  bridgeIP <- view $ aePC . pcBridgeIP
-  userID   <- view $ aePC . pcUserID
   -- Request all light information
-  (newLights :: Lights) <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "lights"
+  (newLights :: Lights) <- do
+    pc           <- view aePC
+    bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar pc
+    bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar pc
+    bridgeRequestRetryTrace MethodGET bridgeIP noBody bridgeUserID "lights"
   -- Do all updating as a single transaction
   broadcast  <- view aeBroadcast
   tvarLights <- view aeLights

@@ -38,6 +38,9 @@ import WebUIREST
 addLightTile :: Light -> String -> Window -> PageBuilder ()
 addLightTile light lightID window = do
   AppEnv { .. } <- ask
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   -- Build tile
   let opacity       = if light ^. lgtState . lsOn then enabledOpacity else disabledOpacity
       brightPercent = printf "%.0f%%"
@@ -86,8 +89,8 @@ addLightTile light lightID window = do
      -- Have light blink once after clicking the caption
      getElementByIdSafe window (buildID lightID "caption") >>= \caption ->
          on UI.click caption $ \_ -> do
-             lightsBreatheCycle (_aePC ^. pcBridgeIP)
-                                (_aePC ^. pcUserID)
+             lightsBreatheCycle bridgeIP
+                                bridgeUserID
                                 [lightID]
      -- Turn on / off by clicking the light symbol
      getElementByIdSafe window (buildID lightID "image") >>= \image ->
@@ -96,10 +99,11 @@ addLightTile light lightID window = do
              curLights <- liftIO . atomically $ readTVar _aeLights
              case HM.lookup lightID curLights of
                  Nothing         -> return ()
-                 Just lightOnOff -> lightsSwitchOnOff (_aePC ^. pcBridgeIP)
-                                                      (_aePC ^. pcUserID)
-                                                      [lightID]
-                                                      (not $ lightOnOff ^. lgtState . lsOn)
+                 Just lightOnOff -> do
+                     lightsSwitchOnOff bridgeIP
+                                       bridgeUserID
+                                       [lightID]
+                                       (not $ lightOnOff ^. lgtState . lsOn)
      -- Change brightness bright clicking the left / right side of the brightness bar
      --
      -- TODO: More precision (smaller increments) when controlling individual lights,
@@ -107,10 +111,10 @@ addLightTile light lightID window = do
      --       beginning)
      --
      getElementByIdSafe window (buildID lightID "brightness-container") >>= \image ->
-         on UI.mousedown image $ \(mx, _) ->
+         on UI.mousedown image $ \(mx, _) -> do
              -- Construct and perform REST API call
-             lightsChangeBrightness (_aePC ^. pcBridgeIP)
-                                    (_aePC ^. pcUserID)
+             lightsChangeBrightness bridgeIP
+                                    bridgeUserID
                                     _aeLights
                                     [lightID]
                                     -- Click on left part decrements, right part increments
@@ -118,25 +122,25 @@ addLightTile light lightID window = do
      -- Respond to clicks on the color picker
      when colorSupport $
          getElementByIdSafe window (buildID lightID "color-picker-overlay") >>= \image ->
-             on UI.mousedown image $ \(mx, my) ->
+             on UI.mousedown image $ \(mx, my) -> do
                  case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
                      CPR_Margin       -> return ()
                      CPR_SetColorLoop ->
-                         lightsColorLoop (_aePC ^. pcBridgeIP)
-                                         (_aePC ^. pcUserID)
+                         lightsColorLoop bridgeIP
+                                         bridgeUserID
                                          _aeLights
                                          [lightID]
                      CPR_Random       -> do
                          (xyX, xyY) <- liftIO getRandomXY
-                         lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                          (_aePC ^. pcUserID)
+                         lightsSetColorXY bridgeIP
+                                          bridgeUserID
                                           _aeLights
                                           [lightID]
                                           xyX
                                           xyY
                      CPR_XY xyX xyY   ->
-                         lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                          (_aePC ^. pcUserID)
+                         lightsSetColorXY bridgeIP
+                                          bridgeUserID
                                           _aeLights
                                           [lightID]
                                           xyX
@@ -179,6 +183,9 @@ iconFromLM lm = basePath </> fn <.> ext
 addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs window = do
   AppEnv { .. } <- ask
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   let groupID                         = "group-" <> groupName
       numLights                       = length groupLightIDs
       queryAnyLightsInGroup condition =
@@ -225,24 +232,24 @@ addGroupSwitchTile groupName groupLightIDs window = do
       -- Have light blink once after clicking the caption
       getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
           on UI.click caption $ \_ -> do
-              lightsBreatheCycle (_aePC ^. pcBridgeIP)
-                                 (_aePC ^. pcUserID)
+              lightsBreatheCycle bridgeIP
+                                 bridgeUserID
                                  groupLightIDs
       -- Register click handler for turning group lights on / off
       getElementByIdSafe window (buildID groupID "image") >>= \image ->
           on UI.click image $ \_ -> do
               -- Query current group light state to see if we need to turn group on or off
               queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
-                  lightsSwitchOnOff (_aePC ^. pcBridgeIP)
-                                    (_aePC ^. pcUserID)
+                  lightsSwitchOnOff bridgeIP
+                                    bridgeUserID
                                     groupLightIDs
                                     (not grpOn)
       -- Register click handler for changing group brightness
       getElementByIdSafe window (buildID groupID "brightness-container") >>= \image ->
           on UI.mousedown image $ \(mx, _) ->
               -- Construct and perform REST API call
-              lightsChangeBrightness (_aePC ^. pcBridgeIP)
-                                     (_aePC ^. pcUserID)
+              lightsChangeBrightness bridgeIP
+                                     bridgeUserID
                                      _aeLights
                                      groupLightIDs
                                      -- Click on left part decrements, right part increments
@@ -257,22 +264,22 @@ addGroupSwitchTile groupName groupLightIDs window = do
                   case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
                       CPR_Margin       -> return ()
                       CPR_SetColorLoop ->
-                          lightsColorLoop (_aePC ^. pcBridgeIP)
-                                          (_aePC ^. pcUserID)
+                          lightsColorLoop bridgeIP
+                                          bridgeUserID
                                           _aeLights
                                           groupLightIDs
                       CPR_Random       -> do
                           -- TODO: Assign different random color to each light
                           (xyX, xyY) <- liftIO getRandomXY
-                          lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                           (_aePC ^. pcUserID)
+                          lightsSetColorXY bridgeIP
+                                           bridgeUserID
                                            _aeLights
                                            groupLightIDs
                                            xyX
                                            xyY
                       CPR_XY xyX xyY   ->
-                          lightsSetColorXY (_aePC ^. pcBridgeIP)
-                                           (_aePC ^. pcUserID)
+                          lightsSetColorXY bridgeIP
+                                           bridgeUserID
                                            _aeLights
                                            groupLightIDs
                                            xyX
@@ -285,6 +292,9 @@ addGroupSwitchTile groupName groupLightIDs window = do
 addAllLightsTile :: Window -> PageBuilder ()
 addAllLightsTile window = do
   AppEnv { .. } <- ask
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   -- Build tile
   void $ do
     lights <- liftIO . atomically $ readTVar _aeLights
@@ -305,7 +315,7 @@ addAllLightsTile window = do
             H.small $
               sequence_ $ intersperse H.br
                 [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
-                , H.toHtml $ "IP "    <> _aePC ^. pcBridgeIP
+                , H.toHtml $ "IP "    <> bridgeIP
                 , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
                 , H.toHtml $ (show $ length lights) <> " Lights Connected"
                 ]
@@ -316,13 +326,16 @@ addAllLightsTile window = do
               -- Query current light state to see if we need to turn everything on or off
               lights <- liftIO . atomically $ readTVar _aeLights
               -- Fire & forget REST API call in another thread
-              switchAllLights (_aePC ^. pcBridgeIP)
-                              (_aePC ^. pcUserID)
+              switchAllLights bridgeIP
+                              bridgeUserID
                               (not $ anyLightsOn lights)
 
 addScenesTile :: Window -> PageBuilder ()
 addScenesTile window = do
   AppEnv { .. } <- ask
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   let sceneBttnID sceneID = -- TODO: Move this logic to where the scenes are fetched
         -- DOM ID from scene ID
         "scene-activate-bttn-" <> sceneID
@@ -368,8 +381,8 @@ addScenesTile window = do
       forM_ topScenes $ \(sceneID, _) ->
           getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
               on UI.click bttn $ \_ ->
-                  recallScene (_aePC ^. pcBridgeIP)
-                              (_aePC ^. pcUserID)
+                  recallScene bridgeIP
+                              bridgeUserID
                               sceneID
 
 data ColorPickerResult = CPR_Margin         -- Click on the margin

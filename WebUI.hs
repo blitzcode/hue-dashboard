@@ -27,6 +27,7 @@ import Trace
 import AppDefs
 import WebUIHelpers
 import WebUITileBuilding
+import PersistConfig
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
@@ -52,6 +53,21 @@ setup :: AppEnv -> Window -> UI ()
 setup ae@AppEnv { .. } window = do
     -- Duplicate broadcast channel
     tchan <- liftIO . atomically $ dupTChan _aeBroadcast
+    -- Obtain user ID from cookie
+    userID <- callFunction $ ffi "getUserID()" :: UI String
+    -- Get user data for user ID, create new data if none is present
+    (newUser, _) <- liftIO . atomically $ do
+        pc <- readTVar _aePC
+        case HM.lookup userID (pc ^. pcUserData) of
+            Nothing  -> do let ud = defaultUserData
+                           writeTVar _aePC $
+                               pc & pcUserData %~ (HM.insert userID ud)
+                           return (True, ud)
+            Just ud -> return (False, ud)
+    traceS TLInfo $ "New connection from user ID '" <> userID <>
+        if   newUser
+        then "' (new user, creating default data)"
+        else "' (known user)"
     -- Read all lights and light groups, display sorted by name. Light IDs in the group are
     -- already sorted by name
     (lights, lightGroupsList) <- liftIO . atomically $
@@ -66,7 +82,6 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / small
-    -- TODO: Set cookie to distinguish users, save various per-user state and preferences
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile

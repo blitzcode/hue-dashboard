@@ -6,11 +6,14 @@ module Main (main) where
 import Data.Monoid
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
+import Control.Monad
 import Control.Lens
 import Control.Concurrent.STM
 import qualified Codec.Picture as JP
 import Text.Read
+import Control.Concurrent.Async
 
+import Util
 import Trace
 import App
 import AppDefs
@@ -29,26 +32,27 @@ main = do
         traceLvl = foldr (\f r -> case f of (FlagTraceLevel lvl) -> mkTrcOpt lvl; _ -> r)
                          TLInfo flags
     withTrace traceFn
-              (not $ FlagTraceNoEcho       `elem` flags)
-              (      FlagTraceAppend       `elem` flags)
-              (not $ FlagTraceDisableColor `elem` flags)
-              traceLvl
-              $ do
-        -- Load configuration (might not be there)
-        let configFile = "./config.yaml" -- TODO: Maybe use ~/.hue-dashboard for this?
-        mbCfg <- loadConfig configFile
-        -- Bridge connection and user ID
-        bridgeIP <- discoverBridgeIP    $ view pcBridgeIP <$> mbCfg
-        userID   <- createUser bridgeIP $ view pcUserID   <$> mbCfg
-        -- We have everything setup, build and store configuration
-        let newCfg = (fromMaybe defaultPersistConfig mbCfg)
-                         & pcBridgeIP .~ bridgeIP
-                         & pcUserID   .~ userID
-        storeConfig configFile newCfg
+            (not $ FlagTraceNoEcho       `elem` flags)
+            (      FlagTraceAppend       `elem` flags)
+            (not $ FlagTraceDisableColor `elem` flags)
+            traceLvl
+            $ do
+      -- Load configuration (might not be there)
+      mbCfg <- loadConfig configFilePath
+      -- Bridge connection and user ID
+      bridgeIP <- discoverBridgeIP    $ view pcBridgeIP     <$> mbCfg
+      userID   <- createUser bridgeIP $ view pcBridgeUserID <$> mbCfg
+      -- We have everything setup, build and store configuration
+      let newCfg = (fromMaybe defaultPersistConfig mbCfg)
+                       & pcBridgeIP     .~ bridgeIP
+                       & pcBridgeUserID .~ userID
+      _aePC <- atomically . newTVar $ newCfg
+      -- Launch persistent configuration writer thread
+      withAsync (pcWriterThread _aePC) $ \_ -> do
         -- Request full bridge configuration
         traceS TLInfo $ "Trying to obtain full bridge configuration..."
-        bridgeConfig <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
-        traceS TLInfo $ "Success, full bridge configuration:\n" <> show bridgeConfig
+        _aeBC <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
+        traceS TLInfo $ "Success, full bridge configuration:\n" <> show _aeBC
         -- Request all scenes (TODO: Maybe do this on every new connection, not once per server?)
         -- http://www.developers.meethue.com/documentation/scenes-api#41_get_all_scenes
         traceS TLInfo $ "Trying to obtain list of bridge scenes..."
@@ -83,8 +87,23 @@ main = do
                 , _cloTraceHTTP     =  FlagTraceHTTP `elem` flags
                 }
         -- Launch application
-        run AppEnv { _aePC = newCfg
-                   , _aeBC = bridgeConfig
-                   , ..
-                   }
+        run AppEnv { .. }
+
+-- Every N seconds we wake up and see if the configuration data we want to persist has
+-- been changed. If so, we write it to disk
+--
+-- TODO: Is there a smarter way of doing this? Changes should be persisted quickly, but
+--       data should not be written too frequently. Not too much CPU should be wasted either
+--
+pcWriterThread :: TVar PersistConfig -> IO ()
+pcWriterThread tvPC = loop defaultPersistConfig
+  where loop lastCfg = do
+          currentCfg <- atomically $ readTVar tvPC
+          when (currentCfg /= lastCfg) $ do
+              traceS TLInfo $ "Configuration data has changed in the last " <> show intervalSec <>
+                              "s, persisting to disk"
+              storeConfig configFilePath currentCfg
+          waitNSec intervalSec
+          loop currentCfg
+        intervalSec = 300
 
