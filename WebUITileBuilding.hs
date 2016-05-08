@@ -229,7 +229,7 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
           -- Group show / hide widget
           H.div H.! A.class_ "text-center" $
             H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-sm btn-scene"
+                     H.! A.class_ "btn btn-sm btn-info"
                      H.! A.style "margin-top: 9px; margin-bottom: -3px;"
                      H.! A.id (H.toValue $ buildID groupID "show-btn")
                      $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
