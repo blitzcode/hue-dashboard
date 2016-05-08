@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, RankNTypes #-}
 
 module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
@@ -13,6 +13,7 @@ import Data.Monoid
 import Data.List
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
@@ -35,8 +36,8 @@ import WebUIREST
 
 -- Code for building the individual tiles making up our user interface
 
-addLightTile :: Light -> String -> Window -> PageBuilder ()
-addLightTile light lightID window = do
+addLightTile :: Light -> String -> Bool -> Window -> PageBuilder ()
+addLightTile light lightID shown window = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
@@ -51,7 +52,9 @@ addLightTile light lightID window = do
       colorSupport  = isColorLT $ light ^. lgtType
   addPageTile $
     H.div H.! A.class_ "thumbnail"
-          H.! A.style (H.toValue $ "opacity: " <> show opacity <> ";")
+          H.! A.style ( H.toValue $ "opacity: " <> show opacity <> ";" <>
+                                    if shown then "display: block;" else "display: none;"
+                      )
           H.! A.id (H.toValue $ buildID lightID "tile") $ do
       -- Caption and light icon
       H.div H.! A.class_ "light-caption small"
@@ -172,62 +175,71 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueLightStripsPlus        -> "lightstrip"
                           LM_Unknown _                 -> "white_e27"
 
+getUserData :: TVar PersistConfig -> String -> STM UserData
+getUserData tvPC userID = readTVar tvPC <&> (^. pcUserData . at userID . non defaultUserData)
+
+-- Apply a lens getter to the user data for the passed user ID
+queryUserData :: forall a. TVar PersistConfig -> String -> Getter UserData a -> STM a
+queryUserData tvPC userID g = getUserData tvPC userID <&> (^. g)
+
 -- Build group switch tile for current light group
 --
 -- TODO: Create a 'group scene' system where the state of all lights
 --       in a group gets saved to a preset slot. Maybe add a tile
 --       for each scene?
 --
--- TODO: Add show / hide button to make groups collapsible
---
-addGroupSwitchTile :: String -> [String] -> Window -> PageBuilder ()
-addGroupSwitchTile groupName groupLightIDs window = do
+addGroupSwitchTile :: String -> [String] -> String -> Window -> PageBuilder ()
+addGroupSwitchTile groupName groupLightIDs userID window = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   let groupID                         = "group-" <> groupName
-      numLights                       = length groupLightIDs
+      grpShownCaption                 = "Hide ◄"
+      grpHiddenCaption                = "Show ►"
       queryAnyLightsInGroup condition =
         (liftIO . atomically $ (,) <$> readTVar _aeLights <*> readTVar _aeLightGroups)
           >>= \(lights, lightGroups) -> return $
             anyLightsInGroup groupName lightGroups lights condition
+      queryGroupShown                  =
+          queryUserData _aePC userID (udVisibleGroupNames . to (HS.member groupName))
   grpHasColor <- queryAnyLightsInGroup (^. lgtType . to isColorLT)
   -- Tile
   queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
-    addPageTile $
-      H.div H.! A.class_ "thumbnail"
-            H.! A.style ( H.toValue $ "opacity: "
-                            <> show (if grpOn then enabledOpacity else disabledOpacity)
-                            <> ";"
-                        )
-            H.! A.id (H.toValue $ buildID groupID "tile") $ do
-        -- Caption and switch icon
-        H.div H.! A.class_ "light-caption light-caption-group-header small"
-              H.! A.id (H.toValue $ buildID groupID "caption") $ do
-                void "Group Switch"
-                H.br
-                H.toHtml groupName
-        H.img H.! A.class_ "img-rounded"
-              H.! A.src "static/svg/hds.svg"
-              H.! A.id (H.toValue $ buildID groupID "image")
-        -- Only add color picker elements for lights that support colors
-        when grpHasColor $
-            addColorPicker groupID
-        -- Group description
-        H.div H.! A.class_ "text-center" $
-          H.h6 $
-            H.small $ do
-              H.toHtml $ show numLights <> if numLights > 1 then " Lights" else " Light"
-              H.br
-              "Grouped by Prefix"
-        -- Brightness widget
-        H.div H.! A.class_ "progress"
-              H.! A.id (H.toValue $ buildID groupID "brightness-container") $ do
-          H.div H.! A.class_ "progress-label-container" $ do
-            H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
-            H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
-          H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
+    liftIO (atomically queryGroupShown) >>= \grpShown ->
+      addPageTile $
+        H.div H.! A.class_ "thumbnail"
+              H.! A.style ( H.toValue $ "opacity: "
+                              <> show (if grpOn then enabledOpacity else disabledOpacity)
+                              <> ";"
+                          )
+              H.! A.id (H.toValue $ buildID groupID "tile") $ do
+          -- Caption and switch icon
+          H.div H.! A.class_ "light-caption light-caption-group-header small"
+                H.! A.id (H.toValue $ buildID groupID "caption") $ do
+                  void "Group"
+                  H.br
+                  H.toHtml groupName
+          H.img H.! A.class_ "img-rounded"
+                H.! A.src "static/svg/hds.svg"
+                H.! A.id (H.toValue $ buildID groupID "image")
+          -- Only add color picker elements for lights that support colors
+          when grpHasColor $
+              addColorPicker groupID
+          -- Group show / hide widget
+          H.div H.! A.class_ "text-center" $
+            H.button H.! A.type_ "button"
+                     H.! A.class_ "btn btn-sm btn-scene"
+                     H.! A.style "margin-top: 9px; margin-bottom: -3px;"
+                     H.! A.id (H.toValue $ buildID groupID "show-btn")
+                     $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+          -- Brightness widget
+          H.div H.! A.class_ "progress"
+                H.! A.id (H.toValue $ buildID groupID "brightness-container") $ do
+            H.div H.! A.class_ "progress-label-container" $ do
+              H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
+              H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
+            H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
   addPageUIAction $ do
       -- Have light blink once after clicking the caption
       getElementByIdSafe window (buildID groupID "caption") >>= \caption ->
@@ -284,6 +296,38 @@ addGroupSwitchTile groupName groupLightIDs window = do
                                            groupLightIDs
                                            xyX
                                            xyY
+      -- Show / hide group lights
+      getElementByIdSafe window (buildID groupID "show-btn") >>= \btn ->
+          on UI.click btn $ \_ -> do
+              -- Start a transaction, flip the shown state of the group by adding /
+              -- removing it from the visible list and return a list of UI actions to
+              -- update the UI with the changes
+              uiActions <- liftIO . atomically $ do
+                  pc <- readTVar _aePC
+                  let grpShown = pc
+                               ^. pcUserData
+                                . at userID
+                                . non defaultUserData
+                                . udVisibleGroupNames
+                                . to (HS.member groupName)
+                  writeTVar _aePC
+                      $  pc
+                      &  pcUserData . at userID . _Just . udVisibleGroupNames
+                      %~ (if grpShown then HS.delete groupName else HS.insert groupName)
+                  return $
+                      ( if   grpShown
+                        then [ void $ element btn & set UI.text grpHiddenCaption ]
+                        else [ void $ element btn & set UI.text grpShownCaption  ]
+                      ) <>
+                      ( (flip map) groupLightIDs $ \lightID ->
+                          getElementByIdSafe window (buildID lightID "tile") >>= \e ->
+                              void $ return e & set style
+                                [ if   grpShown
+                                  then ("display", "none" )
+                                  else ("display", "block")
+                                ]
+                      )
+              sequence_ uiActions
 
 -- Tile for controlling all lights, also displays some bridge information
 --

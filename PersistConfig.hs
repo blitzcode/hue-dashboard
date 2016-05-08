@@ -8,6 +8,7 @@ module PersistConfig ( configFilePath
                      , pcBridgeIP
                      , pcBridgeUserID
                      , pcUserData
+                     , udVisibleGroupNames
                      , defaultPersistConfig
                      , loadConfig
                      , storeConfig
@@ -21,6 +22,7 @@ import Control.Monad.IO.Class
 import qualified Data.Yaml as Y
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Data.Monoid
 
 import Util
@@ -53,20 +55,20 @@ instance ToJSON PersistConfig where
               ]
 
 data UserData = UserData
-    {
+    { _udVisibleGroupNames :: !(HS.HashSet String) -- Groups which are not hidden / collapsed
     } deriving (Show, Eq)
 
 defaultUserData :: UserData
-defaultUserData = UserData
+defaultUserData = UserData HS.empty
 
 instance FromJSON UserData where
     parseJSON (Object o) =
-        return UserData
+        UserData <$> o .:? "_udVisibleGroupNames" .!= _udVisibleGroupNames defaultUserData
     parseJSON _ = mzero
 
 instance ToJSON UserData where
-   toJSON _{-UserData { .. }-}  =
-      object [
+   toJSON UserData { .. }  =
+      object [ "_udVisibleGroupNames" .= _udVisibleGroupNames
              ]
 
 makeLenses ''UserData

@@ -22,7 +22,7 @@ import AppDefs (AppEnv)
 
 data Page = Page { _pgTiles     :: ![Html]  -- Functions to generate all the tiles in the page
                  , _pgUIActions :: ![UI ()] -- Functions to register all event handlers etc.
-                                            -- once the page has been build
+                                            --   once the page has been build
                  }
 
 makeLenses ''Page

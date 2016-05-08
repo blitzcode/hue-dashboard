@@ -11,6 +11,7 @@ import Data.Monoid
 import Data.List
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Control.Concurrent.STM
 import Control.Concurrent.Async
 import Control.Lens hiding ((#), set, (<.>), element)
@@ -56,13 +57,13 @@ setup ae@AppEnv { .. } window = do
     -- Obtain user ID from cookie
     userID <- callFunction $ ffi "getUserID()" :: UI String
     -- Get user data for user ID, create new data if none is present
-    (newUser, _) <- liftIO . atomically $ do
+    (newUser, userData) <- liftIO . atomically $ do
         pc <- readTVar _aePC
         case HM.lookup userID (pc ^. pcUserData) of
-            Nothing  -> do let ud = defaultUserData
-                           writeTVar _aePC $
-                               pc & pcUserData %~ (HM.insert userID ud)
-                           return (True, ud)
+            Nothing -> do let ud = defaultUserData
+                          writeTVar _aePC $
+                              pc & pcUserData %~ (HM.insert userID ud)
+                          return (True, ud)
             Just ud -> return (False, ud)
     traceS TLInfo $ "New connection from user ID '" <> userID <>
         if   newUser
@@ -91,12 +92,14 @@ setup ae@AppEnv { .. } window = do
         -- Create tiles for all light groups
         forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
             -- Build group switch tile for current light group
-            addGroupSwitchTile groupName groupLightIDs window
+            addGroupSwitchTile groupName groupLightIDs userID window
+            -- Is the current group visible?
+            let grpShown = userData ^. udVisibleGroupNames . to (HS.member groupName)
             -- Create all light tiles for the current light group
             forM_ groupLightIDs $ \lightID ->
                 case HM.lookup lightID lights of
                     Nothing    -> return ()
-                    Just light -> addLightTile light lightID window
+                    Just light -> addLightTile light lightID grpShown window
         -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
         when (isInfixOf "arm" $ map toLower SI.arch) $
             addServerTile window
