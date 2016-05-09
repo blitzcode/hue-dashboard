@@ -1,9 +1,17 @@
 
-{-# LANGUAGE LambdaCase, TemplateHaskell, RecordWildCards, OverloadedStrings #-}
+{-# LANGUAGE   LambdaCase
+             , TemplateHaskell
+             , RecordWildCards
+             , OverloadedStrings
+             , ScopedTypeVariables
+             , FlexibleInstances
+             , TypeSynonymInstances
+             , GeneralizedNewtypeDeriving #-}
 
 module PersistConfig ( configFilePath
                      , PersistConfig(..)
                      , UserData(..)
+                     , UserDataMap
                      , defaultUserData
                      , pcBridgeIP
                      , pcBridgeUserID
@@ -24,21 +32,32 @@ import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.Monoid
+import Data.Coerce
 
 import Util
 import Trace
+import HueJSON
 
 configFilePath :: FilePath
 configFilePath = "./config.yaml" -- TODO: Maybe use ~/.hue-dashboard for this?
 
+type UserDataMap = HM.HashMap CookieUserID UserData
+
+-- The newtype wrappers for the various string types give us problems with missing JSON
+-- instances, just use coerce to safely reuse the ones we already got for plain String
+instance FromJSON UserDataMap where
+    parseJSON v = (\(a :: HM.HashMap String UserData) -> coerce a) <$> parseJSON v
+instance ToJSON (HM.HashMap CookieUserID UserData) where
+    toJSON v = toJSON (coerce v :: HM.HashMap String UserData)
+
 data PersistConfig = PersistConfig
-    { _pcBridgeIP     :: !IPAddress                    -- IP address of the bridge
-    , _pcBridgeUserID :: !String                       -- Hue bridge user ID for
-    , _pcUserData     :: !(HM.HashMap String UserData) -- User ID cookie to user data
+    { _pcBridgeIP     :: !IPAddress    -- IP address of the bridge
+    , _pcBridgeUserID :: !BridgeUserID -- Hue bridge user ID for
+    , _pcUserData     :: !UserDataMap  -- User ID cookie to user data
     } deriving (Show, Eq)
 
 defaultPersistConfig :: PersistConfig
-defaultPersistConfig = PersistConfig "" "" HM.empty
+defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty
 
 instance FromJSON PersistConfig where
     parseJSON (Object o) =
@@ -55,7 +74,7 @@ instance ToJSON PersistConfig where
               ]
 
 data UserData = UserData
-    { _udVisibleGroupNames :: !(HS.HashSet String) -- Groups which are not hidden / collapsed
+    { _udVisibleGroupNames :: !(HS.HashSet GroupName) -- Groups which are not hidden / collapsed
     } deriving (Show, Eq)
 
 defaultUserData :: UserData

@@ -1,5 +1,12 @@
 
-{-# LANGUAGE TemplateHaskell, OverloadedStrings, RecordWildCards, LambdaCase #-}
+{-# LANGUAGE   TemplateHaskell
+             , OverloadedStrings
+             , RecordWildCards
+             , LambdaCase
+             , ScopedTypeVariables
+             , FlexibleInstances
+             , TypeSynonymInstances
+             , GeneralizedNewtypeDeriving #-}
 
 module HueJSON where
 
@@ -9,6 +16,8 @@ import Data.Char
 import Data.Word
 import Data.Time
 import Data.Attoparsec.Text
+import Data.Hashable
+import Data.Coerce
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
 import Control.Lens
@@ -171,7 +180,7 @@ instance Show LightModel where
 -- http://www.developers.meethue.com/documentation/scenes-api#41_get_all_scenes
 
 data Scene = Scene { _scName        :: !String
-                   , _scLights      :: ![String]
+                   , _scLights      :: ![LightID]
                    , _scActive      :: !(Maybe Bool)
                    , _scOwner       :: !(Maybe String)
                    , _scRecycle     :: !(Maybe Bool)
@@ -311,11 +320,33 @@ instance FromJSON PortalState where
                     <*> o .: "communication"
     parseJSON _ = fail "Expected object"
 
--- Some helper types for receiving lists / maps of the exported objects
+-- Some helper types for receiving lists / maps of the exported objects,
+-- newtype wrappers for some modicum of type safety
 
-type Lights      = HM.HashMap String Light    -- Light ID to light
-type LightGroups = HM.HashMap String [String] -- Group names to lists of light IDs
-type Scenes      = HM.HashMap String Scene    -- Scene ID to scene
+newtype LightID = LightID { fromLightID :: String }
+                  deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
+
+newtype SceneID = SceneID { fromSceneID :: String }
+                  deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
+
+newtype GroupName = GroupName { fromGroupName :: String }
+                    deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
+
+type Lights      = HM.HashMap LightID Light       -- Light ID to light
+type LightGroups = HM.HashMap GroupName [LightID] -- Group names to lists of light IDs
+type Scenes      = HM.HashMap SceneID Scene       -- Scene ID to scene
+
+-- The newtype wrappers for the various string types give us problems with missing JSON
+-- instances, just use coerce to safely reuse the ones we already got for plain String
+
+instance FromJSON Lights where
+    parseJSON v = (\(a :: HM.HashMap String Light) -> coerce a) <$> parseJSON v
+
+instance FromJSON LightGroups where
+    parseJSON v = (\(a :: HM.HashMap String [LightID]) -> coerce a) <$> parseJSON v
+
+instance FromJSON Scenes where
+    parseJSON v = (\(a :: HM.HashMap String Scene) -> coerce a) <$> parseJSON v
 
 -- Lenses
 

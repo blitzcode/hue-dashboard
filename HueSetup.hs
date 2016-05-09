@@ -33,20 +33,21 @@ discoverBridgeIP bridgeIP =
             -- Verify bridge IP by querying the bridge config. This is one of the few API
             -- requests we can make without having a whitelisted user, use it to verify
             -- that our IP points to a valid Hue bridge
-            traceS TLInfo $ "Trying to verify bridge IP: " <> ip
+            traceS TLInfo $ "Trying to verify bridge IP: " <> fromIPAddress ip
             (r :: Maybe BridgeConfigNoWhitelist) <-
-              (Just <$> bridgeRequest MethodGET ip noBody "no-user" "config") `catches`
-                [ Handler $ \(e :: HttpException) -> do
-                    -- Network / IO error
-                    traceS TLError $ "discoverBridgeIP: HTTP exception, bad / stale bridge IP: "
-                                     <> show e
-                    return Nothing
-                , Handler $ \(e :: JSONException) -> do
-                    -- Parsing error
-                    traceS TLError $ "discoverBridgeIP: JSON exception during bridge verify: '"
-                                     <> show e
-                    return Nothing
-                ]
+              (Just <$> bridgeRequest MethodGET ip noBody (BridgeUserID "no-user") "config")
+                `catches`
+                  [ Handler $ \(e :: HttpException) -> do
+                      -- Network / IO error
+                      traceS TLError $ "discoverBridgeIP: HTTP exception, bad / stale bridge IP: "
+                                       <> show e
+                      return Nothing
+                  , Handler $ \(e :: JSONException) -> do
+                      -- Parsing error
+                      traceS TLError $ "discoverBridgeIP: JSON exception during bridge verify: '"
+                                       <> show e
+                      return Nothing
+                  ]
             case r of
                 Nothing  -> discoverBridgeIP Nothing
                 Just cfg -> do
@@ -94,7 +95,7 @@ discoverBridgeIP bridgeIP =
                                 --       one instead of always going for the first
                                 discoverBridgeIP . Just . brInternalIPAddress . head $ bridges
 
-data UserNameResponse = UserNameResponse !String
+data UserNameResponse = UserNameResponse !BridgeUserID
                         deriving Show
 
 instance FromJSON UserNameResponse where
@@ -103,13 +104,13 @@ instance FromJSON UserNameResponse where
                      UserNameResponse <$> o' .: "username"
 
 -- Verify existing user or create new one
-createUser :: (MonadIO m, MonadCatch m) => IPAddress -> Maybe String -> m String
+createUser :: (MonadIO m, MonadCatch m) => IPAddress -> Maybe BridgeUserID -> m BridgeUserID
 createUser bridgeIP userID =
     -- Do we have a user ID to try?
     case userID of
         Just uid -> do
             -- Verify user ID by querying timezone list, which requires whitelisting
-            traceS TLInfo $ "Trying to verify user ID: " <> uid
+            traceS TLInfo $ "Trying to verify user ID: " <> fromBridgeUserID uid
             r <- (Just <$> bridgeRequest MethodGET bridgeIP noBody uid "info/timezones") `catches`
                 [ Handler $ \(e :: HttpException) -> do
                     -- Network / IO error
@@ -144,7 +145,8 @@ createUser bridgeIP userID =
             let body = -- We use our application name and the host name, as recommended
                        HM.fromList ([("devicetype", "hue-dashboard#" <> host)] :: [(String, String)])
             traceS TLInfo $ "Creating new user ID: " <> show body
-            r <- (Just <$> bridgeRequest MethodPOST bridgeIP (Just body) "" "") `catches`
+            r <- (Just <$> bridgeRequest MethodPOST bridgeIP (Just body) (BridgeUserID "") "")
+              `catches`
                 [ Handler $ \(e :: HttpException) -> do
                     -- Network / IO error
                     traceS TLError $ "createUser: HTTP exception during user user create: "
@@ -176,6 +178,6 @@ createUser bridgeIP userID =
                     createUser bridgeIP Nothing
                 Just (ResponseOK (UserNameResponse uid)) -> do
                     -- We created the user, recurse to verify whitelisting
-                    traceS TLInfo $ "Successfully created new user ID: " <> uid
+                    traceS TLInfo $ "Successfully created new user ID: " <> fromBridgeUserID uid
                     createUser bridgeIP (Just uid)
 

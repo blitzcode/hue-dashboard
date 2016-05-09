@@ -30,7 +30,12 @@ import HueREST
 
 -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
 
-lightsSetState :: (MonadIO m, ToJSON body) => IPAddress -> String -> [String] -> body -> m ()
+lightsSetState :: (MonadIO m, ToJSON body)
+               => IPAddress
+               -> BridgeUserID
+               -> [LightID]
+               -> body
+               -> m ()
 lightsSetState bridgeIP userID lightIDs body =
     void . liftIO . async $
         forM_ lightIDs $ \lightID ->
@@ -39,17 +44,17 @@ lightsSetState bridgeIP userID lightIDs body =
                 bridgeIP
                 (Just body)
                 userID
-                ("lights" </> lightID </> "state")
+                ("lights" </> fromLightID lightID </> "state")
 
-lightsSwitchOnOff :: MonadIO m => IPAddress -> String -> [String] -> Bool -> m ()
+lightsSwitchOnOff :: MonadIO m => IPAddress -> BridgeUserID -> [LightID] -> Bool -> m ()
 lightsSwitchOnOff bridgeIP userID lightIDs onOff =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("on" :: String, onOff)]
 
-lightsBreatheCycle :: MonadIO m => IPAddress -> String -> [String] ->  m ()
+lightsBreatheCycle :: MonadIO m => IPAddress -> BridgeUserID -> [LightID] ->  m ()
 lightsBreatheCycle bridgeIP userID lightIDs =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("alert" :: String, "select" :: String)]
 
-filterOnAndColor :: MonadIO m => TVar Lights -> [String] -> m [String]
+filterOnAndColor :: MonadIO m => TVar Lights -> [LightID] -> m [LightID]
 filterOnAndColor lights' lightIDs = do
     lights <- liftIO . atomically $ readTVar lights'
     let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
@@ -57,7 +62,7 @@ filterOnAndColor lights' lightIDs = do
     return onAndColIDs
 
 -- Turn on the color loop effect for the specified lights
-lightsColorLoop :: MonadIO m => IPAddress -> String -> TVar Lights -> [String] ->  m ()
+lightsColorLoop :: MonadIO m => IPAddress -> BridgeUserID -> TVar Lights -> [LightID] ->  m ()
 lightsColorLoop bridgeIP userID lights lightIDs = do
     -- Can only change the color of lights which are turned on and support this feature
     onAndColIDs <- filterOnAndColor lights lightIDs
@@ -70,9 +75,9 @@ lightsColorLoop bridgeIP userID lights lightIDs = do
 
 lightsChangeBrightness :: MonadIO m
                        => IPAddress
-                       -> String
+                       -> BridgeUserID
                        -> TVar Lights
-                       -> [String]
+                       -> [LightID]
                        -> Int
                        -> m ()
 lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
@@ -84,9 +89,9 @@ lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
 
 lightsSetColorXY :: MonadIO m
                  => IPAddress
-                 -> String
+                 -> BridgeUserID
                  -> TVar Lights
-                 -> [String]
+                 -> [LightID]
                  -> Float
                  -> Float
                  -> m ()
@@ -111,7 +116,7 @@ lightsSetColorXY bridgeIP userID lights lightIDs xyX xyY = do
 --       http://www.developers.meethue.com/content/
 --           bug-delay-reporting-changed-light-state-when-recalling-scenes
 
-recallScene :: MonadIO m => IPAddress -> String -> String -> m ()
+recallScene :: MonadIO m => IPAddress -> BridgeUserID -> SceneID -> m ()
 recallScene bridgeIP userID sceneID =
     void . liftIO . async $
         bridgeRequestTrace
@@ -123,7 +128,7 @@ recallScene bridgeIP userID sceneID =
 
 -- http://www.developers.meethue.com/documentation/groups-api#25_set_group_state
 
-switchAllLights :: MonadIO m => IPAddress -> String -> Bool -> m ()
+switchAllLights :: MonadIO m => IPAddress -> BridgeUserID -> Bool -> m ()
 switchAllLights bridgeIP userID onOff =
     let body = HM.fromList[("on" :: String, onOff)]
     in  void . liftIO . async $

@@ -46,8 +46,12 @@ brightnessChange = 25 -- Relative to 255
 
 -- Build a string for the id field in a light specific DOM object. Do this in one
 -- place as we need to locate them later when we want to update
-buildID :: String -> String -> String
-buildID lightID elemName = "light-" <> lightID <> "-" <> elemName
+
+buildLightID :: LightID -> String -> String
+buildLightID lightID elemName = "light-" <> fromLightID lightID <> "-" <> elemName
+
+buildGroupID :: GroupName -> String -> String
+buildGroupID groupName elemName = "light-" <> fromGroupName groupName <> "-" <> elemName
 
 -- The getElementById function returns a Maybe, but actually just throws an exception if
 -- the element is not found. The exception is unfortunately a JS exception on the client,
@@ -64,9 +68,9 @@ getElementByIdSafe window elementID = do
 anyLightsOn :: Lights -> Bool
 anyLightsOn lights = any (^. _2 . lgtState . lsOn) $ HM.toList lights
 
-anyLightsInGroup :: String -> LightGroups -> Lights -> (Light -> Bool) -> Bool
-anyLightsInGroup groupID groups lights condition =
-    case HM.lookup groupID groups of
+anyLightsInGroup :: GroupName -> LightGroups -> Lights -> (Light -> Bool) -> Bool
+anyLightsInGroup groupName groups lights condition =
+    case HM.lookup groupName groups of
         Nothing          -> False
         Just groupLights ->
             or . map condition . catMaybes . map (flip HM.lookup lights) $ groupLights

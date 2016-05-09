@@ -24,11 +24,13 @@ import Text.Blaze.Html.Renderer.String
 import qualified System.Info as SI
 import Data.Char
 
+import Util
 import Trace
 import AppDefs
 import WebUIHelpers
 import WebUITileBuilding
 import PersistConfig
+import HueJSON (GroupName(..))
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
@@ -55,7 +57,7 @@ setup ae@AppEnv { .. } window = do
     -- Duplicate broadcast channel
     tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Obtain user ID from cookie
-    userID <- callFunction $ ffi "getUserID()" :: UI String
+    userID <- CookieUserID <$> (callFunction $ ffi "getUserID()" :: UI String)
     -- Get user data for user ID, create new data if none is present
     (newUser, userData) <- liftIO . atomically $ do
         pc <- readTVar _aePC
@@ -65,7 +67,7 @@ setup ae@AppEnv { .. } window = do
                               pc & pcUserData %~ (HM.insert userID ud)
                           return (True, ud)
             Just ud -> return (False, ud)
-    traceS TLInfo $ "New connection from user ID '" <> userID <>
+    traceS TLInfo $ "New connection from user ID '" <> fromCookieUserID userID <>
         if   newUser
         then "' (new user, creating default data)"
         else "' (known user)"
@@ -152,35 +154,35 @@ lightUpdateWorker window tchan = runUI window $ loop
         \(lightID, update) -> case update of
           -- Light turned on / off
           LU_OnOff s ->
-            getElementByIdSafe window (buildID lightID "tile") >>= \e ->
+            getElementByIdSafe window (buildLightID lightID "tile") >>= \e ->
                 void $ return e & set style
                     [if s then enabledOpacityStyle else disabledOpacityStyle]
           -- All lights off, grey out 'All Lights' tile
           LU_LastOff ->
-            getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->
+            getElementByIdSafe window (buildGroupID (GroupName "all-lights") "tile") >>= \e ->
               void $ return e & set style [disabledOpacityStyle]
           -- At least one light on, activate 'All Lights' tile
           LU_FirstOn ->
-            getElementByIdSafe window (buildID "all-lights" "tile") >>= \e ->
+            getElementByIdSafe window (buildGroupID (GroupName "all-lights") "tile") >>= \e ->
               void $ return e & set style [enabledOpacityStyle]
           -- All lights in a group off, grey out group switch tile
           LU_GroupLastOff grp ->
-            getElementByIdSafe window (buildID ("group-" <> grp) "tile") >>= \e ->
+            getElementByIdSafe window (buildGroupID grp "tile") >>= \e ->
               void $ return e & set style [disabledOpacityStyle]
           -- At least one light in a group on, activate group switch tile
           LU_GroupFirstOn grp ->
-            getElementByIdSafe window (buildID ("group-" <> grp) "tile") >>= \e ->
+            getElementByIdSafe window (buildGroupID grp "tile") >>= \e ->
               void $ return e & set style [enabledOpacityStyle]
           -- Brightness change
           LU_Brightness brightness -> do
             let brightPercent = printf "%.0f%%" (fromIntegral brightness * 100 / 255 :: Float)
-            getElementByIdSafe window (buildID lightID "brightness-bar") >>= \e ->
+            getElementByIdSafe window (buildLightID lightID "brightness-bar") >>= \e ->
               void $ return e & set style [("width", brightPercent)]
-            getElementByIdSafe window (buildID lightID "brightness-percentage") >>= \e ->
+            getElementByIdSafe window (buildLightID lightID "brightness-percentage") >>= \e ->
               void $ return e & set UI.text brightPercent
           -- Color change
           LU_Color col ->
-            getElementByIdSafe window (buildID lightID "image") >>= \e ->
+            getElementByIdSafe window (buildLightID lightID "image") >>= \e ->
               void $ return e & set style [("background", col)]
       loop
 

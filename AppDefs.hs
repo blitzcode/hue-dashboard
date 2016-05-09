@@ -15,14 +15,14 @@ import HueJSON
 -- Some definitions for the App module which we split out here
 
 -- Channel with light ID and update pair
-type LightUpdateTChan = TChan (String, LightUpdate)
+type LightUpdateTChan = TChan (LightID, LightUpdate)
 
 -- Different updates to the displayed light state
 data LightUpdate = LU_OnOff        !Bool
                  | LU_Brightness   !Word8
                  | LU_Color        !String -- HTML color string
-                 | LU_GroupLastOff !String
-                 | LU_GroupFirstOn !String
+                 | LU_GroupLastOff !GroupName
+                 | LU_GroupFirstOn !GroupName
                  | LU_LastOff
                  | LU_FirstOn
                    deriving Show

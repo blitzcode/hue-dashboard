@@ -38,7 +38,8 @@ executable hue-dashboard
                     vector,
                     blaze-html,
                     random,
-                    process
+                    process,
+                    hashable
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 

@@ -44,12 +44,12 @@ bridgeRequest :: forall m a body. (MonadIO m, MonadThrow m, FromJSON a, ToJSON b
               => BridgeRequestMethod
               -> IPAddress
               -> Maybe body
-              -> String
+              -> BridgeUserID
               -> String
               -> m a
 bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
-    request' <- parseRequest $
-                    show method <> " http://" <> bridgeIP </> "api" </> userID </> apiEndPoint
+    request' <- parseRequest $ show method <> " http://" <> fromIPAddress bridgeIP </> "api"
+                               </> fromBridgeUserID userID </> apiEndPoint
     let request = case mbBody of
                       Just j  -> setRequestBodyJSON j request'
                       Nothing -> request'
@@ -68,7 +68,7 @@ bridgeRequestTrace :: forall m body. ( MonadIO m
                         => BridgeRequestMethod
                         -> IPAddress
                         -> Maybe body
-                        -> String
+                        -> BridgeUserID
                         -> String
                         -> m ()
 bridgeRequestTrace method bridgeIP mbBody userID apiEndPoint = do
@@ -107,7 +107,7 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                         => BridgeRequestMethod
                         -> IPAddress
                         -> Maybe body
-                        -> String
+                        -> BridgeUserID
                         -> String
                         -> m a
 bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do

@@ -66,10 +66,10 @@ buildLightGroups lights =
         lightGroups'      = -- Build 'LightGroups' hashmap
                             HM.fromList . flip map stripSingletonGrp $ \lightGroup ->
                                 case lightGroup of
-                                    []          -> ("<NoGroup>", [])
+                                    []          -> (GroupName "<NoGroup>", [])
                                     (_, name):_ ->
                                         ( -- Extract prefix from first light
-                                          case words name of
+                                          GroupName $ case words name of
                                               prefix:_ -> prefix
                                               _        -> "<NoName>"
                                         , -- Extract list of light IDs
@@ -77,7 +77,7 @@ buildLightGroups lights =
                                         )
         lightGroups       = -- Add singleton groups back in as single 'No Group' group. The
                             -- Unicode quotation marks should also ensure this sorts dead last
-                            HM.insert "“No Group”" (map fst singletons) lightGroups'
+                            HM.insert (GroupName "“No Group”") (map fst singletons) lightGroups'
     in lightGroups
 
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
@@ -120,17 +120,17 @@ fetchBridgeState = do
             anyNewLightsOn = anyLightsOn newLights
             anyOldLightsOn = anyLightsOn oldLights
         when (anyOldLightsOn && not anyNewLightsOn) $
-            writeTChan broadcast ("", LU_GroupLastOff groupName)
+            writeTChan broadcast (LightID "", LU_GroupLastOff groupName)
         when (not anyOldLightsOn && anyNewLightsOn) $
-            writeTChan broadcast ("", LU_GroupFirstOn groupName)
+            writeTChan broadcast (LightID "", LU_GroupFirstOn groupName)
     -- Did we turn the last light off or the first light on?
     let anyLightsOn    = not . null . filter (^. _2 . lgtState . lsOn) . HM.toList
         anyOldLightsOn = anyLightsOn oldLights
         anyNewLightsOn = anyLightsOn newLights
     when (anyOldLightsOn && not anyNewLightsOn) $
-        writeTChan broadcast ("", LU_LastOff)
+        writeTChan broadcast (LightID "", LU_LastOff)
     when (not anyOldLightsOn && anyNewLightsOn) $
-        writeTChan broadcast ("", LU_FirstOn)
+        writeTChan broadcast (LightID "", LU_FirstOn)
 
 -- Application main loop, poll and update every second
 mainLoop :: AppIO ()
