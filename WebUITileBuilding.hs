@@ -5,6 +5,7 @@ module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
                          , addAllLightsTile
                          , addScenesTile
+                         , addSceneTile
                          , addImportedScenesTile
                          , addServerTile
                          ) where
@@ -29,6 +30,7 @@ import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
 import Util
+import Trace
 import HueJSON
 import LightColor
 import AppDefs
@@ -333,10 +335,28 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                       )
               sequence_ uiActions
 
+-- Reload the page
+reloadPage :: UI ()
+reloadPage = runFunction $ ffi "window.location.reload(false);"
+
 -- We give this CSS class to all scene tile elements we want
 -- to hide / show as part of the 'Scenes' group
 sceneTilesClass :: String
 sceneTilesClass = "scene-tiles-hide-show"
+
+-- Capture the relevant state of the passed light IDs and create a named scene from it
+createScene :: TVar Lights -> TVar PersistConfig -> SceneName -> [LightID] -> IO ()
+createScene tvLights tvPC sceneName inclLights = atomically $ do
+    lights <- readTVar tvLights
+    pc     <- readTVar tvPC
+    writeTVar tvPC $ pc & pcScenes . at sceneName ?~ -- Overwrite or create scene
+        ( flip map inclLights $ \lgtID ->
+          ( lgtID
+          , case HM.lookup lgtID lights of
+                Nothing   -> HM.empty -- Light with that LightID doesn't exist
+                Just _lgt -> HM.empty -- TODO
+          )
+        )
 
 -- Build the head tile for toggling visibility and creation of scenes. Return if the
 -- 'Scenes' group is visible and subsequent elements should be added hidden or not
@@ -384,7 +404,7 @@ addScenesTile userID window = do
             H.input H.! A.type_ "text"
                     H.! A.class_ "form-control input-sm"
                     H.! A.maxlength "30"
-                    H.! A.value "New Scene"
+                    H.! A.placeholder "Name"
                     H.! A.id (H.toValue sceneCreatorNameID)
             H.span H.! A.class_ "input-group-btn" $
               H.button H.! A.class_ "btn btn-sm btn-info"
@@ -409,15 +429,20 @@ addScenesTile userID window = do
       -- Create a new scene
       getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
-              -- TODO
+              -- Collect scene name and included lights
               sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
-              sceneName <- get value sceneNameElement
-              liftIO $ print sceneName
-              forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do
+              sceneName        <- get value sceneNameElement
+              inclLights       <- fmap concat . forM lightNameIDSorted $ \(_, lgtID) -> do
                   let checkboxID = sceneCreatorLightCheckboxID $ fromLightID lgtID
                   checkboxElement <- getElementByIdSafe window checkboxID
-                  checkboxCheck <- get UI.checked checkboxElement
-                  liftIO $ printf "%s - %s\n" lgtNm (show checkboxCheck)
+                  checkboxCheck   <- get UI.checked checkboxElement
+                  return $ if checkboxCheck then [lgtID] else []
+              -- Don't bother creating scenes without name or lights
+              unless (null sceneName || null inclLights) $ do
+                  liftIO $ createScene _aeLights _aePC sceneName inclLights
+                  traceS TLInfo $ printf "Created new scene '%s' with %i lights"
+                                         sceneName (length inclLights)
+                  reloadPage
       -- Show / hide scenes
       getElementByIdSafe window scenesTileHideShowBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
@@ -462,6 +487,68 @@ addScenesTile userID window = do
                       )
               sequence_ uiActions
   return grpShown
+
+-- Add a tile for an individual scene
+addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
+addSceneTile sceneName scene shown window = do
+  AppEnv { .. } <- ask
+  let deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
+      deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
+      circleContainerID  = "scene-" <> sceneName <> "-circle-container"
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
+  -- Tile
+  addPageTile $
+    H.div H.! A.class_ (H.toValue $ "thumbnail " <> sceneTilesClass)
+          H.! A.style  ( H.toValue $ ( if   shown
+                                       then "display: block;"
+                                       else "display: none;"
+                                       :: String
+                                     )
+                       )
+          $ do
+      -- Caption
+      H.div H.! A.class_ "light-caption small"
+            H.! A.style "cursor: default;"
+            $ H.toHtml sceneName
+      -- Scene light preview
+      H.div H.! A.class_ "circle-container"
+            H.! A.id (H.toValue circleContainerID) $
+        forM_ ([0..8] :: [Int]) $ \_ ->
+          H.div H.! A.class_ "circle"
+                H.! A.style "background: white; border-color: lightgrey;"
+                $ return ()
+      -- Light count
+      H.div H.! A.class_ "text-center" $ do
+        H.h6 $
+          H.small $
+            "0 On, 0 Off"
+        -- Delete button
+        H.div H.! A.id (H.toValue deleteConfirmDivID)
+              H.! A.style "display: none;" $
+          H.button H.! A.type_ "button"
+                   H.! A.id (H.toValue deleteConfirmBtnID)
+                   H.! A.class_ "btn btn-danger btn-sm"
+                   $ "Confirm"
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-danger btn-sm"
+                 H.! A.onclick ( H.toValue $ "this.style.display = 'none'; getElementById('"
+                                             <> deleteConfirmDivID <> "').style.display = 'block';"
+                               )
+                 $ "Delete"
+  addPageUIAction $ do
+      -- Activate
+      getElementByIdSafe window circleContainerID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              return ()
+      -- Delete
+      getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              liftIO . atomically $ do
+                  pc <- readTVar _aePC
+                  writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
+              reloadPage
 
 addImportedScenesTile :: Bool -> Window -> PageBuilder ()
 addImportedScenesTile shown window = do
@@ -509,7 +596,7 @@ addImportedScenesTile shown window = do
                                        :: String
                                      )
                        )
-          H.! A.id "imported-scenes-tile" $ do
+          $ do
       H.div H.! A.class_ "light-caption small" $ do
         void $ "Imported"
         H.br
@@ -550,7 +637,9 @@ addAllLightsTile window = do
                             <> ";"
                         )
             H.! A.id (H.toValue $ buildGroupID (GroupName "all-lights") "tile") $ do
-        H.div H.! A.class_ "light-caption light-caption-group-header small" $ "All Lights"
+        H.div H.! A.class_ "light-caption light-caption-group-header small" 
+              H.! A.style "cursor: default;"
+              $ "All Lights"
         H.img H.! A.class_ "img-rounded"
               H.! A.src "static/svg/bridge_v2.svg"
               H.! A.id (H.toValue $ buildGroupID (GroupName "all-lights") "image")

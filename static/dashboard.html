@@ -231,14 +231,13 @@
     {
         background: white;
         position: fixed;
-        top: 0;
-        bottom: 0;
+        top: 50%;
         left: 0;
         right: 0;
         margin: auto;
+        transform: translate(0%, -50%);
         z-index: 1001;
         width: 322px;
-        height: 402px;
         border-width: 1px;
         border-style: solid;
         border-radius: 6px;
@@ -257,7 +256,24 @@
         -moz-column-count: 2;
         -webkit-column-count: 2;
         margin-top: -5px;
+        margin-bottom: 40px;
         line-height: 85%;
+    }
+    .light-display .circle-container
+    {
+        padding: 7px;
+        cursor: pointer;
+        width: 98px;
+        height: 98px;
+    }
+    .light-display .circle-container .circle
+    {
+	border-radius: 50%;
+	width: 25px;
+	height: 25px; 
+        float: left;
+        border: 1px solid black;
+        margin: 1.5px;
     }
   </style>
 </head>
@@ -283,6 +299,33 @@
   <!-- Content -->
   <div style="margin-left: 10px; margin-right: 10px;" role="main">
     <div class="thumbnails light-display" id="lights">
+      <!--
+      <div class="thumbnail">
+        <div class="light-caption small">Fernsehen</div>
+        <div class="circle-container">
+          <div class="circle" style="background: orange;"></div>
+          <div class="circle" style="background: green;"></div>
+          <div class="circle" style="background: white;"></div>
+          <div class="circle" style="background: blue;"></div>
+          <div class="circle" style="background: red;"></div>
+          <div class="circle" style="background: white; border-color: lightgrey;"></div>
+          <div class="circle" style="background: grey;"></div>
+          <div class="circle" style="background: pink;"></div>
+          <div class="circle" style="background: black;"></div>
+        </div>
+        <div class="text-center">
+          <h6>
+            <small>
+                4 On, 0 Off
+            </small>
+          </h6>
+          <div id="delete-confirm-btn" style="display: none;">
+            <button type="button" class="btn btn-danger btn-sm">Confirm</button>
+          </div>
+          <button type="button" class="btn btn-danger btn-sm" onclick="this.style.display = 'none'; getElementById('delete-confirm-btn').style.display = 'block';">Delete</button>
+        </div>
+      </div>
+      -->
       <!--
       <div class="thumbnail">
         <div class="light-caption light-caption-group-header small">Scenes</div>

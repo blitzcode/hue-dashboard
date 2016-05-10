@@ -71,13 +71,14 @@ setup ae@AppEnv { .. } window = do
         if   newUser
         then "' (new user, creating default data)"
         else "' (known user)"
-    -- Read all lights and light groups, display sorted by name. Light IDs in the group are
+    -- Read all scenes, lights and light groups, display sorted by name. Light IDs in the group are
     -- already sorted by name
-    (lights, lightGroupsList) <- liftIO . atomically $
-        (,) <$> readTVar _aeLights
-            <*> ( (sortBy (compare `Data.Function.on` fst) . HM.toList)
-                  <$> readTVar _aeLightGroups
-                )
+    (scenes, lights, lightGroupsList) <- liftIO . atomically $
+      (,,) <$> (sortBy (compare `Data.Function.on` fst) . HM.toList . _pcScenes <$> readTVar _aePC)
+           <*> readTVar _aeLights
+           <*> ( (sortBy (compare `Data.Function.on` fst) . HM.toList)
+                 <$> readTVar _aeLightGroups
+               )
     -- Run PageBuilder monad, build list of HTML constructors and UI actions (event handlers)
     --
     -- TODO: Show number of connected users
@@ -91,6 +92,9 @@ setup ae@AppEnv { .. } window = do
         addAllLightsTile window
         -- 'Scenes' header tile
         addScenesTile userID window >>= \grpShown -> do
+            -- Scene tiles
+            forM_ scenes $ \(sceneName, scene) ->
+                addSceneTile sceneName scene grpShown window
             -- Imported scenes tile
             addImportedScenesTile grpShown window
         -- Create tiles for all light groups

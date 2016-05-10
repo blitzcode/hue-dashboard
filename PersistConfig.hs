@@ -11,18 +11,18 @@
 module PersistConfig ( configFilePath
                      , PersistConfig(..)
                      , UserData(..)
-                     , UserDataMap
                      , defaultUserData
                      , pcBridgeIP
                      , pcBridgeUserID
                      , pcUserData
+                     , pcScenes
+                     , Scene
+                     , SceneName
                      , udVisibleGroupNames
                      , defaultPersistConfig
                      , loadConfig
                      , storeConfig
                      ) where
-
--- Configuration and user data which we persist in a file
 
 import Control.Monad
 import Control.Lens hiding ((.=))
@@ -38,14 +38,21 @@ import Util
 import Trace
 import HueJSON
 
+-- Configuration and user data which we persist in a file
+
 configFilePath :: FilePath
 configFilePath = "./config.yaml" -- TODO: Maybe use ~/.hue-dashboard for this?
 
 type UserDataMap = HM.HashMap CookieUserID UserData
 
+-- A scene is a list of light IDs and a map of light state names to values
+type Scene     = [(LightID, (HM.HashMap String Value))]
+type SceneName = String
+type SceneMap  = HM.HashMap SceneName Scene
+
 -- The newtype wrappers for the various string types give us problems with missing JSON
 -- instances, just use coerce to safely reuse the ones we already got for plain String
-instance FromJSON UserDataMap where
+instance FromJSON (HM.HashMap CookieUserID UserData) where
     parseJSON v = (\(a :: HM.HashMap String UserData) -> coerce a) <$> parseJSON v
 instance ToJSON (HM.HashMap CookieUserID UserData) where
     toJSON v = toJSON (coerce v :: HM.HashMap String UserData)
@@ -54,16 +61,18 @@ data PersistConfig = PersistConfig
     { _pcBridgeIP     :: !IPAddress    -- IP address of the bridge
     , _pcBridgeUserID :: !BridgeUserID -- Hue bridge user ID for
     , _pcUserData     :: !UserDataMap  -- User ID cookie to user data
+    , _pcScenes       :: !SceneMap     -- Scene name to scene settings
     } deriving (Show, Eq)
 
 defaultPersistConfig :: PersistConfig
-defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty
+defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty HM.empty
 
 instance FromJSON PersistConfig where
     parseJSON (Object o) =
       PersistConfig <$> o .:? "_pcBridgeIP" .!= _pcBridgeIP     defaultPersistConfig
                     <*> o .:? "_pcUserID"   .!= _pcBridgeUserID defaultPersistConfig
                     <*> o .:? "_pcUserData" .!= _pcUserData     defaultPersistConfig
+                    <*> o .:? "_pcScenes"   .!= _pcScenes       defaultPersistConfig
     parseJSON _ = mzero
 
 instance ToJSON PersistConfig where
@@ -71,6 +80,7 @@ instance ToJSON PersistConfig where
        object [ "_pcBridgeIP" .= _pcBridgeIP
               , "_pcUserID"   .= _pcBridgeUserID
               , "_pcUserData" .= _pcUserData
+              , "_pcScenes"   .= _pcScenes
               ]
 
 data UserData = UserData
