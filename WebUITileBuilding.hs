@@ -11,8 +11,11 @@ module WebUITileBuilding ( addLightTile
                          ) where
 
 import Text.Printf
+import qualified Data.Text as T
 import Data.Monoid
 import Data.List
+import Data.Aeson
+import qualified Data.Vector as V
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
@@ -347,16 +350,33 @@ sceneTilesClass = "scene-tiles-hide-show"
 -- Capture the relevant state of the passed light IDs and create a named scene from it
 createScene :: TVar Lights -> TVar PersistConfig -> SceneName -> [LightID] -> IO ()
 createScene tvLights tvPC sceneName inclLights = atomically $ do
-    lights <- readTVar tvLights
-    pc     <- readTVar tvPC
-    writeTVar tvPC $ pc & pcScenes . at sceneName ?~ -- Overwrite or create scene
-        ( flip map inclLights $ \lgtID ->
-          ( lgtID
-          , case HM.lookup lgtID lights of
-                Nothing   -> HM.empty -- Light with that LightID doesn't exist
-                Just _lgt -> HM.empty -- TODO
-          )
-        )
+  lights <- readTVar tvLights
+  pc     <- readTVar tvPC
+  writeTVar tvPC $ pc & pcScenes . at sceneName ?~ -- Overwrite or create scene
+    ( flip map inclLights $ \lgtID ->
+      ( lgtID
+      , case HM.lookup lgtID lights of
+          Nothing   -> HM.empty -- Light with that LightID doesn't exist
+          Just lgt ->
+            -- For lights that are off we only have to store the off state
+            if not $ lgt ^. lgtState . lsOn then HM.fromList [("on", Bool False)] else
+              -- On, store all relevant light state
+              -- TODO: Skip color temperature for now, seems to override color
+              let lsToNA = Array . V.fromList . map (Number . realToFrac)
+                  bri    = lgt ^. lgtState . lsBrightness
+                  effect = lgt ^. lgtState . lsEffect
+                  xy     = lgt ^. lgtState . lsXY
+                  -- ct     = lgt ^. lgtState . lsColorTemp
+              in  HM.empty
+                    &                 at "on"     ?~ Bool True
+                    & maybe id (\v -> at "bri"    ?~ (Number . fromIntegral $ v)) bri
+                    & maybe id (\v -> at "effect" ?~ (String $ T.pack v)        ) effect
+                    & maybe id (\v -> at "xy    " ?~ (lsToNA v)                 ) xy
+                    -- & maybe id (\v -> at "ct"     ?~ (Number . fromIntegral $ v)) ct
+      )
+    )
+
+-- TODO: Scene creation and deletion currently requires a page reload
 
 -- Build the head tile for toggling visibility and creation of scenes. Return if the
 -- 'Scenes' group is visible and subsequent elements should be added hidden or not
@@ -540,8 +560,8 @@ addSceneTile sceneName scene shown window = do
   addPageUIAction $ do
       -- Activate
       getElementByIdSafe window circleContainerID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              return ()
+          on UI.click btn $ \_ ->
+              lightsSetScene bridgeIP bridgeUserID scene
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do

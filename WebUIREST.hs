@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings, OverloadedLists #-}
 
 module WebUIREST ( lightsSetState
+                 , lightsSetScene
                  , lightsSwitchOnOff
                  , lightsBreatheCycle
                  , lightsColorLoop
@@ -22,6 +23,7 @@ import Control.Monad.Reader
 import System.FilePath
 
 import Util
+import PersistConfig
 import HueJSON
 import HueREST
 
@@ -43,6 +45,22 @@ lightsSetState bridgeIP userID lightIDs body =
                 MethodPUT
                 bridgeIP
                 (Just body)
+                userID
+                ("lights" </> fromLightID lightID </> "state")
+
+lightsSetScene :: MonadIO m
+               => IPAddress
+               -> BridgeUserID
+               -> Scene
+               -> m ()
+lightsSetScene bridgeIP userID scene =
+    void . liftIO . async $
+        -- TODO: Maybe use the actual scene API instead of setting all light states one by one?
+        forM_ scene $ \(lightID, lightState) ->
+            bridgeRequestTrace
+                MethodPUT
+                bridgeIP
+                (Just lightState)
                 userID
                 ("lights" </> fromLightID lightID </> "state")
 
