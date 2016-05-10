@@ -89,8 +89,10 @@ setup ae@AppEnv { .. } window = do
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
         addAllLightsTile window
-        -- Scenes tile
-        addScenesTile window
+        -- 'Scenes' header tile
+        addScenesTile userID window >>= \grpShown -> do
+            -- Imported scenes tile
+            addImportedScenesTile grpShown window
         -- Create tiles for all light groups
         forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
             -- Build group switch tile for current light group
@@ -121,7 +123,7 @@ setup ae@AppEnv { .. } window = do
     runFunction $ ffi "document.getElementById('lights').innerHTML = %1" tilesHtml
     -- Now that we build the page, execute all the UI actions to register event handlers
     --
-    -- TODO: Since we can't batch this, it'll still take up to a second to register
+    -- TODO: Since we can't batch this, it'll still take a second or more to register
     --       all of these handlers, see
     --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
     --

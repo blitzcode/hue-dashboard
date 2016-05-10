@@ -5,6 +5,7 @@ module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
                          , addAllLightsTile
                          , addScenesTile
+                         , addImportedScenesTile
                          , addServerTile
                          ) where
 
@@ -178,28 +179,25 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueLightStripsPlus        -> "lightstrip"
                           LM_Unknown _                 -> "white_e27"
 
-getUserData :: TVar PersistConfig -> CookieUserID -> STM UserData
-getUserData tvPC userID = readTVar tvPC <&> (^. pcUserData . at userID . non defaultUserData)
-
 -- Apply a lens getter to the user data for the passed user ID
 queryUserData :: forall a. TVar PersistConfig -> CookieUserID -> Getter UserData a -> STM a
 queryUserData tvPC userID g = getUserData tvPC userID <&> (^. g)
+getUserData :: TVar PersistConfig -> CookieUserID -> STM UserData
+getUserData tvPC userID = readTVar tvPC <&> (^. pcUserData . at userID . non defaultUserData)
+
+-- Captions for the show / hide group button
+grpShownCaption, grpHiddenCaption :: String
+grpShownCaption  = "Hide ◄"
+grpHiddenCaption = "Show ►"
 
 -- Build group switch tile for current light group
---
--- TODO: Create a 'group scene' system where the state of all lights
---       in a group gets saved to a preset slot. Maybe add a tile
---       for each scene?
---
 addGroupSwitchTile :: GroupName -> [LightID] -> CookieUserID -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs userID window = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
-  let grpShownCaption                 = "Hide ◄"
-      grpHiddenCaption                = "Show ►"
-      queryAnyLightsInGroup condition =
+  let queryAnyLightsInGroup condition =
         (liftIO . atomically $ (,) <$> readTVar _aeLights <*> readTVar _aeLightGroups)
           >>= \(lights, lightGroups) -> return $
             anyLightsInGroup groupName lightGroups lights condition
@@ -335,6 +333,202 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                       )
               sequence_ uiActions
 
+-- We give this CSS class to all scene tile elements we want
+-- to hide / show as part of the 'Scenes' group
+sceneTilesClass :: String
+sceneTilesClass = "scene-tiles-hide-show"
+
+-- Build the head tile for toggling visibility and creation of scenes. Return if the
+-- 'Scenes' group is visible and subsequent elements should be added hidden or not
+addScenesTile :: CookieUserID -> Window -> PageBuilder Bool
+addScenesTile userID window = do
+  AppEnv { .. } <- ask
+  let sceneCreatorID                    = "scene-creator-dialog-container" :: String
+      sceneCreatorNameID                = "scene-creator-dialog-name"      :: String
+      sceneCreatorBtnID                 = "scene-creator-dialog-btn"       :: String
+      sceneCreatorLightCheckboxID lgtID = "scene-creator-dialog-check-light-" <> lgtID
+      scenesTileHideShowBtnID           = "scenes-tile-hide-show-btn"      :: String
+      scenesTileGroupName               = GroupName "<ScenesTileGroup>"
+  let queryGroupShown =
+        queryUserData _aePC userID (udVisibleGroupNames . to (HS.member scenesTileGroupName))
+  grpShown <- liftIO (atomically queryGroupShown)
+  -- Sorted light names with corresponding IDs for the scene creation dialog
+  lightNameIDSorted <-
+    return . map (\(lgtID, lgt) -> (lgt ^. lgtName, lgtID)) .
+      sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList =<<
+        (liftIO . atomically $ readTVar _aeLights)
+  -- Tile
+  addPageTile $
+    H.div H.! A.class_ "thumbnail" $ do
+      -- Caption and scene icon
+      H.div H.! A.class_ "light-caption light-caption-group-header small"
+            H.! A.style "cursor: default;"
+            $ "Scenes"
+      H.img H.! A.class_ "img-rounded"
+            H.! A.src "static/svg/tap.svg"
+            H.! A.style "cursor: default;"
+      -- Scene creation dialog
+      H.div H.! A.style "display: none;"
+            H.! A.id (H.toValue sceneCreatorID) $ do
+        H.div H.! A.class_ "color-picker-curtain"
+              H.! A.onclick "this.parentNode.style.display = 'none'"
+              $ return ()
+        H.div H.! A.class_ "scene-creator-frame" $ do
+          H.div H.! A.class_ "light-checkbox-container small" $
+            forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do -- Light checkboxes
+              H.input H.! A.type_ "checkbox"
+                      H.! A.id (H.toValue . sceneCreatorLightCheckboxID $ fromLightID lgtID)
+              H.toHtml $ " " <> lgtNm
+              H.br
+          H.div H.! A.class_ "scene-create-form input-group" $ do -- Name & 'Create' button
+            H.input H.! A.type_ "text"
+                    H.! A.class_ "form-control input-sm"
+                    H.! A.maxlength "30"
+                    H.! A.value "New Scene"
+                    H.! A.id (H.toValue sceneCreatorNameID)
+            H.span H.! A.class_ "input-group-btn" $
+              H.button H.! A.class_ "btn btn-sm btn-info"
+                       H.! A.id (H.toValue sceneCreatorBtnID)
+                       $ "Create"
+      -- Group show / hide widget and 'New Scene' button
+      H.div H.! A.class_ "text-center" $
+        H.div H.! A.class_ "btn-group-vertical btn-group-sm"
+              H.! A.style "margin-top: 9px;" $ do
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-info"
+                   H.! A.id (H.toValue scenesTileHideShowBtnID)
+                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-info"
+                   H.! A.onclick
+                     ( H.toValue $
+                         "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
+                     )
+                   $ "New Scene"
+  addPageUIAction $ do
+      -- Create a new scene
+      getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              -- TODO
+              sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
+              sceneName <- get value sceneNameElement
+              liftIO $ print sceneName
+              forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do
+                  let checkboxID = sceneCreatorLightCheckboxID $ fromLightID lgtID
+                  checkboxElement <- getElementByIdSafe window checkboxID
+                  checkboxCheck <- get UI.checked checkboxElement
+                  liftIO $ printf "%s - %s\n" lgtNm (show checkboxCheck)
+      -- Show / hide scenes
+      getElementByIdSafe window scenesTileHideShowBtnID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              -- Start a transaction, flip the shown state of the group by adding /
+              -- removing it from the visible list and return a list of UI actions to
+              -- update the UI with the changes
+              uiActions <- liftIO . atomically $ do
+                  pc <- readTVar _aePC
+                  let grpShownNow = pc
+                                  ^. pcUserData
+                                   . at userID
+                                   . non defaultUserData
+                                   . udVisibleGroupNames
+                                   . to (HS.member scenesTileGroupName)
+                  writeTVar _aePC
+                      $  pc
+                         -- Careful not to use 'non' here, would otherwise remove the
+                         -- entire user when removing the last HS entry, confusing...
+                      &  pcUserData . at userID . _Just . udVisibleGroupNames
+                      %~ ( if   grpShownNow
+                           then HS.delete scenesTileGroupName
+                           else HS.insert scenesTileGroupName
+                         )
+                  return $
+                      ( if   grpShownNow
+                        then [ void $ element btn & set UI.text grpHiddenCaption ]
+                        else [ void $ element btn & set UI.text grpShownCaption  ]
+                      ) <>
+                      -- Hide or show all members of the scene group. We do this by
+                      -- identifying them by a special CSS class instead of just setting
+                      -- them from names in our scene database. This ensures we don't try
+                      -- to set a non-existing element in case another users has created
+                      -- a scene not yet present in our DOM as a tile
+                      ( [ getElementsByClassName window sceneTilesClass >>= \elems ->
+                            forM_ elems $ \e ->
+                              element e & set style
+                                [ if   grpShownNow
+                                  then ("display", "none" )
+                                  else ("display", "block")
+                                ]
+                        ]
+                      )
+              sequence_ uiActions
+  return grpShown
+
+addImportedScenesTile :: Bool -> Window -> PageBuilder ()
+addImportedScenesTile shown window = do
+  AppEnv { .. } <- ask
+  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
+  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
+  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
+  let sceneBttnID sceneID = -- TODO: Move this logic to where the scenes are fetched
+        -- DOM ID from scene ID
+        "bridge-scene-activate-bttn-" <> fromBridgeSceneID sceneID
+      nameKeyedScenes =
+          -- Use the scene name as the key instead of the scene ID
+          map (\(sceneID, scene) -> (scene ^. bscName, (sceneID, scene)))
+              $ HM.toList _aeBridgeScenes
+      nubScenes =
+          -- Build 'name -> (sceneID, scene)' hashmap, resolve name
+          -- collisions with the last update date
+          flip HM.fromListWith nameKeyedScenes $ \sceneA sceneB ->
+              case (compare `Data.Function.on` (^. _2 . bscLastUpdated)) sceneA sceneB of
+                  EQ -> sceneA
+                  LT -> sceneB
+                  GT -> sceneA
+      recentScenes =
+          -- List of scenes sorted by last update date
+          reverse . sortBy (compare `Data.Function.on` (^. _2 . bscLastUpdated)) .
+              map snd $ HM.toList nubScenes
+      fixNames =
+          -- Scene names are truncated and decorated when stored on the bridge,
+          -- salvage what we can and extract the cleanest UI label for them
+          recentScenes & traversed . _2 . bscName %~ \sceneName ->
+              (\nm -> if length nm == 16 then nm <> "…" else nm) . take 16 .
+                  concat . intersperse " " . reverse $ case reverse $ words sceneName of
+                      xs@("0":"on":_)  -> drop 2 xs
+                      xs@("on":_)      -> drop 1 xs
+                      xs@("0":"off":_) -> drop 2 xs
+                      xs@("off":_)     -> drop 1 xs
+                      xs               -> xs
+      topScenes = take 8 fixNames
+  -- Build scenes tile
+  addPageTile $
+    H.div H.! A.class_ (H.toValue $ "thumbnail " <> sceneTilesClass)
+          H.! A.style  ( H.toValue $ ( if   shown
+                                       then "display: block;"
+                                       else "display: none;"
+                                       :: String
+                                     )
+                       )
+          H.! A.id "imported-scenes-tile" $ do
+      H.div H.! A.class_ "light-caption small" $ do
+        void $ "Imported"
+        H.br
+        void $ "Scenes"
+      H.div H.! A.class_ "btn-group-vertical btn-group-xs scene-btn-group" $
+        forM_ topScenes $ \(sceneID, scene) ->
+          H.button H.! A.class_ "btn btn-scene"
+                   H.! A.id (H.toValue $ sceneBttnID sceneID) $
+                     H.small $ (H.toHtml $ scene ^. bscName)
+  -- Register click handlers for activating the scenes
+  addPageUIAction $
+      forM_ topScenes $ \(sceneID, _) ->
+          getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
+              on UI.click bttn $ \_ ->
+                  recallScene bridgeIP
+                              bridgeUserID
+                              sceneID
+
+
 -- Tile for controlling all lights, also displays some bridge information
 --
 -- TODO: Maybe add controls for dimming / changing color of all lights?
@@ -379,61 +573,6 @@ addAllLightsTile window = do
               switchAllLights bridgeIP
                               bridgeUserID
                               (not $ anyLightsOn lights)
-
-addScenesTile :: Window -> PageBuilder ()
-addScenesTile window = do
-  AppEnv { .. } <- ask
-  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
-  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
-  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
-  let sceneBttnID sceneID = -- TODO: Move this logic to where the scenes are fetched
-        -- DOM ID from scene ID
-        "scene-activate-bttn-" <> fromSceneID sceneID
-      nameKeyedScenes =
-          -- Use the scene name as the key instead of the scene ID
-          map (\(sceneID, scene) -> (scene ^. scName, (sceneID, scene)))
-              $ HM.toList _aeScenes
-      nubScenes =
-          -- Build 'name -> (sceneID, scene)' hashmap, resolve name
-          -- collisions with the last update date
-          flip HM.fromListWith nameKeyedScenes $ \sceneA sceneB ->
-              case (compare `Data.Function.on` (^. _2 . scLastUpdated)) sceneA sceneB of
-                  EQ -> sceneA
-                  LT -> sceneB
-                  GT -> sceneA
-      recentScenes =
-          -- List of scenes sorted by last update date
-          reverse . sortBy (compare `Data.Function.on` (^. _2 . scLastUpdated)) .
-              map snd $ HM.toList nubScenes
-      fixNames =
-          -- Scene names are truncated and decorated when stored on the bridge,
-          -- salvage what we can and extract the cleanest UI label for them
-          recentScenes & traversed . _2 . scName %~ \sceneName ->
-              (\nm -> if length nm == 16 then nm <> "…" else nm) . take 16 .
-                  concat . intersperse " " . reverse $ case reverse $ words sceneName of
-                      xs@("0":"on":_)  -> drop 2 xs
-                      xs@("on":_)      -> drop 1 xs
-                      xs@("0":"off":_) -> drop 2 xs
-                      xs@("off":_)     -> drop 1 xs
-                      xs               -> xs
-      topScenes = take 8 fixNames
-  -- Build scenes tile
-  addPageTile $
-    H.div H.! A.class_ "thumbnail" $ do
-      H.div H.! A.class_ "light-caption light-caption-group-header small" $ "Recent Scenes"
-      H.div H.! A.class_ "btn-group-vertical btn-group-xs scene-btn-group" $
-        forM_ topScenes $ \(sceneID, scene) ->
-          H.button H.! A.class_ "btn btn-scene"
-                   H.! A.id (H.toValue $ sceneBttnID sceneID) $
-                     H.small $ (H.toHtml $ scene ^. scName)
-  -- Register click handlers for activating the scenes
-  addPageUIAction $
-      forM_ topScenes $ \(sceneID, _) ->
-          getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
-              on UI.click bttn $ \_ ->
-                  recallScene bridgeIP
-                              bridgeUserID
-                              sceneID
 
 data ColorPickerResult = CPR_Margin         -- Click on the margin
                        | CPR_SetColorLoop   -- Click on the 'Set Color Loop' button

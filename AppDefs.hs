@@ -33,7 +33,7 @@ data AppEnv = AppEnv
     , _aeBC             :: !BridgeConfig
     , _aeLights         :: !(TVar Lights)
     , _aeLightGroups    :: !(TVar LightGroups)
-    , _aeScenes         :: !Scenes
+    , _aeBridgeScenes   :: !BridgeScenes
     , _aeBroadcast      :: !LightUpdateTChan
     , _aeColorPickerImg :: !(JP.Image JP.PixelRGB8)
     , _aeCmdLineOpts    :: !CmdLineOpts

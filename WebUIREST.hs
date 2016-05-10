@@ -116,7 +116,7 @@ lightsSetColorXY bridgeIP userID lights lightIDs xyX xyY = do
 --       http://www.developers.meethue.com/content/
 --           bug-delay-reporting-changed-light-state-when-recalling-scenes
 
-recallScene :: MonadIO m => IPAddress -> BridgeUserID -> SceneID -> m ()
+recallScene :: MonadIO m => IPAddress -> BridgeUserID -> BridgeSceneID -> m ()
 recallScene bridgeIP userID sceneID =
     void . liftIO . async $
         bridgeRequestTrace

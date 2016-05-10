@@ -179,17 +179,17 @@ instance Show LightModel where
 --
 -- http://www.developers.meethue.com/documentation/scenes-api#41_get_all_scenes
 
-data Scene = Scene { _scName        :: !String
-                   , _scLights      :: ![LightID]
-                   , _scActive      :: !(Maybe Bool)
-                   , _scOwner       :: !(Maybe String)
-                   , _scRecycle     :: !(Maybe Bool)
-                   , _scLocked      :: !(Maybe Bool)
-                   , _scAppData     :: !(Maybe Object)
-                   , _scPicture     :: !(Maybe String)
-                   , _scLastUpdated :: !(Maybe UTCTime)
-                   , _scVersion     :: !(Maybe Int)
-                   } deriving Show
+data BridgeScene = BridgeScene { _bscName        :: !String
+                               , _bscLights      :: ![LightID]
+                               , _bscActive      :: !(Maybe Bool)
+                               , _bscOwner       :: !(Maybe String)
+                               , _bscRecycle     :: !(Maybe Bool)
+                               , _bscLocked      :: !(Maybe Bool)
+                               , _bscAppData     :: !(Maybe Object)
+                               , _bscPicture     :: !(Maybe String)
+                               , _bscLastUpdated :: !(Maybe UTCTime)
+                               , _bscVersion     :: !(Maybe Int)
+                               } deriving Show
 
 -- Hue UTC strings miss the final Z, fails with the default parser
 parseHueTimeMaybe :: Maybe String -> Maybe UTCTime
@@ -199,17 +199,17 @@ parseHueTimeMaybe (Just t) =
         Just d -> Just d
         Nothing -> Nothing
 
-instance FromJSON Scene where
-    parseJSON (Object o) = Scene <$> o .:  "name"
-                                 <*> o .:  "lights"
-                                 <*> o .:? "active"
-                                 <*> o .:? "owner"
-                                 <*> o .:? "recycle"
-                                 <*> o .:? "locked"
-                                 <*> o .:? "appdata"
-                                 <*> o .:? "picture"
-                                 <*> (parseHueTimeMaybe <$> o .:? "lastupdated")
-                                 <*> o .:? "version"
+instance FromJSON BridgeScene where
+    parseJSON (Object o) = BridgeScene <$> o .:  "name"
+                                       <*> o .:  "lights"
+                                       <*> o .:? "active"
+                                       <*> o .:? "owner"
+                                       <*> o .:? "recycle"
+                                       <*> o .:? "locked"
+                                       <*> o .:? "appdata"
+                                       <*> o .:? "picture"
+                                       <*> (parseHueTimeMaybe <$> o .:? "lastupdated")
+                                       <*> o .:? "version"
     parseJSON _ = fail "Expected object"
 
 -- Bridge configuration obtained from the api/config endpoint without a whitelisted user
@@ -326,15 +326,15 @@ instance FromJSON PortalState where
 newtype LightID = LightID { fromLightID :: String }
                   deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
 
-newtype SceneID = SceneID { fromSceneID :: String }
-                  deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
+newtype BridgeSceneID = BridgeSceneID { fromBridgeSceneID :: String }
+                        deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
 
 newtype GroupName = GroupName { fromGroupName :: String }
                     deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
 
-type Lights      = HM.HashMap LightID Light       -- Light ID to light
-type LightGroups = HM.HashMap GroupName [LightID] -- Group names to lists of light IDs
-type Scenes      = HM.HashMap SceneID Scene       -- Scene ID to scene
+type Lights       = HM.HashMap LightID Light             -- Light ID to light
+type LightGroups  = HM.HashMap GroupName [LightID]       -- Group names to lists of light IDs
+type BridgeScenes = HM.HashMap BridgeSceneID BridgeScene -- Scene ID to scene
 
 -- The newtype wrappers for the various string types give us problems with missing JSON
 -- instances, just use coerce to safely reuse the ones we already got for plain String
@@ -345,8 +345,8 @@ instance FromJSON Lights where
 instance FromJSON LightGroups where
     parseJSON v = (\(a :: HM.HashMap String [LightID]) -> coerce a) <$> parseJSON v
 
-instance FromJSON Scenes where
-    parseJSON v = (\(a :: HM.HashMap String Scene) -> coerce a) <$> parseJSON v
+instance FromJSON BridgeScenes where
+    parseJSON v = (\(a :: HM.HashMap String BridgeScene) -> coerce a) <$> parseJSON v
 
 -- Lenses
 
@@ -356,5 +356,5 @@ makeLenses ''SWUpdate
 makeLenses ''PortalState
 makeLenses ''Light
 makeLenses ''LightState
-makeLenses ''Scene
+makeLenses ''BridgeScene
 

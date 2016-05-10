@@ -69,8 +69,8 @@ main = do
           -- Request all scenes (TODO: Maybe do this on every new connection, not once per server?)
           -- http://www.developers.meethue.com/documentation/scenes-api#41_get_all_scenes
           traceS TLInfo $ "Trying to obtain list of bridge scenes..."
-          _aeScenes <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "scenes"
-          traceS TLInfo $ "Success, number of scenes received: " <> show (length _aeScenes)
+          _aeBridgeScenes <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "scenes"
+          traceS TLInfo $ "Success, number of scenes received: " <> show (length _aeBridgeScenes)
           -- TVars for sharing light / group state across threads
           _aeLights      <- atomically . newTVar $ HM.empty
           _aeLightGroups <- atomically . newTVar $ HM.empty
