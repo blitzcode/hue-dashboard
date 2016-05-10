@@ -451,7 +451,8 @@ addScenesTile userID window = do
           on UI.click btn $ \_ -> do
               -- Collect scene name and included lights
               sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
-              sceneName        <- get value sceneNameElement
+              sceneName        <- T.unpack . T.strip . T.pack <$> -- Trim, autocorrect adds spaces
+                                      get value sceneNameElement
               inclLights       <- fmap concat . forM lightNameIDSorted $ \(_, lgtID) -> do
                   let checkboxID = sceneCreatorLightCheckboxID $ fromLightID lgtID
                   checkboxElement <- getElementByIdSafe window checkboxID
@@ -665,7 +666,6 @@ addImportedScenesTile shown window = do
                   recallScene bridgeIP
                               bridgeUserID
                               sceneID
-
 
 -- Tile for controlling all lights, also displays some bridge information
 --
