@@ -227,6 +227,38 @@
         margin-left: 1px;
         margin-top: 5px;
     }
+    .light-display .scene-creator-frame
+    {
+        background: white;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        z-index: 1001;
+        width: 322px;
+        height: 402px;
+        border-width: 1px;
+        border-style: solid;
+        border-radius: 6px;
+        padding: 10px;
+    }
+    .light-display .scene-create-form
+    {
+        position: absolute;
+        bottom: 10px;
+        width: 300px;
+        margin: auto;
+    }
+    .light-display .light-checkbox-container
+    {
+        column-count: 2;
+        -moz-column-count: 2;
+        -webkit-column-count: 2;
+        margin-top: -5px;
+        line-height: 85%;
+    }
   </style>
 </head>
 <body role="document">
@@ -251,6 +283,65 @@
   <!-- Content -->
   <div style="margin-left: 10px; margin-right: 10px;" role="main">
     <div class="thumbnails light-display" id="lights">
+      <!--
+      <div class="thumbnail">
+        <div class="light-caption light-caption-group-header small">Scenes</div>
+        <img class="img-rounded" src="static/svg/tap.svg" style="cursor: default;"/>
+        <div style="display: none" id="scenes-tile-scene-creator">
+          <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'"></div>
+          <div class="scene-creator-frame">
+            <div class="light-checkbox-container small">
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
+            </div>
+            <div class="scene-create-form input-group">
+              <input type="text" class="form-control input-sm" maxlength="30" value="New Scene">
+              <span class="input-group-btn">
+                <button class="btn btn-sm btn-info">Create</button>                
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="text-center">
+          <div class="btn-group-vertical btn-group-sm" style="margin-top: 9px;">
+            <button type="button" class="btn btn-info">Show ►</button>
+            <button type="button" class="btn btn-info" onclick="getElementById('scenes-tile-scene-creator').style.display = 'block'">New Scene</button>
+          </div>
+        </div>
+      </div>
+      -->
       <!--
       <div class="thumbnail">
         <div class="light-caption light-caption-group-header small">Server</div>
