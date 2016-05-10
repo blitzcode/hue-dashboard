@@ -1,7 +1,7 @@
 
-module LightColor ( rgbFromLight
+module LightColor ( rgbFromLightState
                   , rgbToXY
-                  , htmlColorFromLight
+                  , htmlColorFromLightState
                   , htmlColorFromRGB
                   ) where
 
@@ -15,9 +15,9 @@ import HueJSON
 --
 -- http://www.developers.meethue.com/documentation/color-conversions-rgb-xy
 
--- Compute a normalized RGB triplet for the given light
-rgbFromLight :: Light -> (Float, Float, Float)
-rgbFromLight light
+-- Compute a normalized RGB triplet for the given light state
+rgbFromLightState :: LightState -> (Float, Float, Float)
+rgbFromLightState ls
     | hasXY =
           let -- XYZ conversion
               x = xyX
@@ -68,7 +68,7 @@ rgbFromLight light
     | otherwise = (255, 255, 255) -- TODO: Handle color temperature, might need
                                   --       to check color mode field as well
   where
-        xy         = light ^. lgtState . lsXY
+        xy         = ls ^. lsXY
         hasXY      = isJust xy
         [xyX, xyY] = xy ^. non [0, 0]
 
@@ -93,13 +93,13 @@ rgbToXY (r, g, b) _ =
         then (0, 0)
         else (xX / xyzSum, yY / xyzSum)
 
--- Get an HTML background color string from a light. Return a colorful gradient if the
--- light is in 'colorloop' mode
-htmlColorFromLight :: Light -> String
-htmlColorFromLight light =
-   if   (light ^. lgtState . lsEffect == Just "colorloop")
+-- Get an HTML background color string from a light satte. Return a colorful gradient
+-- if the light is in 'colorloop' mode
+htmlColorFromLightState :: LightState -> String
+htmlColorFromLightState ls =
+   if   (ls ^. lsEffect == Just "colorloop")
    then "linear-gradient(to bottom right, rgb(255,100,100), rgb(100,200,100), rgb(100,100,255))"
-   else htmlColorFromRGB $ rgbFromLight light
+   else htmlColorFromRGB $ rgbFromLightState ls
 
 -- Convert a normalized RGB triplet into an HTML color string
 htmlColorFromRGB :: (Float, Float, Float) -> String

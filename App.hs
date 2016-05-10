@@ -110,8 +110,9 @@ fetchBridgeState = do
               writeChannel . LU_OnOff $ newLight ^. lgtState . lsOn
           when (oldLight ^. lgtState . lsBrightness /= newLight ^. lgtState . lsBrightness) $
               writeChannel . LU_Brightness $ newLight ^. lgtState . lsBrightness . non 255
-          when (htmlColorFromLight oldLight /= htmlColorFromLight newLight) $
-              writeChannel . LU_Color $ htmlColorFromLight newLight
+          when (htmlColorFromLightState (oldLight ^. lgtState) /=
+                htmlColorFromLightState (newLight ^. lgtState)) $
+              writeChannel . LU_Color . htmlColorFromLightState $ newLight ^. lgtState
     -- Did we turn the last light in a group off or the first light in a group on?
     forM_ (HM.toList newGroups) $ \(groupName, groupLights) -> do
         let anyLightsOn lightState =

@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards, RankNTypes #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, RankNTypes, LambdaCase #-}
 
 module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
@@ -55,7 +55,7 @@ addLightTile light lightID shown window = do
                         ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
                           * 100 / 255 :: Float
                         ) :: String
-      colorStr      = htmlColorFromLight light
+      colorStr      = htmlColorFromLightState $ light ^. lgtState
       colorSupport  = isColorLT $ light ^. lgtType
   addPageTile $
     H.div H.! A.class_ "thumbnail"
@@ -371,7 +371,7 @@ createScene tvLights tvPC sceneName inclLights = atomically $ do
                     &                 at "on"     ?~ Bool True
                     & maybe id (\v -> at "bri"    ?~ (Number . fromIntegral $ v)) bri
                     & maybe id (\v -> at "effect" ?~ (String $ T.pack v)        ) effect
-                    & maybe id (\v -> at "xy    " ?~ (lsToNA v)                 ) xy
+                    & maybe id (\v -> at "xy"     ?~ (lsToNA v)                 ) xy
                     -- & maybe id (\v -> at "ct"     ?~ (Number . fromIntegral $ v)) ct
       )
     )
@@ -515,6 +515,11 @@ addSceneTile sceneName scene shown window = do
   let deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
       deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
       circleContainerID  = "scene-" <> sceneName <> "-circle-container"
+      lightsOn           = sum . flip map scene $ \(_, lgtSt) ->
+                               maybe 0 (\case (Bool True) -> 1; _ -> 0) $
+                                   HM.lookup "on" lgtSt
+      lightsOff          = length scene - lightsOn
+      styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
@@ -534,16 +539,37 @@ addSceneTile sceneName scene shown window = do
             $ H.toHtml sceneName
       -- Scene light preview
       H.div H.! A.class_ "circle-container"
-            H.! A.id (H.toValue circleContainerID) $
-        forM_ ([0..8] :: [Int]) $ \_ ->
+            H.! A.id (H.toValue circleContainerID) $ do
+        forM_ (take 9 $ scene) $ \(_, lgSt) ->
+          let col :: String
+              col | HM.lookup "on" lgSt == Just (Bool False) = "background: black;"
+                  | Just (Array vXY)         <- HM.lookup "xy" lgSt,
+                    [Number xXY, Number yXY] <- V.toList vXY =
+                      printf "background: %s;" . htmlColorFromLightState $
+                        -- Build mock LightState
+                        LightState True
+                                   Nothing
+                                   Nothing
+                                   Nothing
+                                   ((\(String t) -> T.unpack t) <$> HM.lookup "effect" lgSt)
+                                   (Just [realToFrac xXY, realToFrac yXY])
+                                   Nothing
+                                   "none"
+                                   Nothing
+                                   True
+                  | otherwise = "background: white;"
+          in  H.div H.! A.class_ "circle"
+                    H.! A.style (H.toValue col)
+                    $ return ()
+        forM_ [0..8 - length scene] $ \_ -> -- Fill remainder with grey circles
           H.div H.! A.class_ "circle"
-                H.! A.style "background: white; border-color: lightgrey;"
+                H.! A.style (H.toValue styleCircleNoExist)
                 $ return ()
       -- Light count
       H.div H.! A.class_ "text-center" $ do
         H.h6 $
           H.small $
-            "0 On, 0 Off"
+            H.toHtml $ (printf "%i On, %i Off" lightsOn lightsOff :: String)
         -- Delete button
         H.div H.! A.id (H.toValue deleteConfirmDivID)
               H.! A.style "display: none;" $
@@ -559,6 +585,10 @@ addSceneTile sceneName scene shown window = do
                  $ "Delete"
   addPageUIAction $ do
       -- Activate
+      --
+      -- TODO: Maybe add a rate limiter for this? Spamming the activate button for a scene
+      --       with lots of lights can really overwhelm the bridge
+      --
       getElementByIdSafe window circleContainerID >>= \btn ->
           on UI.click btn $ \_ ->
               lightsSetScene bridgeIP bridgeUserID scene
