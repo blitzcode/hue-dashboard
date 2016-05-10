@@ -43,6 +43,8 @@ import WebUIREST
 
 -- Code for building the individual tiles making up our user interface
 
+-- TODO: Module is getting very large, split
+
 addLightTile :: Light -> LightID -> Bool -> Window -> PageBuilder ()
 addLightTile light lightID shown window = do
   AppEnv { .. } <- ask
@@ -415,6 +417,7 @@ addScenesTile userID window = do
               $ return ()
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "light-checkbox-container small" $
+            -- TODO: More light selection options: all, none, all on, by group, etc.
             forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do -- Light checkboxes
               H.input H.! A.type_ "checkbox"
                       H.! A.id (H.toValue . sceneCreatorLightCheckboxID $ fromLightID lgtID)
@@ -511,6 +514,9 @@ addScenesTile userID window = do
   return grpShown
 
 -- Add a tile for an individual scene
+--
+-- TODO: Provide a way to edit or update scenes
+--
 addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
 addSceneTile sceneName scene shown window = do
   AppEnv { .. } <- ask
@@ -539,7 +545,7 @@ addSceneTile sceneName scene shown window = do
       H.div H.! A.class_ "light-caption small"
             H.! A.style "cursor: default;"
             $ H.toHtml sceneName
-      -- Scene light preview
+      -- Scene light preview (TODO: Maybe use actual light icons instead of circles?)
       H.div H.! A.class_ "circle-container"
             H.! A.id (H.toValue circleContainerID) $ do
         forM_ (take 9 $ scene) $ \(_, lgSt) ->

@@ -82,10 +82,12 @@ setup ae@AppEnv { .. } window = do
     -- Run PageBuilder monad, build list of HTML constructors and UI actions (event handlers)
     --
     -- TODO: Show number of connected users
-    -- TODO: Add a 'Help' tile with basic instructions
+    -- TODO: Add a 'Help' tile with basic instructions, maybe only the first time
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / small
+    -- TODO: Add a schedule group, allowing to trigger scenes at certain times
+    -- TODO: Consider removing space between tiles, have them share a border
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
