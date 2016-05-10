@@ -21,7 +21,8 @@ And the same on the iPad:
 - Works with any modern browser
 - Adjusting individual lights or the automatically created groups is comfortable both with a mouse and touch based input
 - Light groups can be shown / hidden, preferences are stored on a per-browser basis
-- Existing scenes created in other Hue applications are fetched from the bridge
+- Scene creation interface allows easy building of scenes from the current light state
+- Existing scenes created in other Hue applications can be activated as well
 - Supports putting lights in a 'color loop' mode where they cycle between all available colors
 - Clicking a light / group caption makes the lamps blink (can be used as a crude form of communication!)
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics

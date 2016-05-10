@@ -458,6 +458,7 @@ addScenesTile userID window = do
                   checkboxCheck   <- get UI.checked checkboxElement
                   return $ if checkboxCheck then [lgtID] else []
               -- Don't bother creating scenes without name or lights
+              -- TODO: Show an error message to indicate what the problem is
               unless (null sceneName || null inclLights) $ do
                   liftIO $ createScene _aeLights _aePC sceneName inclLights
                   traceS TLInfo $ printf "Created new scene '%s' with %i lights"
