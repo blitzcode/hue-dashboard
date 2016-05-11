@@ -25,10 +25,16 @@ And the same on the iPad:
 - Scene creation interface allows easy building of scenes from the current light state
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-scene-creator.png)
+
 - Supports putting lights in a 'color loop' mode where they cycle between all available colors
 - Clicking a light / group caption makes the lamps blink (can be used as a crude form of communication!)
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - The UI is done with vector graphics and looks crisp on retina displays
+- Schedule system allows automatic triggering of scenes at specified times
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-1.png)
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-2.png)
+
 - On-screen light status responds in real-time to changes with smooth animations and transitions
 - Reliable enough to run 24/7 and be used by many people from many devices simultaneously
 - Server has been tested on OS X and Ubuntu, needs very little system resources to run
