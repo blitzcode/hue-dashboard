@@ -11,9 +11,6 @@ import qualified Data.Text as T
 import Data.Monoid
 import Data.List
 import Data.Maybe
-import Data.Aeson
-import qualified Data.Function (on)
-import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>), element)
@@ -30,7 +27,6 @@ import HueJSON
 import AppDefs
 import PersistConfig
 import WebUIHelpers
-import WebUIREST
 
 -- Code for building the schedule tiles
 
@@ -43,6 +39,10 @@ scheduleTilesClass = "schedule-tiles-hide-show"
 createSchedule :: TVar PersistConfig -> ScheduleName -> SceneName -> Int -> Int -> [Bool] -> IO ()
 createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays =
     atomically $ modifyTVar' tvPC (pcSchedules . at scheduleName ?~ Schedule { .. })
+
+-- Weekday names
+days :: [String]
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 -- TODO: Schedule creation and deletion currently requires a page reload
 
@@ -60,7 +60,6 @@ addSchedulesTile sceneNames userID window = do
       scheduleCreatorDayID day             = "schedule-creator-dialog-day" <> day :: String
       schedulesTileHideShowBtnID           = "schedules-tile-hide-show-btn"       :: String
       schedulesTileGroupName               = GroupName "<SchedulesTileGroup>"
-      days                                 = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
       queryGroupShown                      =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
@@ -224,24 +223,13 @@ addSchedulesTile sceneNames userID window = do
 -- TODO: It should be possible to pause / disable schedules
 --
 addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
-addScheduleTile scheduleName schedule shown window = do
+addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
-  return ()
-  {-
-  let deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
-      deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
-      circleContainerID  = "scene-" <> sceneName <> "-circle-container"
-      lightsOn           = sum . flip map scene $ \(_, lgtSt) ->
-                               maybe 0 (\case (Bool True) -> 1; _ -> 0) $
-                                   HM.lookup "on" lgtSt
-      lightsOff          = length scene - lightsOn
-      styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
-  -- Get relevant bridge information, assume it won't change over the lifetime of the connection
-  bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
-  bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
+  let deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
+      deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
   -- Tile
   addPageTile $
-    H.div H.! A.class_ (H.toValue $ "thumbnail " <> sceneTilesClass)
+    H.div H.! A.class_ (H.toValue $ "thumbnail " <> scheduleTilesClass)
           H.! A.style  ( H.toValue $ ( if   shown
                                        then "display: block;"
                                        else "display: none;"
@@ -252,40 +240,27 @@ addScheduleTile scheduleName schedule shown window = do
       -- Caption
       H.div H.! A.class_ "light-caption small"
             H.! A.style "cursor: default;"
-            $ H.toHtml sceneName
-      -- Scene light preview (TODO: Maybe use actual light icons instead of circles?)
-      H.div H.! A.class_ "circle-container"
-            H.! A.id (H.toValue circleContainerID) $ do
-        forM_ (take 9 $ scene) $ \(_, lgSt) ->
-          let col :: String
-              col | HM.lookup "on" lgSt == Just (Bool False) = "background: black;"
-                  | Just (Array vXY)         <- HM.lookup "xy" lgSt,
-                    [Number xXY, Number yXY] <- V.toList vXY =
-                      printf "background: %s;" . htmlColorFromLightState $
-                        -- Build mock LightState
-                        LightState True
-                                   Nothing
-                                   Nothing
-                                   Nothing
-                                   ((\(String t) -> T.unpack t) <$> HM.lookup "effect" lgSt)
-                                   (Just [realToFrac xXY, realToFrac yXY])
-                                   Nothing
-                                   "none"
-                                   Nothing
-                                   True
-                  | otherwise = "background: white;"
-          in  H.div H.! A.class_ "circle"
-                    H.! A.style (H.toValue col)
-                    $ return ()
-        forM_ [0..8 - length scene] $ \_ -> -- Fill remainder with grey circles
-          H.div H.! A.class_ "circle"
-                H.! A.style (H.toValue styleCircleNoExist)
-                $ return ()
-      -- Light count
-      H.div H.! A.class_ "text-center" $ do
+            $ H.toHtml scheduleName
+      -- Schedule information
+      H.div H.! A.class_ "schedule-container" $ do
+        H.span H.! A.class_ "glyphicon glyphicon-time" 
+               H.! A.style "width: 16px;"
+               $ return ()
+        H.span H.! A.class_ "lead" $
+          H.toHtml $ " " <> show _sHour <> ":" <> show _sMinute
+        H.br
         H.h6 $
-          H.small $
-            H.toHtml $ (printf "%i On, %i Off" lightsOn lightsOff :: String)
+          H.small $ do
+            sequence_ .
+              intersperse "·" .
+                flip map (filter ((== True) . snd) $ zip days _sDays) $ \(dayName, _) ->
+                  H.toHtml $ take 2 dayName
+            H.br
+            H.p $ return ()
+            void "Scene"
+            H.br
+            H.toHtml _sScene
+        H.br
         -- Delete button
         H.div H.! A.id (H.toValue deleteConfirmDivID)
               H.! A.style "display: none;" $
@@ -299,21 +274,12 @@ addScheduleTile scheduleName schedule shown window = do
                                              <> deleteConfirmDivID <> "').style.display = 'block';"
                                )
                  $ "Delete"
-  addPageUIAction $ do
-      -- Activate
-      --
-      -- TODO: Maybe add a rate limiter for this? Spamming the activate button for a scene
-      --       with lots of lights can really overwhelm the bridge
-      --
-      getElementByIdSafe window circleContainerID >>= \btn ->
-          on UI.click btn $ \_ ->
-              lightsSetScene bridgeIP bridgeUserID scene
+  addPageUIAction $
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
               liftIO . atomically $ do
                   pc <- readTVar _aePC
-                  writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
+                  writeTVar _aePC $ pc & pcSchedules . iat scheduleName #~ Nothing
               reloadPage
-    -}
 
