@@ -16,8 +16,11 @@ module PersistConfig ( configFilePath
                      , pcBridgeUserID
                      , pcUserData
                      , pcScenes
+                     , pcSchedules
                      , Scene
                      , SceneName
+                     , Schedule(..)
+                     , ScheduleName
                      , udVisibleGroupNames
                      , defaultPersistConfig
                      , loadConfig
@@ -37,6 +40,7 @@ import Data.Coerce
 import Util
 import Trace
 import HueJSON
+import Data.Time.Clock
 
 -- Configuration and user data which we persist in a file
 
@@ -50,6 +54,34 @@ type Scene     = [(LightID, (HM.HashMap String Value))]
 type SceneName = String
 type SceneMap  = HM.HashMap SceneName Scene
 
+-- Schedules
+data Schedule = Schedule { _sHour   :: !Int
+                         , _sMinute :: !Int
+                         , _sScene  :: !SceneName
+                         , _sDays   :: ![Bool]
+                         } deriving (Eq, Show)
+type ScheduleName = String
+type ScheduleMap  = HM.HashMap ScheduleName Schedule
+
+defaultSchedule :: Schedule
+defaultSchedule = Schedule 16 30 "SceneName" (replicate 7 True)
+
+instance FromJSON Schedule where
+    parseJSON (Object o) =
+        Schedule <$> o .:? "_sHour"   .!= _sHour   defaultSchedule
+                 <*> o .:? "_sMinute" .!= _sMinute defaultSchedule
+                 <*> o .:? "_sScene"  .!= _sScene  defaultSchedule
+                 <*> o .:? "_sDays"   .!= _sDays   defaultSchedule
+    parseJSON _ = mzero
+
+instance ToJSON Schedule where
+   toJSON Schedule { .. } =
+      object [ "_sHour"   .= _sHour
+             , "_sMinute" .= _sMinute
+             , "_sScene"  .= _sScene
+             , "_sDays"   .= _sDays
+             ]
+
 -- The newtype wrappers for the various string types give us problems with missing JSON
 -- instances, just use coerce to safely reuse the ones we already got for plain String
 instance FromJSON (HM.HashMap CookieUserID UserData) where
@@ -62,25 +94,28 @@ data PersistConfig = PersistConfig
     , _pcBridgeUserID :: !BridgeUserID -- Hue bridge user ID for
     , _pcUserData     :: !UserDataMap  -- User ID cookie to user data
     , _pcScenes       :: !SceneMap     -- Scene name to scene settings
+    , _pcSchedules    :: !ScheduleMap  -- Schedule name to schedule parameters
     } deriving (Show, Eq)
 
 defaultPersistConfig :: PersistConfig
-defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty HM.empty
+defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty HM.empty HM.empty
 
 instance FromJSON PersistConfig where
     parseJSON (Object o) =
-      PersistConfig <$> o .:? "_pcBridgeIP" .!= _pcBridgeIP     defaultPersistConfig
-                    <*> o .:? "_pcUserID"   .!= _pcBridgeUserID defaultPersistConfig
-                    <*> o .:? "_pcUserData" .!= _pcUserData     defaultPersistConfig
-                    <*> o .:? "_pcScenes"   .!= _pcScenes       defaultPersistConfig
+      PersistConfig <$> o .:? "_pcBridgeIP"  .!= _pcBridgeIP     defaultPersistConfig
+                    <*> o .:? "_pcUserID"    .!= _pcBridgeUserID defaultPersistConfig
+                    <*> o .:? "_pcUserData"  .!= _pcUserData     defaultPersistConfig
+                    <*> o .:? "_pcScenes"    .!= _pcScenes       defaultPersistConfig
+                    <*> o .:? "_pcSchedules" .!= _pcSchedules    defaultPersistConfig
     parseJSON _ = mzero
 
 instance ToJSON PersistConfig where
    toJSON PersistConfig { .. }  =
-       object [ "_pcBridgeIP" .= _pcBridgeIP
-              , "_pcUserID"   .= _pcBridgeUserID
-              , "_pcUserData" .= _pcUserData
-              , "_pcScenes"   .= _pcScenes
+       object [ "_pcBridgeIP"  .= _pcBridgeIP
+              , "_pcUserID"    .= _pcBridgeUserID
+              , "_pcUserData"  .= _pcUserData
+              , "_pcScenes"    .= _pcScenes
+              , "_pcSchedules" .= _pcSchedules
               ]
 
 data UserData = UserData
@@ -100,6 +135,7 @@ instance ToJSON UserData where
       object [ "_udVisibleGroupNames" .= _udVisibleGroupNames
              ]
 
+makeLenses ''Schedule
 makeLenses ''UserData
 makeLenses ''PersistConfig
 
@@ -114,7 +150,7 @@ loadConfig fn = do
                          "Can't load configuration: " <> (Y.prettyPrintParseException e)
                         traceS TLInfo "Proceeding without prior configuration data"
                         return Nothing
-        Right cfg -> do traceS TLInfo $ "Configuration: " <> show cfg
+        Right cfg -> do traceS TLInfo $ "Configuration (truncated): " <> (take 2048 $ show cfg)
                         return $ Just cfg
 
 storeConfig :: MonadIO m => FilePath -> PersistConfig -> m ()

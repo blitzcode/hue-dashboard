@@ -30,6 +30,7 @@ import AppDefs
 import WebUIHelpers
 import WebUITileBuilding
 import WebUITileBuildingScenes
+import WebUITileBuildingSchedules
 import PersistConfig
 import HueJSON (GroupName(..))
 
@@ -72,14 +73,16 @@ setup ae@AppEnv { .. } window = do
         if   newUser
         then "' (new user, creating default data)"
         else "' (known user)"
-    -- Read all scenes, lights and light groups, display sorted by name. Light IDs in the group are
-    -- already sorted by name
-    (scenes, lights, lightGroupsList) <- liftIO . atomically $
-      (,,) <$> (sortBy (compare `Data.Function.on` fst) . HM.toList . _pcScenes <$> readTVar _aePC)
-           <*> readTVar _aeLights
-           <*> ( (sortBy (compare `Data.Function.on` fst) . HM.toList)
-                 <$> readTVar _aeLightGroups
-               )
+    -- Read all scenes, schedules, lights and light groups, display sorted by name.
+    -- Light IDs in the group are already sorted by name
+    (scenes, schedules, lights, lightGroupsList) <- liftIO . atomically $
+      (,,,)
+        <$> (sortBy (compare `Data.Function.on` fst) . HM.toList . _pcScenes    <$> readTVar _aePC)
+        <*> (sortBy (compare `Data.Function.on` fst) . HM.toList . _pcSchedules <$> readTVar _aePC)
+        <*> readTVar _aeLights
+        <*> ( (sortBy (compare `Data.Function.on` fst) . HM.toList)
+              <$> readTVar _aeLightGroups
+            )
     -- Run PageBuilder monad, build list of HTML constructors and UI actions (event handlers)
     --
     -- TODO: Show number of connected users
@@ -87,7 +90,6 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / small
-    -- TODO: Add a schedule group, allowing to trigger scenes at certain times
     -- TODO: Consider removing space between tiles, have them share a border
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
@@ -111,6 +113,11 @@ setup ae@AppEnv { .. } window = do
                 case HM.lookup lightID lights of
                     Nothing    -> return ()
                     Just light -> addLightTile light lightID grpShown window
+        -- 'Schedules' header tile
+        addSchedulesTile (map fst scenes) userID window >>= \grpShown -> do
+            -- Schedule tiles
+            forM_ schedules $ \(scheduleName, schedule) ->
+                addScheduleTile scheduleName schedule grpShown window
         -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
         when (isInfixOf "arm" $ map toLower SI.arch) $
             addServerTile window
