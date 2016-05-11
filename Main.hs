@@ -54,6 +54,8 @@ main = do
       --       terminated when we run the handler. Still a risk of data corruption
       --       when being interrupted twice
       --
+      -- TODO: This doesn't seem to trigger when we run with daemontools and do 'svc -d'
+      --
       flip finally
         ( do currentCfg <- atomically $ readTVar _aePC
              traceS TLInfo "Exiting, persisting configuration data..."

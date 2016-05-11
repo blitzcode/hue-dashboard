@@ -224,6 +224,7 @@ addSchedulesTile sceneNames userID window = do
 --
 -- TODO: Provide a way to edit or update schedules
 -- TODO: It should be possible to pause / disable schedules
+-- TODO: Indicate if we reference a scene that's missing
 --
 addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do

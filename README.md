@@ -14,6 +14,10 @@ And the same on the iPad:
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ipad.jpg)
 
+Another view on a Mac desktop browser:
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-mac.jpg)
+
 ### Features
 
 - Aims to be an ideal control panel for daily operation of your Hue lights
