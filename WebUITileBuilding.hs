@@ -45,6 +45,7 @@ import WebUIREST
 
 -- TODO: Module is getting very large, split
 
+-- Add tile for an individual light
 addLightTile :: Light -> LightID -> Bool -> Window -> PageBuilder ()
 addLightTile light lightID shown window = do
   AppEnv { .. } <- ask
@@ -197,7 +198,7 @@ grpShownCaption, grpHiddenCaption :: String
 grpShownCaption  = "Hide ◄"
 grpHiddenCaption = "Show ►"
 
--- Build group switch tile for current light group
+-- Build group switch tile for light group
 addGroupSwitchTile :: GroupName -> [LightID] -> CookieUserID -> Window -> PageBuilder ()
 addGroupSwitchTile groupName groupLightIDs userID window = do
   AppEnv { .. } <- ask
@@ -768,6 +769,8 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
 --
 -- TODO: Maybe add a brightness adjustment area to the color picker?
 -- TODO: Reduce height of central element in color picker (better for smaller screens)
+-- TODO: Button for alert mode next to the color loop button, would be good to have
+--       scenes that have blinking lights so we can eventually trigger them from schedules
 --
 addColorPicker :: String -> String -> String -> H.Html
 addColorPicker tileID containerID overlayID = do
