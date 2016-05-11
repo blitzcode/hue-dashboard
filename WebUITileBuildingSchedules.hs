@@ -230,6 +230,8 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
   let deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
+      minute             = show _sMinute
+      minutePretty       = if length minute == 1 then "0" <> minute else minute
   -- Tile
   addPageTile $
     H.div H.! A.class_ (H.toValue $ "thumbnail " <> scheduleTilesClass)
@@ -250,7 +252,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
                H.! A.style "width: 16px;"
                $ return ()
         H.span H.! A.class_ "lead" $
-          H.toHtml $ " " <> show _sHour <> ":" <> show _sMinute
+          H.toHtml $ " " <> show _sHour <> ":" <> minutePretty
         H.br
         H.h6 $
           H.small $ do
