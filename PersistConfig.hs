@@ -17,9 +17,15 @@ module PersistConfig ( configFilePath
                      , pcUserData
                      , pcScenes
                      , pcSchedules
+                     , sDays
+                     , sHour
+                     , sMinute
+                     , sScene
+                     , sTrigStatus
                      , Scene
                      , SceneName
                      , Schedule(..)
+                     , ScheduleTriggerStatus(..)
                      , ScheduleName
                      , udVisibleGroupNames
                      , defaultPersistConfig
@@ -40,31 +46,38 @@ import Data.Coerce
 import Util
 import Trace
 import HueJSON
-import Data.Time.Clock
 
 -- Configuration and user data which we persist in a file
 
 configFilePath :: FilePath
 configFilePath = "./config.yaml" -- TODO: Maybe use ~/.hue-dashboard for this?
 
-type UserDataMap = HM.HashMap CookieUserID UserData
-
 -- A scene is a list of light IDs and a map of light state names to values
 type Scene     = [(LightID, (HM.HashMap String Value))]
 type SceneName = String
 type SceneMap  = HM.HashMap SceneName Scene
 
+data ScheduleTriggerStatus = STJustCreated      -- Just added, determine what to do
+                           | STAlreadyTriggered -- Don't trigger today
+                           | STPending          -- Trigger at earliest convenience after due time
+                             deriving (Eq, Show)
+
 -- Schedules
-data Schedule = Schedule { _sHour   :: !Int
-                         , _sMinute :: !Int
-                         , _sScene  :: !SceneName
-                         , _sDays   :: ![Bool]
-                         } deriving (Eq, Show)
+data Schedule = Schedule { _sHour       :: !Int
+                         , _sMinute     :: !Int
+                         , _sScene      :: !SceneName
+                         , _sDays       :: ![Bool]
+                           -- We don't serialize or compare this, only for the
+                           -- scheduleWatcher thread to keep track of status
+                         , _sTrigStatus :: !ScheduleTriggerStatus
+                         } deriving Show
 type ScheduleName = String
 type ScheduleMap  = HM.HashMap ScheduleName Schedule
 
+makeLenses ''Schedule
+
 defaultSchedule :: Schedule
-defaultSchedule = Schedule 16 30 "SceneName" (replicate 7 True)
+defaultSchedule = Schedule 16 30 "SceneName" (replicate 7 True) STJustCreated
 
 instance FromJSON Schedule where
     parseJSON (Object o) =
@@ -72,6 +85,7 @@ instance FromJSON Schedule where
                  <*> o .:? "_sMinute" .!= _sMinute defaultSchedule
                  <*> o .:? "_sScene"  .!= _sScene  defaultSchedule
                  <*> o .:? "_sDays"   .!= _sDays   defaultSchedule
+                 <*> pure STJustCreated
     parseJSON _ = mzero
 
 instance ToJSON Schedule where
@@ -80,6 +94,34 @@ instance ToJSON Schedule where
              , "_sMinute" .= _sMinute
              , "_sScene"  .= _sScene
              , "_sDays"   .= _sDays
+             ]
+
+-- Ignore sTrigStatus, just a runtime artifact. Don't write
+-- configuration to disk again because it changed
+instance Eq Schedule where
+    (==) a b = (a & sTrigStatus .~ STJustCreated) == (b & sTrigStatus .~ STJustCreated)
+
+-- User data
+
+data UserData = UserData
+    { _udVisibleGroupNames :: !(HS.HashSet GroupName) -- Groups which are not hidden / collapsed
+    } deriving (Show, Eq)
+
+makeLenses ''UserData
+
+type UserDataMap = HM.HashMap CookieUserID UserData
+
+defaultUserData :: UserData
+defaultUserData = UserData HS.empty
+
+instance FromJSON UserData where
+    parseJSON (Object o) =
+        UserData <$> o .:? "_udVisibleGroupNames" .!= _udVisibleGroupNames defaultUserData
+    parseJSON _ = mzero
+
+instance ToJSON UserData where
+   toJSON UserData { .. }  =
+      object [ "_udVisibleGroupNames" .= _udVisibleGroupNames
              ]
 
 -- The newtype wrappers for the various string types give us problems with missing JSON
@@ -96,6 +138,8 @@ data PersistConfig = PersistConfig
     , _pcScenes       :: !SceneMap     -- Scene name to scene settings
     , _pcSchedules    :: !ScheduleMap  -- Schedule name to schedule parameters
     } deriving (Show, Eq)
+
+makeLenses ''PersistConfig
 
 defaultPersistConfig :: PersistConfig
 defaultPersistConfig = PersistConfig (IPAddress "") (BridgeUserID "") HM.empty HM.empty HM.empty
@@ -117,27 +161,6 @@ instance ToJSON PersistConfig where
               , "_pcScenes"    .= _pcScenes
               , "_pcSchedules" .= _pcSchedules
               ]
-
-data UserData = UserData
-    { _udVisibleGroupNames :: !(HS.HashSet GroupName) -- Groups which are not hidden / collapsed
-    } deriving (Show, Eq)
-
-defaultUserData :: UserData
-defaultUserData = UserData HS.empty
-
-instance FromJSON UserData where
-    parseJSON (Object o) =
-        UserData <$> o .:? "_udVisibleGroupNames" .!= _udVisibleGroupNames defaultUserData
-    parseJSON _ = mzero
-
-instance ToJSON UserData where
-   toJSON UserData { .. }  =
-      object [ "_udVisibleGroupNames" .= _udVisibleGroupNames
-             ]
-
-makeLenses ''Schedule
-makeLenses ''UserData
-makeLenses ''PersistConfig
 
 -- Load / store / create persistent configuration
 

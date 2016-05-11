@@ -6,7 +6,6 @@ module Main (main) where
 import Data.Monoid
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
-import Control.Monad
 import Control.Lens
 import Control.Exception
 import Control.Concurrent.STM
@@ -14,7 +13,6 @@ import qualified Codec.Picture as JP
 import Text.Read
 import Control.Concurrent.Async
 
-import Util
 import Trace
 import App
 import AppDefs
@@ -22,6 +20,7 @@ import HueREST
 import HueSetup
 import PersistConfig
 import CmdLineOptions
+import BackgroundProcessing
 
 main :: IO ()
 main = do
@@ -61,7 +60,9 @@ main = do
              storeConfig configFilePath currentCfg
         ) $
         -- Launch persistent configuration writer thread
-        withAsync (pcWriterThread _aePC) $ \_ -> do
+        withAsync (pcWriterThread _aePC) $ \_ ->
+        -- Launch schedule watcher thread
+        withAsync (scheduleWatcher _aePC) $ \_ -> do
           -- Request full bridge configuration
           traceS TLInfo $ "Trying to obtain full bridge configuration..."
           _aeBC <- bridgeRequestRetryTrace MethodGET bridgeIP noBody userID "config"
@@ -101,22 +102,4 @@ main = do
                   }
           -- Launch application
           run AppEnv { .. }
-
--- Every N seconds we wake up and see if the configuration data we want to persist has
--- been changed. If so, we write it to disk to make sure we don't lose all data in case
--- of a crash
---
--- TODO: Risk of data corruption when being interrupted while saving at our interval
---
-pcWriterThread :: TVar PersistConfig -> IO ()
-pcWriterThread tvPC = loop defaultPersistConfig
-  where loop lastCfg = do
-          waitNSec intervalSec
-          currentCfg <- atomically $ readTVar tvPC
-          when (currentCfg /= lastCfg) $ do
-              traceS TLInfo $ "Configuration data has changed in the last " <> show intervalSec <>
-                              "s, persisting to disk..."
-              storeConfig configFilePath currentCfg
-          loop currentCfg
-        intervalSec = 1800 -- 30min
 

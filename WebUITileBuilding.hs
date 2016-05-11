@@ -449,6 +449,10 @@ addColorPicker tileID containerID overlayID = do
     H.div H.! A.class_ "glyphicon glyphicon-tint color-picker-tint-icon" $ return ()
 
 -- Tile for shutting down / rebooting server
+--
+-- TODO: Show server information like CPU load, memory usage, uptime, local time, etc.
+-- TODO: Add option to backup / restore configuration
+--
 addServerTile :: Window -> PageBuilder ()
 addServerTile window = do
   AppEnv { .. } <- ask

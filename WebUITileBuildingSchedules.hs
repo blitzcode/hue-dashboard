@@ -30,6 +30,8 @@ import WebUIHelpers
 
 -- Code for building the schedule tiles
 
+-- TODO: This module has a fair bit in common with WebUITileBuildingScenes, refactor
+
 -- We give this CSS class to all schedule tile elements we want
 -- to hide / show as part of the 'Schedules' group
 scheduleTilesClass :: String
@@ -38,7 +40,8 @@ scheduleTilesClass = "schedule-tiles-hide-show"
 -- Overwrite or create schedule
 createSchedule :: TVar PersistConfig -> ScheduleName -> SceneName -> Int -> Int -> [Bool] -> IO ()
 createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays =
-    atomically $ modifyTVar' tvPC (pcSchedules . at scheduleName ?~ Schedule { .. })
+    atomically $ modifyTVar' tvPC (pcSchedules . at scheduleName ?~
+        Schedule { _sTrigStatus = STJustCreated, .. })
 
 -- Weekday names
 days :: [String]
