@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts, RankNTypes #-}
 
 module WebUIHelpers where
 
@@ -9,10 +9,13 @@ import qualified Data.HashMap.Strict as HM
 import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.State
+import Control.Concurrent.STM
 import Graphics.UI.Threepenny.Core
 import Text.Blaze.Html (Html)
 
+import Util
 import HueJSON
+import PersistConfig
 import AppDefs (AppEnv)
 
 -- Some utility functions split out from the WebUI / WebUITileBuilding modules
@@ -74,4 +77,19 @@ anyLightsInGroup groupName groups lights condition =
         Nothing          -> False
         Just groupLights ->
             or . map condition . catMaybes . map (flip HM.lookup lights) $ groupLights
+
+-- Reload the page
+reloadPage :: UI ()
+reloadPage = runFunction $ ffi "window.location.reload(false);"
+
+-- Apply a lens getter to the user data for the passed user ID
+queryUserData :: forall a. TVar PersistConfig -> CookieUserID -> Getter UserData a -> STM a
+queryUserData tvPC userID g = getUserData tvPC userID <&> (^. g)
+getUserData :: TVar PersistConfig -> CookieUserID -> STM UserData
+getUserData tvPC userID = readTVar tvPC <&> (^. pcUserData . at userID . non defaultUserData)
+
+-- Captions for the show / hide group button
+grpShownCaption, grpHiddenCaption :: String
+grpShownCaption  = "Hide ◄"
+grpHiddenCaption = "Show ►"
 

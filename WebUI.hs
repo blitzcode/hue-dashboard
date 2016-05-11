@@ -29,6 +29,7 @@ import Trace
 import AppDefs
 import WebUIHelpers
 import WebUITileBuilding
+import WebUITileBuildingScenes
 import PersistConfig
 import HueJSON (GroupName(..))
 
