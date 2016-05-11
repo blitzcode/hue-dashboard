@@ -36,7 +36,7 @@ pcWriterThread tvPC = loop defaultPersistConfig
                               "s, persisting to disk..."
               storeConfig configFilePath currentCfg
           loop currentCfg
-        intervalSec = 1800 -- 30min
+        intervalSec = 900 -- 15min
 
 -- Schedule related processing
 

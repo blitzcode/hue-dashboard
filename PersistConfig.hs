@@ -99,7 +99,10 @@ instance ToJSON Schedule where
 -- Ignore sTrigStatus, just a runtime artifact. Don't write
 -- configuration to disk again because it changed
 instance Eq Schedule where
-    (==) a b = (a & sTrigStatus .~ STJustCreated) == (b & sTrigStatus .~ STJustCreated)
+    (==) a b = a ^. sHour   == b ^. sHour   &&
+               a ^. sMinute == b ^. sMinute &&
+               a ^. sScene  == b ^. sScene  &&
+               a ^. sDays   == b ^. sDays
 
 -- User data
 
