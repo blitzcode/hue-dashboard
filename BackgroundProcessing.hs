@@ -48,7 +48,7 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
           -- Need to reset triggers when a new day starts
           when (diffDays (localDay curTime) startDay /= 0) $ do
             traceS TLInfo "Day has changed, resetting all triggers for the new day"
-            atomically . modifyTVar tvPC $ pcSchedules . traversed . sTrigStatus %~
+            atomically . modifyTVar' tvPC $ pcSchedules . traversed . sTrigStatus %~
               (\ts -> if ts == STAlreadyTriggered then STPending else ts)
           -- Inspect all schedules, update them and assemble list of
           -- IO actions to perform, all as a single transaction
@@ -63,10 +63,10 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                   -- it from the configuration, decide what to do with it
                   if   triggerPassed sched curTime
                   then -- Already to late for this schedule today, mark as triggered
-                       lift . modifyTVar tvPC $
+                       lift . modifyTVar' tvPC $
                          pcSchedules . at schedName . _Just . sTrigStatus .~ STAlreadyTriggered
                   else -- Still happening later today, mark as pending
-                       lift . modifyTVar tvPC $
+                       lift . modifyTVar' tvPC $
                          pcSchedules . at schedName . _Just . sTrigStatus .~ STPending
                 STAlreadyTriggered ->
                   -- Has already been triggered today, nothing left to do
@@ -105,7 +105,7 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                                                 "' skipped, not active today"
                               ]
                     -- Mark as triggered
-                    lift . modifyTVar tvPC $
+                    lift . modifyTVar' tvPC $
                       pcSchedules . at schedName . _Just . sTrigStatus .~ STAlreadyTriggered
           -- Execute all pending actions, sleep for a while and start again
           sequence_ ioActions
