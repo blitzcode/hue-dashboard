@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="-1024 -1024 2048 2048" width="600" height="600">
+  <title>Swiss Railway Clock</title>
+  <style type="text/css">
+    .bg {stroke: none; fill: white;}
+    .fc {stroke: none; fill: black;}
+    .h1 {stroke: none; fill: black;}
+  </style>
+  <defs>
+    <path id="mark1" d="M -20,-1000 l 40,0 0,100 -40,0 z" />
+    <path id="mark2" d="M -40,-1000 l 80,0 0,240 -80,0 z" />
+    <path id="mark3" d="M -40,-1000 l 80,0 0,300 -80,0 z" />
+    <path id="handh" d="M -50,-600  l 50,-50 50,50 0,800  -100,0 z" />
+    <path id="handm" d="M -40,-900  l 40,-40 40,40 0,1180 -80,0  z" />
+    <g id="face1">
+      <use xlink:href="#mark1" transform="rotate(06)" />
+      <use xlink:href="#mark1" transform="rotate(12)" />
+      <use xlink:href="#mark1" transform="rotate(18)" />
+      <use xlink:href="#mark1" transform="rotate(24)" />
+    </g>
+    <g id="face2">
+      <use xlink:href="#face1" />
+      <use xlink:href="#face1" transform="rotate(30)" />
+      <use xlink:href="#face1" transform="rotate(60)" />
+      <use xlink:href="#mark3" />
+      <use xlink:href="#mark2" transform="rotate(30)" />
+      <use xlink:href="#mark2" transform="rotate(60)" />
+    </g>
+    <g id="face">
+      <use xlink:href="#face2" />
+      <use xlink:href="#face2" transform="rotate(90)"  />
+      <use xlink:href="#face2" transform="rotate(180)" />
+      <use xlink:href="#face2" transform="rotate(270)" />
+    </g>
+  </defs>
+  <circle class="bg" r="1024" />
+  <use xlink:href="#face"  class="fc" />
+  <use xlink:href="#handh" class="h1" transform="rotate(304.5)" />
+  <use xlink:href="#handm" class="h1" transform="rotate(54)" />
+  <!-- hands at 10:09:02 -->
+</svg>

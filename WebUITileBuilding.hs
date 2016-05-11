@@ -434,7 +434,7 @@ addScenesTile userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue sceneCreatorBtnID)
                        $ "Create"
-      -- Group show / hide widget and 'New Scene' button
+      -- Group show / hide widget and 'New' button
       H.div H.! A.class_ "text-center" $
         H.div H.! A.class_ "btn-group-vertical btn-group-sm"
               H.! A.style "margin-top: 9px;" $ do
@@ -448,7 +448,7 @@ addScenesTile userID window = do
                      ( H.toValue $
                          "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
                      )
-                   $ "New Scene"
+                   $ "New"
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
