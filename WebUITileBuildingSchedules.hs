@@ -77,11 +77,15 @@ addSchedulesTile sceneNames userID window = do
             H.! A.src "static/svg/clock.svg"
             H.! A.style "cursor: default;"
       -- Schedule creation dialog
-      H.div H.! A.style "display: none;"
-            H.! A.id (H.toValue scheduleCreatorID) $ do
-        H.div H.! A.class_ "color-picker-curtain"
-              H.! A.onclick "this.parentNode.style.display = 'none'"
-              $ return ()
+      H.div H.! A.class_ "color-picker-curtain"
+            H.! A.style "display: none;"
+            H.! A.id (H.toValue scheduleCreatorID)
+            H.! A.onclick
+              -- Close after a click, but only on the curtain itself, not the picker
+              ( H.toValue $
+                  "if(event.target.id=='" <> scheduleCreatorID <> "'){this.style.display='none'}"
+              )
+            $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "small" $ do
             void $ "at "

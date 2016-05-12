@@ -101,11 +101,15 @@ addScenesTile userID window = do
             H.! A.src "static/svg/tap.svg"
             H.! A.style "cursor: default;"
       -- Scene creation dialog
-      H.div H.! A.style "display: none;"
-            H.! A.id (H.toValue sceneCreatorID) $ do
-        H.div H.! A.class_ "color-picker-curtain"
-              H.! A.onclick "this.parentNode.style.display = 'none'"
-              $ return ()
+      H.div H.! A.class_ "color-picker-curtain"
+            H.! A.style "display: none;"
+            H.! A.id (H.toValue sceneCreatorID)
+            H.! A.onclick
+              -- Close after a click, but only on the curtain itself, not the picker
+              ( H.toValue $
+                  "if (event.target.id=='" <> sceneCreatorID <> "') { this.style.display='none' }"
+              )
+            $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "light-checkbox-container small" $
             -- TODO: More light selection options: all, none, all on, by group, etc.

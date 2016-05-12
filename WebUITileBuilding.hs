@@ -420,11 +420,14 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
 --
 addColorPicker :: String -> String -> String -> H.Html
 addColorPicker tileID containerID overlayID = do
-  H.div H.! A.style "display: none;"
-        H.! A.id (H.toValue containerID) $ do
-    H.div H.! A.class_ "color-picker-curtain"
-          H.! A.onclick "this.parentNode.style.display = 'none'"
-          $ return ()
+  H.div H.! A.class_ "color-picker-curtain"
+        H.! A.style "display: none;"
+        H.! A.onclick
+          -- Close after a click, but only on the curtain itself, not the picker
+          ( H.toValue $
+              "if (event.target.id == '" <> containerID <> "') { this.style.display = 'none' }"
+          )
+        H.! A.id (H.toValue containerID) $
     H.img H.! A.class_ "color-picker-overlay"
           H.! A.src "static/color_picker.png"
           H.! A.id (H.toValue overlayID)
