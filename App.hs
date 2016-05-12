@@ -48,6 +48,10 @@ _traceBridgeState = do
     liftIO $ putStrLn ""
 
 -- Build light groups from name prefixes
+--
+-- TODO: Consider replacing the prefix system with manually created groups,
+--       same dialog as scene creation
+--
 buildLightGroups :: Lights -> LightGroups
 buildLightGroups lights =
     let lightIDAndName'   = -- Build (light ID, light name) list

@@ -36,6 +36,9 @@ import WebUIREST
 -- Code for building the individual tiles making up our user interface
 
 -- Add tile for an individual light
+--
+-- TODO: Add ability to rename lights
+--
 addLightTile :: Light -> LightID -> Bool -> Window -> PageBuilder ()
 addLightTile light lightID shown window = do
   AppEnv { .. } <- ask

@@ -89,8 +89,10 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add a 'Help' tile with basic instructions, maybe only the first time
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
-    -- TODO: Zoom buttons to make tiles larger / small
+    -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Consider removing space between tiles, have them share a border
+    -- TODO: Shrink / replace title navbar
+    -- TODO: Configuration tile, allow hiding / reordering of other tiles
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
@@ -119,6 +121,7 @@ setup ae@AppEnv { .. } window = do
             forM_ schedules $ \(scheduleName, schedule) ->
                 addScheduleTile scheduleName schedule grpShown window
         -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
+        -- TODO: Command line option to control visibility of the server tile
         when (isInfixOf "arm" $ map toLower SI.arch) $
             addServerTile window
     -- Execute all blaze HTML builders and get HTML code for the entire dynamic part of the
@@ -149,6 +152,10 @@ setup ae@AppEnv { .. } window = do
     on UI.disconnect window . const . liftIO $
         -- TODO: This is a potential resource leak, see
         --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/133
+        --
+        -- TODO: Log disconnects and keep track of the number of connections to
+        --       better investigate potential resource leaks, also log lightUpdateWorker
+        --       entry / exit
         cancel updateWorker
 
 -- Update DOM elements with light update messages received

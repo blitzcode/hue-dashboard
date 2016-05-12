@@ -47,10 +47,15 @@ createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays =
 days :: [String]
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
--- TODO: Schedule creation and deletion currently requires a page reload
-
 -- Build the head tile for toggling visibility and creation of schedules. Return if the
 -- 'Schedules' group is visible and subsequent elements should be added hidden or not
+--
+-- TODO: Schedule creation and deletion currently requires a page reload
+-- TODO: Detect when there is a large time discrepancy between server and client,
+--       otherwise users might wonder why their schedules are running at the wrong time,
+--       maybe display a special error tile
+-- TODO: Add 'run once' option
+--
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
 addSchedulesTile sceneNames userID window = do
   AppEnv { .. } <- ask
@@ -81,13 +86,15 @@ addSchedulesTile sceneNames userID window = do
             H.! A.style "display: none;"
             H.! A.id (H.toValue scheduleCreatorID)
             H.! A.onclick
-              -- Close after a click, but only on the curtain itself, not the picker
+              -- Close after a click, but only on the curtain itself, not the dialog
               ( H.toValue $
                   "if(event.target.id=='" <> scheduleCreatorID <> "'){this.style.display='none'}"
               )
             $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "small" $ do
+            -- TODO: Use Bootstrap styled form elements
+            -- TODO: Add explanation text, dialog title
             void $ "at "
             H.select H.! A.id (H.toValue scheduleCreatorHourID) $
               forM_ ([0..23] :: [Int]) $ \h ->
@@ -161,6 +168,7 @@ addSchedulesTile sceneNames userID window = do
               -- Don't bother creating schedules without name or active days
               -- TODO: Show an error message to indicate what the problem is
               -- TODO: Deal with the situation where we have no scenes at all
+              -- TODO: Allow no active days, simply say 'disabled'
               unless (null scheduleName || or daysActive == False) $ do
                   liftIO $ createSchedule _aePC
                                           scheduleName
@@ -227,9 +235,10 @@ addSchedulesTile sceneNames userID window = do
 
 -- Add a tile for an individual schedule
 --
--- TODO: Provide a way to edit or update schedules
--- TODO: It should be possible to pause / disable schedules
+-- TODO: Add edit button (or click title?) which opens the schedule creator again with the same
+--       parameters, allowing to overwrite the schedule with changed parameters
 -- TODO: Indicate if we reference a scene that's missing
+-- TODO: More attractive display of schedule information, maybe use the scene icon etc.
 --
 addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do

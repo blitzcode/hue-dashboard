@@ -105,13 +105,15 @@ addScenesTile userID window = do
             H.! A.style "display: none;"
             H.! A.id (H.toValue sceneCreatorID)
             H.! A.onclick
-              -- Close after a click, but only on the curtain itself, not the picker
+              -- Close after a click, but only on the curtain itself, not the dialog
               ( H.toValue $
                   "if (event.target.id=='" <> sceneCreatorID <> "') { this.style.display='none' }"
               )
             $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "light-checkbox-container small" $
+            -- TODO: Use Bootstrap styled form elements
+            -- TODO: Add explanation text, dialog title
             -- TODO: More light selection options: all, none, all on, by group, etc.
             forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do -- Light checkboxes
               H.input H.! A.type_ "checkbox"
@@ -210,7 +212,8 @@ addScenesTile userID window = do
 
 -- Add a tile for an individual scene
 --
--- TODO: Provide a way to edit or update scenes
+-- TODO: Add edit button (or click title?) which opens the scene creator again with the same
+--       parameters, allowing to overwrite the scene with changed parameters
 --
 addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
 addSceneTile sceneName scene shown window = do
