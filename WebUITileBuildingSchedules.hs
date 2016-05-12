@@ -160,6 +160,7 @@ addSchedulesTile sceneNames userID window = do
                   get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
               -- Don't bother creating schedules without name or active days
               -- TODO: Show an error message to indicate what the problem is
+              -- TODO: Deal with the situation where we have no scenes at all
               unless (null scheduleName || or daysActive == False) $ do
                   liftIO $ createSchedule _aePC
                                           scheduleName
