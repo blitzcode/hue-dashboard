@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Hue Dashboard</title>
   <link rel="icon" href="static/favicon.png">
   <!-- Bootstrap -->
@@ -105,44 +106,21 @@
   </script>
   <!-- Our CSS -->
   <style>
-    .navbar-default
+    .title-bar
     {
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
-    }
-    body
-    {
-        text-align: center;
+        margin-bottom: 6px;
+        padding: 5px;
+        height: 33px;
+        border-style: solid;
+        border-width: 0px 0px 1px 0px;
+        border-color: #ddd;
     }
     .light-display
     {
-          margin: 0 auto;
+        margin: 0 auto;
     }
-
-/*
-inline 	Default value. Displays an element as an inline element (like <span>) 	
-block 	Displays an element as a block element (like <p>) 	
-flex 	Displays an element as an block-level flex container. New in CSS3 	
-inline-block 	Displays an element as an inline-level block container. The inside of this block is formatted as block-level box, and the element itself is formatted as an inline-level box 	
-inline-flex 	Displays an element as an inline-level flex container. New in CSS3 	
-inline-table 	The element is displayed as an inline-level table 	 
-list-item 	Let the element behave like a <li> element 	
-run-in 	Displays an element as either block or inline, depending on context 	 
-table 	Let the element behave like a <table> element 	
-table-caption 	Let the element behave like a <caption> element 	
-table-column-group 	Let the element behave like a <colgroup> element 	
-table-header-group 	Let the element behave like a <thead> element 	
-table-footer-group 	Let the element behave like a <tfoot> element 	
-table-row-group 	Let the element behave like a <tbody> element 	
-table-cell 	Let the element behave like a <td> element 	
-table-column 	Let the element behave like a <col> element 	
-table-row 	Let the element behave like a <tr> element 	
-none 	The element will not be displayed at all (has no effect on layout) 	
-initial 	Sets this property to its default value. Read about initial 	
-inherit 	Inherits this property from its parent element. Read about inherit 	
-*/
-
-
 
     .light-display .tile
     {
@@ -150,13 +128,13 @@ inherit 	Inherits this property from its parent element. Read about inherit
         width: 110px;
         height: 213px;
         border-width: 1px 1px 1px 1px;
-        border-radius: 6px;
+        border-radius: 4px;
         border-style: solid;
         border-color: #ddd;
         padding: 0px 5px 0px 5px;
-        margin: 0px 3px 3px 0px;
+        margin: 0px 4px 4px 0px;
         transition: opacity 0.2s linear 0.0s;
-        box-shadow: 0 1px 5px rgba(0, 0, 0, .075);
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, .075);
     }
     .light-display .light-caption
     {
@@ -220,15 +198,15 @@ inherit 	Inherits this property from its parent element. Read about inherit
     }
     .light-display .scene-btn-group
     {
-        width: 111px;
+        width: 110px;
         left: -6px;
-        margin-top: 22px;
+        margin-top: 21px;
     }
     .light-display .btn-scene
     {
         color: #333;
         background-color: #fff;
-        border-color: #ccc;
+        border-color: #ddd;
         overflow: hidden;
     }
     .light-display .btn-scene:hover
@@ -344,25 +322,16 @@ inherit 	Inherits this property from its parent element. Read about inherit
     }
   </style>
 </head>
-<body role="document">
+<body>
   <!-- JS Warning -->
   <noscript>Please enable JavaScript</noscript>
   <!-- Header -->
-  <nav class="navbar navbar-default">
-    <div class="container-fluid">
-      <div class="navbar-header">
-        <div class="navbar-brand">
-          <img src="static/favicon.png" style="height: 22px; width: 22px; float: left;" />
-          <span style="line-height: 22px; padding: 10px;">Hue Dashboard</span>
-          <img src="static/spinner.gif" style="height: 22px; float: right;" id="navbar-spinner" />
-          <div style="clear: both;"></div>
-        </a>
-      </div>
-    </div>
-  </nav>
-  <!-- GitHub badge -->
-  <a href="https://github.com/blitzcode/hue-dashboard/"><img style="position: absolute;
-      top: 0; right: 0; border: 0; width: 95px;" src="static/forkme.png" alt="Fork me on GitHub"></a>
+  <div class="title-bar">
+    <span style="line-height: 22px; padding-left: 5px; padding-right: 5px; color: #666; float: left;">Hue Dashboard</span>
+    <img src="static/spinner.gif" style="height: 24px; float: left;" id="navbar-spinner" />
+    <a href="https://www.github.com/blitzcode/hue-dashboard" style="line-height: 22px; padding-right: 5px; padding-left: 5px; color: #666; float: right;">Help</a>
+    <div style="both: clear"></div>
+  </div>
   <!-- Content -->
     <div class="light-display" id="lights">
 
