@@ -458,6 +458,7 @@ addColorPicker tileID containerID overlayID = do
 --
 -- TODO: Show server information like CPU load, memory usage, uptime, local time, etc.
 -- TODO: Add option to backup / restore configuration
+-- TODO: Add a 'Log' button to see record of last ten errors / warnings
 --
 addServerTile :: Window -> PageBuilder ()
 addServerTile window = do
