@@ -81,6 +81,27 @@
         }
         return userid;
     }
+
+
+
+// http://stackoverflow.com/questions/19527104/left-aligned-last-row-in-centered-grid-of-elements
+    $(document).ready(function(){
+        setContainerWidth();
+    });
+    
+    $(window).resize(function(){
+       setContainerWidth();
+    });
+    
+    function setContainerWidth()
+    {
+        $('.light-display').css('width', 'auto'); //reset
+        var windowWidth = $(document).width();
+        var blockWidth = $('.tile').outerWidth(true);
+        var maxBoxPerRow = Math.floor(windowWidth / blockWidth);
+        $('.light-display').width(maxBoxPerRow * blockWidth);
+    }
+
   </script>
   <!-- Our CSS -->
   <style>
@@ -89,15 +110,53 @@
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
     }
-    .light-display .thumbnail
+    body
+    {
+        text-align: center;
+    }
+    .light-display
+    {
+          margin: 0 auto;
+    }
+
+/*
+inline 	Default value. Displays an element as an inline element (like <span>) 	
+block 	Displays an element as a block element (like <p>) 	
+flex 	Displays an element as an block-level flex container. New in CSS3 	
+inline-block 	Displays an element as an inline-level block container. The inside of this block is formatted as block-level box, and the element itself is formatted as an inline-level box 	
+inline-flex 	Displays an element as an inline-level flex container. New in CSS3 	
+inline-table 	The element is displayed as an inline-level table 	 
+list-item 	Let the element behave like a <li> element 	
+run-in 	Displays an element as either block or inline, depending on context 	 
+table 	Let the element behave like a <table> element 	
+table-caption 	Let the element behave like a <caption> element 	
+table-column-group 	Let the element behave like a <colgroup> element 	
+table-header-group 	Let the element behave like a <thead> element 	
+table-footer-group 	Let the element behave like a <tfoot> element 	
+table-row-group 	Let the element behave like a <tbody> element 	
+table-cell 	Let the element behave like a <td> element 	
+table-column 	Let the element behave like a <col> element 	
+table-row 	Let the element behave like a <tr> element 	
+none 	The element will not be displayed at all (has no effect on layout) 	
+initial 	Sets this property to its default value. Read about initial 	
+inherit 	Inherits this property from its parent element. Read about inherit 	
+*/
+
+
+
+    .light-display .tile
     {
         float: left;
         width: 110px;
-        height: 217px;
-        margin: 0px 5px 5px 0px;
+        height: 213px;
+        border-width: 1px 1px 1px 1px;
+        border-radius: 6px;
+        border-style: solid;
+        border-color: #ddd;
         padding: 0px 5px 0px 5px;
+        margin: 0px 3px 3px 0px;
         transition: opacity 0.2s linear 0.0s;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, .075);
+        box-shadow: 0 1px 5px rgba(0, 0, 0, .075);
     }
     .light-display .light-caption
     {
@@ -124,7 +183,6 @@
     }
     .light-display .progress
     {
-        margin: 13px 0px 6px 0px;
         cursor: pointer;
     }
     .light-display .progress-label-container
@@ -162,9 +220,9 @@
     }
     .light-display .scene-btn-group
     {
-        width: 110px;
+        width: 111px;
         left: -6px;
-        margin-top: 4px;
+        margin-top: 22px;
     }
     .light-display .btn-scene
     {
@@ -306,10 +364,9 @@
   <a href="https://github.com/blitzcode/hue-dashboard/"><img style="position: absolute;
       top: 0; right: 0; border: 0; width: 95px;" src="static/forkme.png" alt="Fork me on GitHub"></a>
   <!-- Content -->
-  <div style="margin-left: 10px; margin-right: 10px;" role="main">
-    <div class="thumbnails light-display" id="lights">
+    <div class="light-display" id="lights">
 
-      <div class="thumbnail" style="opacity: 1.0;">
+      <div class="tile" style="opacity: 1.0;">
         <div class="light-caption light-caption-group-header small">All Lights</div>
         <img class="img-rounded" src="static/svg/bridge_v2.svg"/>
         <div class="text-center">
@@ -324,9 +381,9 @@
         </div>
       </div>
 
-<div class="thumbnail" id="light-Kinderzimmer-tile"><div class="light-caption light-caption-group-header small" id="light-Kinderzimmer-caption">Group<br>Kinderzimmer</div><img class="img-rounded" src="static/svg/hds.svg" id="light-Kinderzimmer-image"><div class="color-picker-curtain" style="display: none;" onclick="if (event.target.id == 'light-Kinderzimmer-color-picker-container') { this.style.display = 'none' }" id="light-Kinderzimmer-color-picker-container"><img class="color-picker-overlay" src="static/color_picker.png" id="light-Kinderzimmer-color-picker-overlay"></div><div class="color-picker-button" onclick="if (getElementById('light-Kinderzimmer-tile').style.opacity == 1)  { getElementById('light-Kinderzimmer-color-picker-container').style.display = 'block'; }"><div class="glyphicon glyphicon-tint color-picker-tint-icon"></div></div><div class="text-center"><button type="button" class="btn btn-sm btn-info" style="margin-top: 9px; margin-bottom: -3px;" id="light-Kinderzimmer-show-btn">Hide ◄</button></div><div class="progress" id="light-Kinderzimmer-brightness-container"><div class="progress-label-container"><div class="glyphicon glyphicon-minus minus-label"></div><div class="glyphicon glyphicon-plus plus-label"></div></div><div class="progress-bar progress-bar-info"></div></div></div>
+<div class="tile" id="light-Kinderzimmer-tile"><div class="light-caption light-caption-group-header small" id="light-Kinderzimmer-caption">Group<br>Kinderzimmer</div><img class="img-rounded" src="static/svg/hds.svg" id="light-Kinderzimmer-image"><div class="color-picker-curtain" style="display: none;" onclick="if (event.target.id == 'light-Kinderzimmer-color-picker-container') { this.style.display = 'none' }" id="light-Kinderzimmer-color-picker-container"><img class="color-picker-overlay" src="static/color_picker.png" id="light-Kinderzimmer-color-picker-overlay"></div><div class="color-picker-button" onclick="if (getElementById('light-Kinderzimmer-tile').style.opacity == 1)  { getElementById('light-Kinderzimmer-color-picker-container').style.display = 'block'; }"><div class="glyphicon glyphicon-tint color-picker-tint-icon"></div></div><div class="text-center"><button type="button" class="btn btn-sm btn-info" style="margin-top: 7px; margin-bottom: 9px;" id="light-Kinderzimmer-show-btn">Hide ◄</button></div><div class="progress" id="light-Kinderzimmer-brightness-container"><div class="progress-label-container"><div class="glyphicon glyphicon-minus minus-label"></div><div class="glyphicon glyphicon-plus plus-label"></div></div><div class="progress-bar progress-bar-info"></div></div></div>
 
-      <div class="thumbnail" style="opacity: 1.0;">
+      <div class="tile" style="opacity: 1.0;">
         <div class="light-caption small" style="">Kinderzimmer Tisch</div>
         <img class="img-rounded" style="background: lightgreen;" src="static/svg/br30.svg"/>
         <div style="display: none" id="light-0-color-picker">
@@ -359,7 +416,7 @@
         </div>
       </div>
 
-      <div class="thumbnail">
+      <div class="tile">
         <div class="light-caption light-caption-group-header small">Scenes</div>
         <img class="img-rounded" src="static/svg/tap.svg" style="cursor: default;"/>
         <div style="display: none" id="scenes-tile-scene-creator">
@@ -425,7 +482,7 @@
         </div>
       </div>
 
-      <div class="thumbnail">
+      <div class="tile">
         <div class="light-caption small">Fernsehen</div>
         <div class="circle-container">
           <div class="circle" style="background: orange;"></div>
@@ -455,7 +512,7 @@
         </div>
       </div>
 
-      <div class="thumbnail" style="opacity: 1.0;">
+      <div class="tile" style="opacity: 1.0;">
         <div class="light-caption light-caption-group-header small">Imported<br/>Scenes</div>
         <div class="btn-group-vertical btn-group-xs scene-btn-group">
           <button class="btn btn-scene"><small>Kinderzimmer Abe…</small></button>
@@ -465,11 +522,10 @@
           <button class="btn btn-scene"><small>Fernsehen</small></button>
           <button class="btn btn-scene"><small>Farbig</small></button>
           <button class="btn btn-scene"><small>Gemütlich</small></button>
-          <button class="btn btn-scene"><small>Bunt</small></button>
         </div>
       </div>
 
-      <div class="thumbnail">
+      <div class="tile">
         <div class="light-caption light-caption-group-header small">Schedules</div>
         <img class="img-rounded" src="static/svg/clock.svg" style="cursor: default;"/>
         <div style="display: none" id="schedules-tile-schedules-creator">
@@ -534,7 +590,7 @@
         </div>
       </div>
 
-      <div class="thumbnail">
+      <div class="tile">
         <div class="light-caption small">Aufwachen</div>
         <div class="text-center">
           <div style="font-size: 18pt; font-weight: 300;">
@@ -568,7 +624,7 @@
         </div>
       </div>
 
-      <div class="thumbnail">
+      <div class="tile">
         <div class="light-caption light-caption-group-header small">Server</div>
         <img class="img-rounded" src="static/svg/raspberrypi.svg"/>
         <div class="text-center">
@@ -590,7 +646,7 @@
       </div>
 
     </div>
-  </div>
+
 </body>
 </html>
 
