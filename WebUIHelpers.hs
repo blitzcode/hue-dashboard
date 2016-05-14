@@ -6,6 +6,7 @@ module WebUIHelpers where
 import Data.Monoid
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.State
@@ -76,7 +77,7 @@ anyLightsInGroup groupName groups lights condition =
     case HM.lookup groupName groups of
         Nothing          -> False
         Just groupLights ->
-            or . map condition . catMaybes . map (flip HM.lookup lights) $ groupLights
+            or . map condition . catMaybes . map (flip HM.lookup lights) . HS.toList $ groupLights
 
 -- Reload the page
 reloadPage :: UI ()

@@ -20,6 +20,7 @@ import Data.Hashable
 import Data.Coerce
 import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Control.Lens
 
 import Util
@@ -332,9 +333,9 @@ newtype BridgeSceneID = BridgeSceneID { fromBridgeSceneID :: String }
 newtype GroupName = GroupName { fromGroupName :: String }
                     deriving (Eq, Ord, Show, FromJSON, ToJSON, Hashable)
 
-type Lights       = HM.HashMap LightID Light             -- Light ID to light
-type LightGroups  = HM.HashMap GroupName [LightID]       -- Group names to lists of light IDs
-type BridgeScenes = HM.HashMap BridgeSceneID BridgeScene -- Scene ID to scene
+type Lights       = HM.HashMap LightID Light                  -- Light ID to light
+type LightGroups  = HM.HashMap GroupName (HS.HashSet LightID) -- Group names to set of light IDs
+type BridgeScenes = HM.HashMap BridgeSceneID BridgeScene      -- Scene ID to scene
 
 -- The newtype wrappers for the various string types give us problems with missing JSON
 -- instances, just use coerce to safely reuse the ones we already got for plain String
@@ -343,7 +344,7 @@ instance FromJSON Lights where
     parseJSON v = (\(a :: HM.HashMap String Light) -> coerce a) <$> parseJSON v
 
 instance FromJSON LightGroups where
-    parseJSON v = (\(a :: HM.HashMap String [LightID]) -> coerce a) <$> parseJSON v
+    parseJSON v = (\(a :: HM.HashMap String (HS.HashSet LightID)) -> coerce a) <$> parseJSON v
 
 instance FromJSON BridgeScenes where
     parseJSON v = (\(a :: HM.HashMap String BridgeScene) -> coerce a) <$> parseJSON v

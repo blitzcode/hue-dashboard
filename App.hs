@@ -9,6 +9,7 @@ module App ( run
            ) where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.HashSet as HS
 import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
@@ -70,18 +71,20 @@ buildLightGroups lights =
         lightGroups'      = -- Build 'LightGroups' hashmap
                             HM.fromList . flip map stripSingletonGrp $ \lightGroup ->
                                 case lightGroup of
-                                    []          -> (GroupName "<NoGroup>", [])
+                                    []          -> (GroupName "<NoGroup>", HS.empty)
                                     (_, name):_ ->
                                         ( -- Extract prefix from first light
                                           GroupName $ case words name of
                                               prefix:_ -> prefix
                                               _        -> "<NoName>"
                                         , -- Extract list of light IDs
-                                          map fst lightGroup
+                                          HS.fromList $ map fst lightGroup
                                         )
         lightGroups       = -- Add singleton groups back in as single 'No Group' group. The
                             -- Unicode quotation marks should also ensure this sorts dead last
-                            HM.insert (GroupName "“No Group”") (map fst singletons) lightGroups'
+                            HM.insert (GroupName "“No Group”")
+                                      (HS.fromList $ map fst singletons)
+                                      lightGroups'
     in lightGroups
 
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
@@ -121,7 +124,7 @@ fetchBridgeState = do
     forM_ (HM.toList newGroups) $ \(groupName, groupLights) -> do
         let anyLightsOn lightState =
                 or . map (^. lgtState . lsOn) .
-                    catMaybes . map (flip HM.lookup lightState) $ groupLights
+                    catMaybes . map (flip HM.lookup lightState) . HS.toList $ groupLights
             anyNewLightsOn = anyLightsOn newLights
             anyOldLightsOn = anyLightsOn oldLights
         when (anyOldLightsOn && not anyNewLightsOn) $

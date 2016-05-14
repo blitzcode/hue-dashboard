@@ -219,24 +219,19 @@ addScenesTile userID window = do
   return grpShown
 
 -- Add a tile for an individual scene
---
--- TODO: Add edit button (or click title?) which opens the scene creator again with the same
---       parameters, allowing to overwrite the scene with changed parameters
---
 addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
 addSceneTile sceneName scene shown window = do
   AppEnv { .. } <- ask
   let deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
       deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
+      editSceneBtnID     = "scene-" <> sceneName <> "-edit-btn"
       circleContainerID  = "scene-" <> sceneName <> "-circle-container"
-      lightsOn           = sum . flip map scene $ \(_, lgtSt) ->
-                               maybe 0 (\case (Bool True) -> 1; _ -> 0) $
-                                   HM.lookup "on" lgtSt
-      lightsOff          = length scene - lightsOn
       styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
+  -- Query groups for the scene group information
+  groups       <- liftIO . atomically . readTVar $ _aeLightGroups
   -- Tile
   addPageTile $
     H.div H.! A.class_ (H.toValue $ "tile " <> sceneTilesClass)
@@ -279,24 +274,38 @@ addSceneTile sceneName scene shown window = do
           H.div H.! A.class_ "circle"
                 H.! A.style (H.toValue styleCircleNoExist)
                 $ return ()
-      -- Light count
       H.div H.! A.class_ "text-center" $ do
+        -- List all group names affected by the scene, truncate with ellipsis if needed
         H.h6 $
           H.small $
-            H.toHtml $ (printf "%i On, %i Off" lightsOn lightsOff :: String)
-        -- Delete button
+            H.toHtml $
+              let groupsTouched = flip concatMap (HM.toList groups) $ \(grpName, grpLights) ->
+                                      if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
+                                      then [grpName]
+                                      else []
+                  groupStr      = concat . intersperse ", " $ map fromGroupName groupsTouched
+              in  if   length groupStr > 20
+                  then take 20 groupStr <> "…"
+                  else groupStr
+        -- Edit and delete button
         H.div H.! A.id (H.toValue deleteConfirmDivID)
               H.! A.style "display: none;" $
           H.button H.! A.type_ "button"
                    H.! A.id (H.toValue deleteConfirmBtnID)
                    H.! A.class_ "btn btn-danger btn-sm"
                    $ "Confirm"
-        H.button H.! A.type_ "button"
-                 H.! A.class_ "btn btn-danger btn-sm"
-                 H.! A.onclick ( H.toValue $ "this.style.display = 'none'; getElementById('"
-                                             <> deleteConfirmDivID <> "').style.display = 'block';"
-                               )
-                 $ "Delete"
+        H.div H.! A.class_ "btn-group btn-group-sm" $ do
+          H.button H.! A.type_ "button"
+                   H.! A.id (H.toValue editSceneBtnID)
+                   H.! A.class_ "btn btn-scene btn-sm" $
+                     H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-danger btn-sm"
+                   H.! A.onclick ( H.toValue $
+                                     "this.parentNode.style.display = 'none'; getElementById('"
+                                     <> deleteConfirmDivID <> "').style.display = 'block';"
+                                 )
+                   $ "Delete"
   addPageUIAction $ do
       -- Activate
       --
@@ -306,6 +315,10 @@ addSceneTile sceneName scene shown window = do
       getElementByIdSafe window circleContainerID >>= \btn ->
           on UI.click btn $ \_ ->
               lightsSetScene bridgeIP bridgeUserID scene
+      -- Edit
+      getElementByIdSafe window editSceneBtnID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              return () -- TODO: Implement
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
@@ -350,7 +363,7 @@ addImportedScenesTile shown window = do
                       xs@("0":"off":_) -> drop 2 xs
                       xs@("off":_)     -> drop 1 xs
                       xs               -> xs
-      topScenes = take 8 fixNames
+      topScenes = take 7 fixNames
   -- Build scenes tile
   addPageTile $
     H.div H.! A.class_ (H.toValue $ "tile " <> sceneTilesClass)

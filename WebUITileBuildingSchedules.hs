@@ -69,7 +69,7 @@ addSchedulesTile sceneNames userID window = do
       queryGroupShown                      =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
-  -- Client and server epoch time in ms
+  -- Client and server epoch time in ms, compute difference and complain if it differs too much
   clientTime <- liftIO $ runUI window (callFunction $ ffi "(new Date()).getTime()" :: UI Double)
   serverTime <- (1000 *) . realToFrac <$> liftIO getPOSIXTime :: PageBuilder Double
   let timeDiff          = abs $ clientTime - serverTime

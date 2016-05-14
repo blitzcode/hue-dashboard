@@ -105,7 +105,7 @@ setup ae@AppEnv { .. } window = do
         -- Create tiles for all light groups
         forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
             -- Build group switch tile for current light group
-            addGroupSwitchTile groupName groupLightIDs userID window
+            addGroupSwitchTile groupName (HS.toList groupLightIDs) userID window
             -- Is the current group visible?
             let grpShown = userData ^. udVisibleGroupNames . to (HS.member groupName)
             -- Create all light tiles for the current light group
