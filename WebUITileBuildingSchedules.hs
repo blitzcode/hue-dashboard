@@ -52,7 +52,6 @@ days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 -- 'Schedules' group is visible and subsequent elements should be added hidden or not
 --
 -- TODO: Schedule creation and deletion currently requires a page reload
--- TODO: Add 'run once' option
 --
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
 addSchedulesTile sceneNames userID window = do

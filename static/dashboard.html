@@ -143,12 +143,15 @@
         float: left;
         width: 110px;
         height: 213px;
-        border-width: 0px 1px 1px 1px;
-        margin-left: -1px;
+        border-width: 1px 1px 1px 1px;
+        margin: 4px 4px 0px 0px;
+        border-radius: 8px;
         border-style: solid;
         border-color: #ddd;
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
+        background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, .075);
     }
     .tile-display .light-caption
     {
@@ -227,7 +230,7 @@
     {
         width: 110px;
         left: -6px;
-        margin-top: 22px;
+        margin-top: 21px;
     }
     .tile-display .btn-scene
     {
@@ -370,7 +373,9 @@
   </div>
   <!-- Content -->
   <div class="tile-display" id="lights">
+    <div class="tile" style="display: none;"></div>
 
+    <!--
     <div class="tile" style="opacity: 1.0;">
       <div class="light-caption light-caption-group-header small">All Lights</div>
       <img class="img-rounded" src="static/svg/bridge_v2.svg"/>
@@ -649,7 +654,7 @@
         </div>
       </div>
     </div>
-
+    -->
  </div>
 </body>
 </html>

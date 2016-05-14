@@ -279,13 +279,15 @@ addSceneTile sceneName scene shown window = do
         H.h6 $
           H.small $
             H.toHtml $
-              let groupsTouched = flip concatMap (HM.toList groups) $ \(grpName, grpLights) ->
-                                      if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
-                                      then [grpName]
-                                      else []
+              let groupsTouched =
+                      flip concatMap (HM.toList groups) $ \(grpName, grpLights) ->
+                        if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
+                        then [grpName]
+                        else []
                   groupStr      = concat . intersperse ", " $ map fromGroupName groupsTouched
-              in  if   length groupStr > 20
-                  then take 20 groupStr <> "…"
+                  maxLength     = 20
+              in  if   length groupStr > maxLength
+                  then take maxLength groupStr <> "…"
                   else groupStr
         -- Edit and delete button
         H.div H.! A.id (H.toValue deleteConfirmDivID)
