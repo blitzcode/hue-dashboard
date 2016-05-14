@@ -282,7 +282,7 @@ addSceneTile sceneName scene shown window = do
                       if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
                       then [grpName]
                       else []
-                groupStr      = concat . intersperse ", " $ map fromGroupName groupsTouched
+                groupStr      = concat . intersperse ", " . sort $ map fromGroupName groupsTouched
                 maxLength     = 20
             in  if   length groupStr > maxLength
                 then take maxLength groupStr <> "…"
