@@ -91,6 +91,8 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
+    -- TODO: Fixed-size navbar on top, more careful layout
+    -- TODO: Log amount of tiles and UI handlers generated
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
@@ -159,7 +161,7 @@ setup ae@AppEnv { .. } window = do
 -- Update DOM elements with light update messages received
 --
 -- TODO: We don't handle addition / removal of lights or changes in properties like the
---       name. Need to refresh page for those to show up
+--       name. Maybe refresh page automatically
 --
 -- TODO: Because getElementById just freezes when we pass it a non-existent element, our
 --       entire worker thread will just freeze when we receive an update for a new light,

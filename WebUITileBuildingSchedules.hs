@@ -55,23 +55,23 @@ days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
 addSchedulesTile sceneNames userID window = do
   AppEnv { .. } <- ask
-  let scheduleCreatorID                    = "schedule-creator-dialog-container"  :: String
-      scheduleCreatorNameID                = "schedule-creator-dialog-name"       :: String
-      scheduleCreatorBtnID                 = "schedule-creator-dialog-btn"        :: String
-      scheduleCreatorHourID                = "schedule-creator-dialog-hour"       :: String
-      scheduleCreatorMinuteID              = "schedule-creator-dialog-minute"     :: String
-      scheduleCreatorSceneID               = "schedule-creator-dialog-scene"      :: String
-      scheduleCreatorDayID day             = "schedule-creator-dialog-day" <> day :: String
-      schedulesTileHideShowBtnID           = "schedules-tile-hide-show-btn"       :: String
-      schedulesTileGroupName               = GroupName "<SchedulesTileGroup>"
-      queryGroupShown                      =
+  let scheduleCreatorID          = "schedule-creator-dialog-container"  :: String
+      scheduleCreatorNameID      = "schedule-creator-dialog-name"       :: String
+      scheduleCreatorBtnID       = "schedule-creator-dialog-btn"        :: String
+      scheduleCreatorHourID      = "schedule-creator-dialog-hour"       :: String
+      scheduleCreatorMinuteID    = "schedule-creator-dialog-minute"     :: String
+      scheduleCreatorSceneID     = "schedule-creator-dialog-scene"      :: String
+      scheduleCreatorDayID day   = "schedule-creator-dialog-day" <> day :: String
+      schedulesTileHideShowBtnID = "schedules-tile-hide-show-btn"       :: String
+      schedulesTileGroupName     = GroupName "<SchedulesTileGroup>"
+      queryGroupShown            =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
   -- Client and server epoch time in ms, compute difference and complain if it differs too much
   clientTime <- liftIO $ runUI window (callFunction $ ffi "(new Date()).getTime()" :: UI Double)
   serverTime <- (1000 *) . realToFrac <$> liftIO getPOSIXTime :: PageBuilder Double
   let timeDiff          = abs $ clientTime - serverTime
-      timeDiffThreshold = 120 * 1000
+      timeDiffThreshold = 120 * 1000 -- 2min
   when (timeDiff > timeDiffThreshold) $
       traceS TLWarn $ printf "Time difference between client and server is %i seconds"
                       (round $ timeDiff / 1000 :: Int)
@@ -174,7 +174,7 @@ addSchedulesTile sceneNames userID window = do
               minute       <- fromMaybe 30 . readMaybe <$>
                                   (get value =<< getElementByIdSafe window scheduleCreatorMinuteID)
               -- Active days
-              daysActive <- forM days $ \day ->do
+              daysActive   <- forM days $ \day ->do
                   get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
               -- Don't bother creating schedules without name or active days
               -- TODO: Show an error message to indicate what the problem is
@@ -285,6 +285,8 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
       H.div H.! A.class_ "light-caption small no-padding-margin" $
         H.toHtml _sScene
       -- Edit and delete button
+      -- TODO: Merge with similar code in Scene
+      -- TODO: Add ability to go back from 'Confirm' button without refresh
       H.div H.! A.id (H.toValue deleteConfirmDivID)
             H.! A.style "display: none;" $
         H.button H.! A.type_ "button"

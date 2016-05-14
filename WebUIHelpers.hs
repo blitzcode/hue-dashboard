@@ -79,7 +79,7 @@ anyLightsInGroup groupName groups lights condition =
         Just groupLights ->
             or . map condition . catMaybes . map (flip HM.lookup lights) . HS.toList $ groupLights
 
--- Reload the page
+-- Reload the page (TODO: Maybe we can do something more granular, just repopulate a div?)
 reloadPage :: UI ()
 reloadPage = runFunction $ ffi "window.location.reload(false);"
 
