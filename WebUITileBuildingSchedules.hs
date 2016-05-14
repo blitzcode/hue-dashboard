@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import Data.Monoid
 import Data.Maybe
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>), element)
@@ -245,12 +246,10 @@ addSchedulesTile sceneNames userID window = do
   return grpShown
 
 -- Add a tile for an individual schedule
---
--- TODO: Indicate if we reference a scene that's missing
---
 addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
+  scenes <- _pcScenes <$> (liftIO . atomically . readTVar $ _aePC)
   let deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
       editScheduleBtnID  = "schedule-" <> scheduleName <> "-edit-btn"
@@ -282,8 +281,15 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
           H.span H.! A.class_ (if dayEnabled then "day-enabled" else "day-disabled") $
             H.toHtml $ take 2 dayName <> " "
       H.span H.! A.class_ "glyphicon glyphicon-chevron-down schedule-chevron-down" $ return ()
-      H.div H.! A.class_ "light-caption small no-padding-margin" $
+      H.div H.! A.class_ "light-caption small no-padding-margin"
+            H.! A.style "cursor: default;"
+            $ do
         H.toHtml _sScene
+        unless (HM.member _sScene scenes) $ do -- Missing scene?
+          H.toHtml (" " :: String)
+          H.span H.! A.class_ "glyphicon glyphicon-alert"
+                 H.! A.style "color: red;"
+                 $ return ()
       -- Edit and delete button
       -- TODO: Merge with similar code in Scene
       -- TODO: Add ability to go back from 'Confirm' button without refresh
