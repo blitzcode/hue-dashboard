@@ -73,12 +73,11 @@ addLightTile light lightID shown window = do
                              (buildLightID lightID "color-picker-container")
                              (buildLightID lightID "color-picker-overlay"  )
       -- Model type and text
-      H.div H.! A.class_ "text-center" $
-        H.h6 $
-          H.small $ do
-            H.toHtml . show $ light ^. lgtModelID
-            H.br
-            H.toHtml . show $ light ^. lgtType
+      H.h6 $
+        H.small $ do
+          H.toHtml . show $ light ^. lgtModelID
+          H.br
+          H.toHtml . show $ light ^. lgtType
       -- Brightness widget
       H.div H.! A.class_ "progress"
             H.! A.id (H.toValue $ buildLightID lightID "brightness-container") $ do
@@ -219,11 +218,10 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                              (buildGroupID groupName "color-picker-container")
                              (buildGroupID groupName "color-picker-overlay"  )
           -- Group show / hide widget
-          H.div H.! A.class_ "text-center" $
-            H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-sm btn-info show-hide-btn group-switch-show-hide-btn"
-                     H.! A.id (H.toValue $ buildGroupID groupName "show-btn")
-                     $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-sm btn-info show-hide-btn group-switch-show-hide-btn"
+                   H.! A.id (H.toValue $ buildGroupID groupName "show-btn")
+                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
           -- Brightness widget
           H.div H.! A.class_ "progress"
                 H.! A.id (H.toValue $ buildGroupID groupName "brightness-container") $ do
@@ -349,15 +347,14 @@ addAllLightsTile window = do
         H.img H.! A.class_ "img-rounded"
               H.! A.src "static/svg/bridge_v2.svg"
               H.! A.id (H.toValue $ buildGroupID (GroupName "all-lights") "image")
-        H.div H.! A.class_ "text-center" $
-          H.h6 $
-            H.small $
-              sequence_ $ intersperse H.br
-                [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
-                , H.toHtml $ "IP "    <> fromIPAddress bridgeIP
-                , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
-                , H.toHtml $ (show $ length lights) <> " Lights Connected"
-                ]
+        H.h6 $
+          H.small $
+            sequence_ $ intersperse H.br
+              [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
+              , H.toHtml $ "IP "    <> fromIPAddress bridgeIP
+              , H.toHtml $ "API v"  <> (show $ _aeBC ^. bcAPIVersion)
+              , H.toHtml $ (show $ length lights) <> " Lights Connected"
+              ]
   -- Register click handler for turning all lights on / off
   addPageUIAction $
       getElementByIdSafe window (buildGroupID (GroupName "all-lights") "image") >>= \image ->
@@ -472,28 +469,27 @@ addServerTile window = do
         H.img H.! A.class_ "img-rounded"
               H.! A.src "static/svg/raspberrypi.svg"
               H.! A.style "cursor: default;"
-        H.div H.! A.class_ "text-center" $ do
-          H.div H.! A.id "server-warning" $ do
-            H.h6 $
-              H.small $
-                "Administrative Options"
-            H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-danger btn-sm"
-                     H.! A.onclick ( "getElementById('server-warning').style.display='none';" <>
-                                     "getElementById('server-danger-bttns').style.display='block';"
-                                   )
-                     $ "Show"
-          H.div H.! A.class_ "btn-group-vertical btn-group-sm"
-                H.! A.id "server-danger-bttns"
-                H.! A.style "display: none;" $ do
-            H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-danger"
-                     H.! A.id "server-shutdown-bttn"
-                     $ "Shutdown"
-            H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-danger"
-                     H.! A.id "server-reboot-bttn"
-                     $ "Reboot"
+        H.div H.! A.id "server-warning" $ do
+          H.h6 $
+            H.small $
+              "Administrative Options"
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-danger btn-sm"
+                   H.! A.onclick ( "getElementById('server-warning').style.display='none';" <>
+                                   "getElementById('server-danger-bttns').style.display='block';"
+                                 )
+                   $ "Show"
+        H.div H.! A.class_ "btn-group-vertical btn-group-sm"
+              H.! A.id "server-danger-bttns"
+              H.! A.style "display: none;" $ do
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-danger"
+                   H.! A.id "server-shutdown-bttn"
+                   $ "Shutdown"
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-danger"
+                   H.! A.id "server-reboot-bttn"
+                   $ "Reboot"
   -- Register click handler for shutdown / reboot
   addPageUIAction $
       getElementByIdSafe window "server-shutdown-bttn" >>= \bttn ->

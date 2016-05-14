@@ -132,27 +132,26 @@ addScenesTile userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue sceneCreatorBtnID)
                        $ "Create"
-      H.div H.! A.class_ "text-center" $ do
-        -- Scene count
-        H.h6 $
-          H.small $
-            H.toHtml $ case numScenes of
-                         0 -> "No Scenes"
-                         1 -> "1 Scene"
-                         _ -> show numScenes <> " Scenes"
-        -- Group show / hide widget and 'New' button
-        H.div H.! A.class_ "btn-group btn-group-sm" $ do
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-scene plus-btn"
-                   H.! A.onclick
-                     ( H.toValue $
-                         "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
-                     ) $
-                     H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info show-hide-btn"
-                   H.! A.id (H.toValue scenesTileHideShowBtnID)
-                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+      -- Scene count
+      H.h6 $
+        H.small $
+          H.toHtml $ case numScenes of
+                       0 -> "No Scenes"
+                       1 -> "1 Scene"
+                       _ -> show numScenes <> " Scenes"
+      -- Group show / hide widget and 'New' button
+      H.div H.! A.class_ "btn-group btn-group-sm" $ do
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-scene plus-btn"
+                 H.! A.onclick
+                   ( H.toValue $
+                       "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
+                   ) $
+                   H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-info show-hide-btn"
+                 H.! A.id (H.toValue scenesTileHideShowBtnID)
+                 $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
@@ -274,40 +273,39 @@ addSceneTile sceneName scene shown window = do
           H.div H.! A.class_ "circle"
                 H.! A.style (H.toValue styleCircleNoExist)
                 $ return ()
-      H.div H.! A.class_ "text-center" $ do
-        -- List all group names affected by the scene, truncate with ellipsis if needed
-        H.h6 $
-          H.small $
-            H.toHtml $
-              let groupsTouched =
-                      flip concatMap (HM.toList groups) $ \(grpName, grpLights) ->
-                        if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
-                        then [grpName]
-                        else []
-                  groupStr      = concat . intersperse ", " $ map fromGroupName groupsTouched
-                  maxLength     = 20
-              in  if   length groupStr > maxLength
-                  then take maxLength groupStr <> "…"
-                  else groupStr
-        -- Edit and delete button
-        H.div H.! A.id (H.toValue deleteConfirmDivID)
-              H.! A.style "display: none;" $
-          H.button H.! A.type_ "button"
-                   H.! A.id (H.toValue deleteConfirmBtnID)
-                   H.! A.class_ "btn btn-danger btn-sm"
-                   $ "Confirm"
-        H.div H.! A.class_ "btn-group btn-group-sm" $ do
-          H.button H.! A.type_ "button"
-                   H.! A.id (H.toValue editSceneBtnID)
-                   H.! A.class_ "btn btn-scene btn-sm" $
-                     H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-danger btn-sm"
-                   H.! A.onclick ( H.toValue $
-                                     "this.parentNode.style.display = 'none'; getElementById('"
-                                     <> deleteConfirmDivID <> "').style.display = 'block';"
-                                 )
-                   $ "Delete"
+      -- List all group names affected by the scene, truncate with ellipsis if needed
+      H.h6 $
+        H.small $
+          H.toHtml $
+            let groupsTouched =
+                    flip concatMap (HM.toList groups) $ \(grpName, grpLights) ->
+                      if   or $ map (\(lgtID, _) -> HS.member lgtID grpLights) scene
+                      then [grpName]
+                      else []
+                groupStr      = concat . intersperse ", " $ map fromGroupName groupsTouched
+                maxLength     = 20
+            in  if   length groupStr > maxLength
+                then take maxLength groupStr <> "…"
+                else groupStr
+      -- Edit and delete button
+      H.div H.! A.id (H.toValue deleteConfirmDivID)
+            H.! A.style "display: none;" $
+        H.button H.! A.type_ "button"
+                 H.! A.id (H.toValue deleteConfirmBtnID)
+                 H.! A.class_ "btn btn-danger btn-sm"
+                 $ "Confirm"
+      H.div H.! A.class_ "btn-group btn-group-sm" $ do
+        H.button H.! A.type_ "button"
+                 H.! A.id (H.toValue editSceneBtnID)
+                 H.! A.class_ "btn btn-scene btn-sm" $
+                   H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-danger btn-sm"
+                 H.! A.onclick ( H.toValue $
+                                   "this.parentNode.style.display = 'none'; getElementById('"
+                                   <> deleteConfirmDivID <> "').style.display = 'block';"
+                               )
+                 $ "Delete"
   addPageUIAction $ do
       -- Activate
       --

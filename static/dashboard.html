@@ -144,7 +144,7 @@
         width: 110px;
         height: 213px;
         border-width: 1px 1px 1px 1px;
-        margin: 4px 4px 0px 0px;
+        margin: 5px 5px 0px 0px;
         border-radius: 8px;
         border-style: solid;
         border-color: #ddd;
@@ -152,6 +152,7 @@
         transition: opacity 0.2s linear 0.0s;
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
         box-shadow: 1px 1px 3px rgba(0, 0, 0, .075);
+        text-align: center;
     }
     .tile-display .light-caption
     {
@@ -359,6 +360,17 @@
         margin-top: 3px;
         margin-bottom: 2px;
     }
+    .tile-display .schedule-time-display
+    {
+        font-size: 18pt;
+        font-weight: 300;
+    }
+    .tile-display .no-padding-margin
+    {
+        margin: 0px;
+        padding: 0px;
+    }
+
   </style>
 </head>
 <body>
@@ -603,7 +615,7 @@
     <div class="tile">
       <div class="light-caption small">Aufwachen</div>
       <div class="text-center">
-        <div style="font-size: 18pt; font-weight: 300;">
+        <div class="schedule-time-display">
           <span style="vertical-align: middle;" class="glyphicon glyphicon-time"></span>
           <span style="vertical-align: middle;">16:30</span>
         </div>
@@ -617,7 +629,7 @@
           <span class="day-enabled">Su<span/>
         </div>
         <span class="glyphicon glyphicon-chevron-down schedule-chevron-down"></span>
-        <div class="light-caption small" style="margin: 0px; padding: 0px;">
+        <div class="light-caption small no-padding-margin">
           Kinderzimmer Abends
         </div>
         <div id="delete-confirm-btn" style="display: none;">
@@ -655,7 +667,8 @@
       </div>
     </div>
     -->
- </div>
+  </div>
+  <div style="clear: both; height: 5px;"></div>
 </body>
 </html>
 

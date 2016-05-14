@@ -9,7 +9,6 @@ import Text.Printf
 import Text.Read (readMaybe)
 import qualified Data.Text as T
 import Data.Monoid
-import Data.List
 import Data.Maybe
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Data.HashSet as HS
@@ -136,29 +135,28 @@ addSchedulesTile sceneNames userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue scheduleCreatorBtnID)
                        $ "Create"
-      H.div H.! A.class_ "text-center" $ do
-        -- Server / client time status
-        H.h6 $
-            if   timeDiff > timeDiffThreshold
-            then H.small H.! A.style "color: red;" $ do
-                   H.span H.! A.class_ "glyphicon glyphicon-remove" $ return ()
-                   H.toHtml (" Server Time Differs" :: String)
-            else H.small H.! A.style "color: green;" $ do
-                   H.span H.! A.class_ "glyphicon glyphicon-ok" $ return ()
-                   H.toHtml (" Server Time Matches" :: String)
-        -- Group show / hide widget and 'New' button
-        H.div H.! A.class_ "btn-group btn-group-sm" $ do
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-scene plus-btn"
-                   H.! A.onclick
-                     ( H.toValue $
-                         "getElementById('" <> scheduleCreatorID <>"').style.display = 'block'"
-                     ) $
-                     H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info show-hide-btn"
-                   H.! A.id (H.toValue schedulesTileHideShowBtnID)
-                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+      -- Server / client time status
+      H.h6 $
+          if   timeDiff > timeDiffThreshold
+          then H.small H.! A.style "color: red;" $ do
+                 H.span H.! A.class_ "glyphicon glyphicon-remove" $ return ()
+                 H.toHtml (" Server Time Differs" :: String)
+          else H.small H.! A.style "color: green;" $ do
+                 H.span H.! A.class_ "glyphicon glyphicon-ok" $ return ()
+                 H.toHtml (" Server Time Matches" :: String)
+      -- Group show / hide widget and 'New' button
+      H.div H.! A.class_ "btn-group btn-group-sm" $ do
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-scene plus-btn"
+                 H.! A.onclick
+                   ( H.toValue $
+                       "getElementById('" <> scheduleCreatorID <>"').style.display = 'block'"
+                   ) $
+                   H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
+        H.button H.! A.type_ "button"
+                 H.! A.class_ "btn btn-info show-hide-btn"
+                 H.! A.id (H.toValue schedulesTileHideShowBtnID)
+                 $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window scheduleCreatorBtnID >>= \btn ->
@@ -248,16 +246,14 @@ addSchedulesTile sceneNames userID window = do
 
 -- Add a tile for an individual schedule
 --
--- TODO: Add edit button (or click title?) which opens the schedule creator again with the same
---       parameters, allowing to overwrite the schedule with changed parameters
 -- TODO: Indicate if we reference a scene that's missing
--- TODO: More attractive display of schedule information, maybe use the scene icon etc.
 --
 addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
   let deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
+      editScheduleBtnID  = "schedule-" <> scheduleName <> "-edit-btn"
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
   -- Tile
@@ -275,39 +271,43 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
             H.! A.style "cursor: default;"
             $ H.toHtml scheduleName
       -- Schedule information
-      H.div H.! A.class_ "schedule-container" $ do
-        H.span H.! A.class_ "glyphicon glyphicon-time" 
-               H.! A.style "width: 16px;"
+      H.div H.! A.class_ "schedule-time-display" $ do
+        H.span H.! A.class_ "glyphicon glyphicon-time"
+               H.! A.style "vertical-align: middle;"
                $ return ()
-        H.span H.! A.class_ "lead" $
+        H.span H.! A.style "vertical-align: middle;" $
           H.toHtml $ " " <> show _sHour <> ":" <> minutePretty
-        H.br
-        H.h6 $
-          H.small $ do
-            sequence_ .
-              intersperse "·" .
-                flip map (filter ((== True) . snd) $ zip days _sDays) $ \(dayName, _) ->
-                  H.toHtml $ take 2 dayName
-            H.br
-            H.p $ return ()
-            void "Scene"
-            H.br
-            H.toHtml _sScene
-        H.br
-        -- Delete button
-        H.div H.! A.id (H.toValue deleteConfirmDivID)
-              H.! A.style "display: none;" $
-          H.button H.! A.type_ "button"
-                   H.! A.id (H.toValue deleteConfirmBtnID)
-                   H.! A.class_ "btn btn-danger btn-sm"
-                   $ "Confirm"
+      H.div $
+        forM_ (zip days _sDays) $ \(dayName, dayEnabled) ->
+          H.span H.! A.class_ (if dayEnabled then "day-enabled" else "day-disabled") $
+            H.toHtml $ take 2 dayName <> " "
+      H.span H.! A.class_ "glyphicon glyphicon-chevron-down schedule-chevron-down" $ return ()
+      H.div H.! A.class_ "light-caption small no-padding-margin" $
+        H.toHtml _sScene
+      -- Edit and delete button
+      H.div H.! A.id (H.toValue deleteConfirmDivID)
+            H.! A.style "display: none;" $
+        H.button H.! A.type_ "button"
+                 H.! A.id (H.toValue deleteConfirmBtnID)
+                 H.! A.class_ "btn btn-danger btn-sm"
+                 $ "Confirm"
+      H.div H.! A.class_ "btn-group btn-group-sm" $ do
+        H.button H.! A.type_ "button"
+                 H.! A.id (H.toValue editScheduleBtnID)
+                 H.! A.class_ "btn btn-scene btn-sm" $
+                   H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
         H.button H.! A.type_ "button"
                  H.! A.class_ "btn btn-danger btn-sm"
-                 H.! A.onclick ( H.toValue $ "this.style.display = 'none'; getElementById('"
-                                             <> deleteConfirmDivID <> "').style.display = 'block';"
+                 H.! A.onclick ( H.toValue $
+                                   "this.parentNode.style.display = 'none'; getElementById('"
+                                   <> deleteConfirmDivID <> "').style.display = 'block';"
                                )
                  $ "Delete"
-  addPageUIAction $
+  addPageUIAction $ do
+      -- Edit
+      getElementByIdSafe window editScheduleBtnID >>= \btn ->
+          on UI.click btn $ \_ -> do
+              return () -- TODO: Implement
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
