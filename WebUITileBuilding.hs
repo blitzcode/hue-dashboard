@@ -479,9 +479,7 @@ addServerTile window = do
               H.toHtml $ (printf "RAM Usage: %.1f%%" ramUsage :: String)
           H.button H.! A.type_ "button"
                    H.! A.class_ "btn btn-danger btn-sm"
-                   H.! A.onclick ( "getElementById('server-warning').style.display='none';" <>
-                                   "getElementById('server-danger-bttns').style.display='block';"
-                                 )
+                   H.! A.onclick "getElementById('server-danger-bttns').style.display='block';"
                    $ "Admin"
         H.div H.! A.class_ "btn-group-vertical btn-group-sm"
               H.! A.id "server-danger-bttns"
@@ -494,6 +492,10 @@ addServerTile window = do
                    H.! A.class_ "btn btn-danger"
                    H.! A.id "server-reboot-bttn"
                    $ "Reboot"
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-scene"
+                   H.! A.onclick "getElementById('server-danger-bttns').style.display='none';" $
+                     H.span H.! A.class_ "glyphicon glyphicon-chevron-left" $ return ()
   -- Register click handler for shutdown / reboot
   addPageUIAction $
       getElementByIdSafe window "server-shutdown-bttn" >>= \bttn ->

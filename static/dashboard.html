@@ -381,6 +381,10 @@
     {
         margin-top: -13px;
     }
+    #server-danger-bttns
+    {
+        margin-top: -156px;
+    }
     .tile-display .day-enabled
     {
         color: black;
@@ -698,15 +702,17 @@
                 RAM Usage: 11%
             </small>
           </h6>
-          <button type="button" class="btn btn-danger btn-sm" onclick="getElementById('server-warning').style.display = 'none'; getElementById('server-danger-bttns').style.display = 'block'; ">Admin</button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="getElementById('server-danger-bttns').style.display = 'block'; ">Admin</button>
         </div>
-        <div class="btn-group-vertical btn-group-sm" id="server-danger-bttns" style="display: none;">
+        <div class="btn-group-vertical btn-group-sm" id="server-danger-bttns" style="display: none; margin-top: -156px;">
           <button type="button" class="btn btn-danger">Shutdown</button>
           <button type="button" class="btn btn-danger">Reboot</button>
+          <button type="button" class="btn btn-scene">Cancel</button>
         </div>
       </div>
     </div>
     -->
+
   </div>
   <div style="clear: both; height: 5px;"></div>
 </body>
