@@ -107,8 +107,8 @@
   <style>
     .title-bar
     {
-        background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
-        box-shadow: inset 0 1px  rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
+        background: white;
+        box-shadow: 0px 0px 3px rgba(0, 0, 0, .2);
         position: fixed;
         left: 0px;
         right: 0px;
@@ -116,7 +116,7 @@
         z-index: 2;
         padding: 5px;
         height: 30px;
-        width: 268px;
+        width: 240px;
         border-style: solid;
         border-width: 0px 1px 1px 1px;
         border-color: #ddd;
@@ -138,6 +138,13 @@
         padding-left: 5px;
         padding-right: 5px;
         float: left;
+        cursor: pointer;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
     }
     .title-bar .separator
     {
@@ -409,11 +416,9 @@
   <!-- Header -->
   <div class="title-bar">
     <img src="static/favicon.png" class="icon"/>
-    <span class="title">Hue Dashboard</span>
+    <span class="title" onclick="window.scrollTo(0, 0);">Hue Dashboard</span>
     <div class="separator"></div>
-    <a href="https://www.github.com/blitzcode/hue-dashboard">Help</a>
-    <div class="separator"></div>
-    <img src="static/svg/refresh.svg" onclick="window.location.reload(false)" style="cursor: pointer;" class="image" />
+    <a href="https://www.github.com/blitzcode/hue-dashboard">About</a>
     <div class="separator"></div>
     <img src="static/spinner.gif" class="image" id="navbar-spinner" />
   </div>
