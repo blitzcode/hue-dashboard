@@ -100,7 +100,6 @@ addEditAndDeleteButton editDeleteDivID
                        editBtnID
                        deleteConfirmDivID
                        deleteConfirmBtnID = do
-   -- TODO: Merge with similar code in Scene
    H.div H.! A.id (H.toValue deleteConfirmDivID)
          H.! A.class_ "btn-group btn-group-sm"
          H.! A.style "display: none;" $ do

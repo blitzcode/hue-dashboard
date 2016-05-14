@@ -100,6 +100,12 @@ addSchedulesTile sceneNames userID window = do
           H.div H.! A.class_ "small" $ do
             -- TODO: Use Bootstrap styled form elements
             -- TODO: Add explanation text, dialog title
+            -- TODO: Replace 'activate' with dropdown  with the following options
+            --       'activate'
+            --       'turn off lights in'
+            --       'blink lights in'
+            -- TODO: Put day labels below checkboxes to make layout less cramped
+            -- TODO: Button should say 'Create / Update'
             void $ "at "
             H.select H.! A.id (H.toValue scheduleCreatorHourID) $
               forM_ ([0..23] :: [Int]) $ \h ->

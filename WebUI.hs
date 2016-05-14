@@ -91,6 +91,7 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
+    -- TODO: Drop down menu in the fixed navbar for quickly jumping to important tiles
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
