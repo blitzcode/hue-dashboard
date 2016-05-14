@@ -221,9 +221,10 @@ addScenesTile userID window = do
 addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
 addSceneTile sceneName scene shown window = do
   AppEnv { .. } <- ask
-  let deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
+  let editDeleteDivID    = "scene-" <> sceneName <> "-edit-delete-div"
+      deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
       deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
-      editSceneBtnID     = "scene-" <> sceneName <> "-edit-btn"
+      editBtnID          = "scene-" <> sceneName <> "-edit-btn"
       circleContainerID  = "scene-" <> sceneName <> "-circle-container"
       styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
@@ -288,24 +289,10 @@ addSceneTile sceneName scene shown window = do
                 then take maxLength groupStr <> "…"
                 else groupStr
       -- Edit and delete button
-      H.div H.! A.id (H.toValue deleteConfirmDivID)
-            H.! A.style "display: none;" $
-        H.button H.! A.type_ "button"
-                 H.! A.id (H.toValue deleteConfirmBtnID)
-                 H.! A.class_ "btn btn-danger btn-sm"
-                 $ "Confirm"
-      H.div H.! A.class_ "btn-group btn-group-sm" $ do
-        H.button H.! A.type_ "button"
-                 H.! A.id (H.toValue editSceneBtnID)
-                 H.! A.class_ "btn btn-scene btn-sm" $
-                   H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
-        H.button H.! A.type_ "button"
-                 H.! A.class_ "btn btn-danger btn-sm"
-                 H.! A.onclick ( H.toValue $
-                                   "this.parentNode.style.display = 'none'; getElementById('"
-                                   <> deleteConfirmDivID <> "').style.display = 'block';"
-                               )
-                 $ "Delete"
+      addEditAndDeleteButton editDeleteDivID
+                             editBtnID
+                             deleteConfirmDivID
+                             deleteConfirmBtnID
   addPageUIAction $ do
       -- Activate
       --
@@ -316,7 +303,7 @@ addSceneTile sceneName scene shown window = do
           on UI.click btn $ \_ ->
               lightsSetScene bridgeIP bridgeUserID scene
       -- Edit
-      getElementByIdSafe window editSceneBtnID >>= \btn ->
+      getElementByIdSafe window editBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
               return () -- TODO: Implement
       -- Delete

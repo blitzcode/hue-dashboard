@@ -12,7 +12,8 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Concurrent.STM
 import Graphics.UI.Threepenny.Core
-import Text.Blaze.Html (Html)
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 
 import Util
 import HueJSON
@@ -24,16 +25,16 @@ import AppDefs (AppEnv)
 -- We build our page in a monad stack that provides the application environment and a
 -- place to store all the event handlers and HTML elements that comprise it
 
-data Page = Page { _pgTiles     :: ![Html]  -- Functions to generate all the tiles in the page
-                 , _pgUIActions :: ![UI ()] -- Functions to register all event handlers etc.
-                                            --   once the page has been build
+data Page = Page { _pgTiles     :: ![H.Html]  -- Functions to generate all the tiles in the page
+                 , _pgUIActions :: ![UI ()]   -- Functions to register all event handlers etc.
+                                              --   once the page has been build
                  }
 
 makeLenses ''Page
 
 type PageBuilder = StateT Page (ReaderT AppEnv IO)
 
-addPageTile :: MonadState Page m => Html -> m ()
+addPageTile :: MonadState Page m => H.Html -> m ()
 addPageTile tile = pgTiles %= (tile :)
 
 addPageUIAction :: MonadState Page m => UI () -> m ()
@@ -93,4 +94,39 @@ getUserData tvPC userID = readTVar tvPC <&> (^. pcUserData . at userID . non def
 grpShownCaption, grpHiddenCaption :: String
 grpShownCaption  = "Hide ◄"
 grpHiddenCaption = "Show ►"
+
+addEditAndDeleteButton :: String -> String -> String -> String -> H.Html
+addEditAndDeleteButton editDeleteDivID
+                       editBtnID
+                       deleteConfirmDivID
+                       deleteConfirmBtnID = do
+   -- TODO: Merge with similar code in Scene
+   H.div H.! A.id (H.toValue deleteConfirmDivID)
+         H.! A.class_ "btn-group btn-group-sm"
+         H.! A.style "display: none;" $ do
+     H.button H.! A.type_ "button"
+              H.! A.id (H.toValue editBtnID)
+              H.! A.class_ "btn btn-scene btn-sm"
+              H.! A.onclick ( H.toValue $
+                                "this.parentNode.style.display = 'none'; getElementById('"
+                                <> editDeleteDivID <> "').style.display = 'block';"
+                            ) $
+                H.span H.! A.class_ "glyphicon glyphicon-chevron-left" $ return ()
+     H.button H.! A.type_ "button"
+              H.! A.id (H.toValue deleteConfirmBtnID)
+              H.! A.class_ "btn btn-danger btn-sm delete-confirm-btn"
+              $ "Confirm"
+   H.div H.! A.id (H.toValue editDeleteDivID)
+         H.! A.class_ "btn-group btn-group-sm" $ do
+     H.button H.! A.type_ "button"
+              H.! A.id (H.toValue editBtnID)
+              H.! A.class_ "btn btn-scene btn-sm" $
+                H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
+     H.button H.! A.type_ "button"
+              H.! A.class_ "btn btn-danger btn-sm delete-confirm-btn"
+              H.! A.onclick ( H.toValue $
+                                "this.parentNode.style.display = 'none'; getElementById('"
+                                <> deleteConfirmDivID <> "').style.display = 'block';"
+                            )
+              $ "Delete"
 

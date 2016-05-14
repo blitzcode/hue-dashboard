@@ -250,9 +250,10 @@ addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
   scenes <- _pcScenes <$> (liftIO . atomically . readTVar $ _aePC)
-  let deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
+  let editDeleteDivID    = "schedule-" <> scheduleName <> "-edit-delete-div"
+      deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
-      editScheduleBtnID  = "schedule-" <> scheduleName <> "-edit-btn"
+      editBtnID          = "schedule-" <> scheduleName <> "-edit-btn"
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
   -- Tile
@@ -291,29 +292,13 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
                  H.! A.style "color: red;"
                  $ return ()
       -- Edit and delete button
-      -- TODO: Merge with similar code in Scene
-      -- TODO: Add ability to go back from 'Confirm' button without refresh
-      H.div H.! A.id (H.toValue deleteConfirmDivID)
-            H.! A.style "display: none;" $
-        H.button H.! A.type_ "button"
-                 H.! A.id (H.toValue deleteConfirmBtnID)
-                 H.! A.class_ "btn btn-danger btn-sm"
-                 $ "Confirm"
-      H.div H.! A.class_ "btn-group btn-group-sm" $ do
-        H.button H.! A.type_ "button"
-                 H.! A.id (H.toValue editScheduleBtnID)
-                 H.! A.class_ "btn btn-scene btn-sm" $
-                   H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
-        H.button H.! A.type_ "button"
-                 H.! A.class_ "btn btn-danger btn-sm"
-                 H.! A.onclick ( H.toValue $
-                                   "this.parentNode.style.display = 'none'; getElementById('"
-                                   <> deleteConfirmDivID <> "').style.display = 'block';"
-                               )
-                 $ "Delete"
+      addEditAndDeleteButton editDeleteDivID
+                             editBtnID
+                             deleteConfirmDivID
+                             deleteConfirmBtnID
   addPageUIAction $ do
       -- Edit
-      getElementByIdSafe window editScheduleBtnID >>= \btn ->
+      getElementByIdSafe window editBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
               return () -- TODO: Implement
       -- Delete
