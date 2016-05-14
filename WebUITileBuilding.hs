@@ -54,7 +54,7 @@ addLightTile light lightID shown window = do
       colorStr      = htmlColorFromLightState $ light ^. lgtState
       colorSupport  = isColorLT $ light ^. lgtType
   addPageTile $
-    H.div H.! A.class_ "thumbnail"
+    H.div H.! A.class_ "tile"
           H.! A.style ( H.toValue $ "opacity: " <> show opacity <> ";" <>
                                     if shown then "display: block;" else "display: none;"
                       )
@@ -198,7 +198,7 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
   queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
     liftIO (atomically queryGroupShown) >>= \grpShown ->
       addPageTile $
-        H.div H.! A.class_ "thumbnail"
+        H.div H.! A.class_ "tile"
               H.! A.style ( H.toValue $ "opacity: "
                               <> show (if grpOn then enabledOpacity else disabledOpacity)
                               <> ";"
@@ -221,8 +221,7 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
           -- Group show / hide widget
           H.div H.! A.class_ "text-center" $
             H.button H.! A.type_ "button"
-                     H.! A.class_ "btn btn-sm btn-info"
-                     H.! A.style "margin-top: 9px; margin-bottom: -3px;"
+                     H.! A.class_ "btn btn-sm btn-info show-hide-btn group-switch-show-hide-btn"
                      H.! A.id (H.toValue $ buildGroupID groupName "show-btn")
                      $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
           -- Brightness widget
@@ -338,7 +337,7 @@ addAllLightsTile window = do
     lights <- liftIO . atomically $ readTVar _aeLights
     let lgtOn = anyLightsOn lights
     addPageTile $
-      H.div H.! A.class_ "thumbnail"
+      H.div H.! A.class_ "tile"
             H.! A.style ( H.toValue $ "opacity: "
                             <> show (if lgtOn then enabledOpacity else disabledOpacity)
                             <> ";"
@@ -466,7 +465,7 @@ addServerTile window = do
   -- Build tile
   void $ do
     addPageTile $
-      H.div H.! A.class_ "thumbnail" $ do
+      H.div H.! A.class_ "tile" $ do
         H.div H.! A.class_ "light-caption light-caption-group-header small"
               H.! A.style "cursor: default;"
               $ "Server"

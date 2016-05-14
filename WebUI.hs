@@ -90,8 +90,6 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / smaller
-    -- TODO: Consider removing space between tiles, have them share a border
-    -- TODO: Shrink / replace title navbar
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
