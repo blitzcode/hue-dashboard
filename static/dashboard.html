@@ -83,45 +83,62 @@
         return userid;
     }
 
-
-
-// http://stackoverflow.com/questions/19527104/left-aligned-last-row-in-centered-grid-of-elements
-    $(document).ready(function(){
+    // In pure CSS there's no way to center a div full of floating, wrapping div while left aligning
+    // the last, potentially non-full row. Use jQuery to do this
+    // http://stackoverflow.com/questions/19527104/left-aligned-last-row-in-centered-grid-of-elements
+    $(document).ready(function()
+    {
         setContainerWidth();
     });
-    
-    $(window).resize(function(){
+    $(window).resize(function()
+    {
        setContainerWidth();
     });
-    
     function setContainerWidth()
     {
-        $('.light-display').css('width', 'auto'); //reset
-        var windowWidth = $(document).width();
-        var blockWidth = $('.tile').outerWidth(true);
+        $('.tile-display').css('width', 'auto'); // Reset
+        var windowWidth  = $(document).width();
+        var blockWidth   = $('.tile').outerWidth(true);
         var maxBoxPerRow = Math.floor(windowWidth / blockWidth);
-        $('.light-display').width(maxBoxPerRow * blockWidth);
+        $('.tile-display').width(maxBoxPerRow * blockWidth);
     }
-
   </script>
   <!-- Our CSS -->
   <style>
     .title-bar
     {
-        background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
+        background-image: linear-gradient(to bottom, #fff 0%, #f1f1f1 100%);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
         padding: 5px;
         height: 33px;
         border-style: solid;
         border-width: 0px 0px 1px 0px;
         border-color: #ddd;
+        line-height: 22px;
+        color: #666;
     }
-    .light-display
+    .title-bar .title
+    {
+        padding-left: 5px;
+        padding-right: 5px;
+        float: left;
+    }
+    .title-bar a
+    {
+        padding-left: 5px;
+        padding-right: 5px;
+        float: right;
+    }
+    .title-bar .spinner
+    {
+        height: 24px;
+        float: left;
+    }
+    .tile-display
     {
         margin: 0 auto;
     }
-
-    .light-display .tile
+    .tile-display .tile
     {
         float: left;
         width: 110px;
@@ -133,7 +150,7 @@
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
     }
-    .light-display .light-caption
+    .tile-display .light-caption
     {
         text-align: center;
         padding-top: 5px;
@@ -142,13 +159,13 @@
         overflow: hidden;
         cursor: pointer;
     }
-    .light-display .light-caption-group-header
+    .tile-display .light-caption-group-header
     {
         color: black;
         background: #ddd;
         border-radius: 0px 0px 6px 6px;
     }
-    .light-display .img-rounded
+    .tile-display .img-rounded
     {
         padding: 7px;
         transition: background 0.2s linear 0.0s;
@@ -156,30 +173,30 @@
         width: 98px;
         height: 98px;
     }
-    .light-display .progress
+    .tile-display .progress
     {
         cursor: pointer;
     }
-    .light-display .progress-label-container
+    .tile-display .progress-label-container
     {
         position: relative;
         color: white;
     }
-    .light-display .minus-label
+    .tile-display .minus-label
     {
         position: absolute;
         left: 3px;
         top: 3px;
         text-shadow: 0px 0px 1px #333;
     }
-    .light-display .plus-label
+    .tile-display .plus-label
     {
         position: absolute;
         right: 3px;
         top: 3px;
         text-shadow: 0px 0px 1px #333;
     }
-    .light-display .percentage-label
+    .tile-display .percentage-label
     {
         position: absolute;
         text-align: center;
@@ -193,26 +210,39 @@
         -ms-user-select: none;
         user-select: none;
     }
-    .light-display .scene-btn-group
+    .tile-display .plus-btn
+    {
+        width: 32px;
+    }
+    .tile-display .show-hide-btn
+    {
+        width: 63px;
+    }
+    .tile-display .group-switch-show-hide-btn
+    {
+        margin-top: 7px;
+        margin-bottom: 9px;
+    }
+    .tile-display .scene-btn-group
     {
         width: 110px;
         left: -6px;
         margin-top: 22px;
     }
-    .light-display .btn-scene
+    .tile-display .btn-scene
     {
         color: #333;
         background-color: #fff;
         border-color: #ddd;
         overflow: hidden;
     }
-    .light-display .btn-scene:hover
+    .tile-display .btn-scene:hover
     {
         color: #333;
         background-color: #e6e6e6;
         border-color: #adadad;
     }
-    .light-display .color-picker-curtain
+    .tile-display .color-picker-curtain
     {
         width: 100%;
         height: 100%;
@@ -222,7 +252,7 @@
         left: 0;
         z-index: 1000;
     }
-    .light-display .color-picker-overlay
+    .tile-display .color-picker-overlay
     {
         background: white;
         position: fixed;
@@ -240,7 +270,7 @@
         cursor: crosshair;
         box-shadow: 0px 0px 15px rgba(0, 0, 0, .8);
     }
-    .light-display .scene-creator-frame
+    .tile-display .scene-creator-frame
     {
         background: white;
         position: fixed;
@@ -256,7 +286,7 @@
         padding: 10px;
         box-shadow: 0px 0px 15px rgba(0, 0, 0, .8);
     }
-    .light-display .color-picker-button
+    .tile-display .color-picker-button
     {
         position: absolute;
         border-radius: 0px 6px 0px 0px;
@@ -269,19 +299,19 @@
         text-align: center;
         cursor: pointer;
     }
-    .light-display .color-picker-tint-icon
+    .tile-display .color-picker-tint-icon
     {
         margin-left: 1px;
         margin-top: 5px;
     }
-    .light-display .scene-create-form
+    .tile-display .scene-create-form
     {
         position: absolute;
         bottom: 10px;
         width: 300px;
         margin: auto;
     }
-    .light-display .light-checkbox-container
+    .tile-display .light-checkbox-container
     {
         column-count: 2;
         -moz-column-count: 2;
@@ -290,14 +320,14 @@
         margin-bottom: 40px;
         line-height: 85%;
     }
-    .light-display .circle-container
+    .tile-display .circle-container
     {
         padding: 7px;
         cursor: pointer;
         width: 98px;
         height: 98px;
     }
-    .light-display .circle-container .circle
+    .tile-display .circle-container .circle
     {
 	border-radius: 50%;
 	width: 25px;
@@ -306,16 +336,25 @@
         border: 1px solid black;
         margin: 1.5px;
     }
-
-    .light-display .day-enabled
+    #server-warning
+    {
+        margin-top: -13px;
+    }
+    .tile-display .day-enabled
     {
         color: black;
         font-size: 7pt;
     }
-    .light-display .day-disabled
+    .tile-display .day-disabled
     {
         color: lightgrey;
         font-size: 7pt;
+    }
+    .tile-display .schedule-chevron-down
+    {
+        font-size: 18pt;
+        margin-top: 3px;
+        margin-bottom: 2px;
     }
   </style>
 </head>
@@ -324,296 +363,294 @@
   <noscript>Please enable JavaScript</noscript>
   <!-- Header -->
   <div class="title-bar">
-    <span style="line-height: 22px; padding-left: 5px; padding-right: 5px; color: #666; float: left;">Hue Dashboard</span>
-    <img src="static/spinner.gif" style="height: 24px; float: left;" id="navbar-spinner" />
-    <a href="https://www.github.com/blitzcode/hue-dashboard" style="line-height: 22px; padding-right: 5px; padding-left: 5px; color: #666; float: right;">Help</a>
+    <span class="title">Hue Dashboard</span>
+    <img src="static/spinner.gif" class="spinner" id="navbar-spinner" />
+    <a href="https://www.github.com/blitzcode/hue-dashboard">Help</a>
     <div style="both: clear"></div>
   </div>
   <!-- Content -->
-    </div>
-    <div class="light-display" id="lights">
+  <div class="tile-display" id="lights">
 
-      <div class="tile" style="opacity: 1.0;">
-        <div class="light-caption light-caption-group-header small">All Lights</div>
-        <img class="img-rounded" src="static/svg/bridge_v2.svg"/>
-        <div class="text-center">
-          <h6>
-            <small>
-              Model BSB002<br/>
-              IP 192.168.1.197<br/>
-              API v1.13.0<br/>
-              13 Lights Connected<br/>
-            </small>
-          </h6>
-        </div>
+    <div class="tile" style="opacity: 1.0;">
+      <div class="light-caption light-caption-group-header small">All Lights</div>
+      <img class="img-rounded" src="static/svg/bridge_v2.svg"/>
+      <div class="text-center">
+        <h6>
+          <small>
+            Model BSB002<br/>
+            IP 192.168.1.197<br/>
+            API v1.13.0<br/>
+            13 Lights Connected<br/>
+          </small>
+        </h6>
       </div>
-
-<div class="tile" id="light-Kinderzimmer-tile"><div class="light-caption light-caption-group-header small" id="light-Kinderzimmer-caption">Group<br>Kinderzimmer</div><img class="img-rounded" src="static/svg/hds.svg" id="light-Kinderzimmer-image"><div class="color-picker-curtain" style="display: none;" onclick="if (event.target.id == 'light-Kinderzimmer-color-picker-container') { this.style.display = 'none' }" id="light-Kinderzimmer-color-picker-container"><img class="color-picker-overlay" src="static/color_picker.png" id="light-Kinderzimmer-color-picker-overlay"></div><div class="color-picker-button" onclick="if (getElementById('light-Kinderzimmer-tile').style.opacity == 1)  { getElementById('light-Kinderzimmer-color-picker-container').style.display = 'block'; }"><div class="glyphicon glyphicon-tint color-picker-tint-icon"></div></div><div class="text-center"><button type="button" class="btn btn-sm btn-info" style="margin-top: 7px; margin-bottom: 9px;" id="light-Kinderzimmer-show-btn">Hide ◄</button></div><div class="progress" id="light-Kinderzimmer-brightness-container"><div class="progress-label-container"><div class="glyphicon glyphicon-minus minus-label"></div><div class="glyphicon glyphicon-plus plus-label"></div></div><div class="progress-bar progress-bar-info"></div></div></div>
-
-      <div class="tile" style="opacity: 1.0;">
-        <div class="light-caption small" style="">Kinderzimmer Tisch</div>
-        <img class="img-rounded" style="background: lightgreen;" src="static/svg/br30.svg"/>
-        <div style="display: none" id="light-0-color-picker">
-          <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'"></div>
-          <img class="color-picker-overlay" src="static/color_picker.png"/>
-        </div>
-        <div class="color-picker-button" onclick="getElementById('light-0-color-picker').style.display = 'block'">
-          <div class="glyphicon glyphicon-tint" style="margin: 3px"></div>
-        </div>
-        <div class="text-center">
-          <h6>
-            <small>
-              Hue Bulb A19
-              <br/>
-              Extended Color Light
-            </small>
-          </h6>
-        </div>
-        <div class="progress">
-          <div class="progress-label-container">
-            <div class="glyphicon glyphicon-minus minus-label">
-            </div>
-            <div class="glyphicon glyphicon-plus plus-label">
-            </div>
-            <div class="percentage-label">
-                <small>85%</small>
-            </div>
-          </div>
-          <div class="progress-bar progress-bar-info" role="progressbar" style="width: 85%;"></div>
-        </div>
-      </div>
-
-      <div class="tile">
-        <div class="light-caption light-caption-group-header small">Scenes</div>
-        <img class="img-rounded" src="static/svg/tap.svg" style="cursor: default;"/>
-        <div style="display: none" id="scenes-tile-scene-creator">
-          <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
-            <div class="scene-creator-frame">
-              <div class="light-checkbox-container small">
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
-                <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
-              </div>
-              <div class="scene-create-form input-group">
-                <input type="text" class="form-control input-sm" maxlength="30" value="New Scene">
-                <span class="input-group-btn">
-                  <button class="btn btn-sm btn-info">Create</button>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="text-center">
-          <h6>
-            <small>
-                6 Scenes
-            </small>
-          </h6>
-          <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-scene" onclick="getElementById('scenes-tile-scene-creator').style.display = 'block'" style="width: 32px;">
-              <span class="glyphicon glyphicon-plus"></span>
-            </button>
-            <button type="button" class="btn btn-info" style="width: 63px;">Show ►</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile">
-        <div class="light-caption small">Fernsehen</div>
-        <div class="circle-container">
-          <div class="circle" style="background: orange;"></div>
-          <div class="circle" style="background: green;"></div>
-          <div class="circle" style="background: white;"></div>
-          <div class="circle" style="background: blue;"></div>
-          <div class="circle" style="background: red;"></div>
-          <div class="circle" style="background: white; border-color: lightgrey;"></div>
-          <div class="circle" style="background: grey;"></div>
-          <div class="circle" style="background: pink;"></div>
-          <div class="circle" style="background: black;"></div>
-        </div>
-        <div class="text-center">
-          <h6>
-            <small>
-                Stube, Küche, …
-            </small>
-          </h6>
-          <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-scene btn-sm">
-              <span class="glyphicon glyphicon-th-list"></span>
-            </button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.style.display = 'none'; getElementById('delete-confirm-btn').style.display = 'block';">
-                Delete
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile" style="opacity: 1.0;">
-        <div class="light-caption light-caption-group-header small">Imported<br/>Scenes</div>
-        <div class="btn-group-vertical btn-group-xs scene-btn-group">
-          <button class="btn btn-scene"><small>Kinderzimmer Abe…</small></button>
-          <button class="btn btn-scene"><small>Schlafzimmer Abe…</small></button>
-          <button class="btn btn-scene"><small>Lesen</small></button>
-          <button class="btn btn-scene"><small>Besuch</small></button>
-          <button class="btn btn-scene"><small>Fernsehen</small></button>
-          <button class="btn btn-scene"><small>Farbig</small></button>
-          <button class="btn btn-scene"><small>Gemütlich</small></button>
-        </div>
-      </div>
-
-      <div class="tile">
-        <div class="light-caption light-caption-group-header small">Schedules</div>
-        <img class="img-rounded" src="static/svg/clock.svg" style="cursor: default;"/>
-        <div style="display: none" id="schedules-tile-schedules-creator">
-          <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
-            <div class="scene-creator-frame">
-              <div class="small">
-                at
-                <select id="hour">
-                  <option value="0"> 0 </option>
-                  <option value="1"> 1 </option>
-                  <option value="2"> 2 </option>
-                  <option value="16" selected="selected">16</option>
-                </select>
-                hour
-                <select id="minute">
-                  <option value="0"> 0 </option>
-                  <option value="1"> 5 </option>
-                  <option value="6" selected="selected"> 30</option>
-                </select>
-                minutes
-                <br/>
-                <br/>
-                activate scene
-                <select id="scene">
-                  <option value="0"> Besuch</option>
-                  <option value="1"> Abends</option>
-                </select>
-                but only on
-                <br/>
-                <br/>
-                <input type="checkbox" id="cb" checked="checked">Mon
-                <input type="checkbox" id="cb" checked="checked">Tue
-                <input type="checkbox" id="cb" checked="checked">Wed
-                <input type="checkbox" id="cb" checked="checked">Thu
-                <input type="checkbox" id="cb" checked="checked">Fri
-                <input type="checkbox" id="cb" checked="checked">Sat
-                <input type="checkbox" id="cb" checked="checked">Sun
-              </div>
-              <br/>
-              <div class="input-group">
-                <input type="text" class="form-control input-sm" maxlength="30" value="New Schedule">
-                <span class="input-group-btn">
-                  <button class="btn btn-sm btn-info" onclick="window.alert(getElementById('myselect').value)">Create</button>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="text-center">
-          <h6>
-            <small style="color: green;">
-                <span class="glyphicon glyphicon-ok"></span>
-                Server Time Matches
-            </small>
-          </h6>
-          <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-scene" onclick="getElementById('schedules-tile-schedules-creator').style.display = 'block'" style="width: 32px;">
-              <span class="glyphicon glyphicon-plus"></span>
-            </button>
-            <button type="button" class="btn btn-info" style="width: 63px;">Show ►</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile">
-        <div class="light-caption small">Aufwachen</div>
-        <div class="text-center">
-          <div style="font-size: 18pt; font-weight: 300;">
-            <span style="vertical-align: middle;" class="glyphicon glyphicon-time"></span>
-            <span style="vertical-align: middle;">16:30</span>
-          </div>
-          <div>
-            <span class="day-enabled">Mo<span/>
-            <span class="day-enabled">Tu<span/>
-            <span class="day-enabled">We<span/>
-            <span class="day-disabled">Th<span/>
-            <span class="day-disabled">Fr<span/>
-            <span class="day-enabled">Sa<span/>
-            <span class="day-enabled">Su<span/>
-          </div>
-          <span class="glyphicon glyphicon-chevron-down" style="font-size: 18pt; margin-top: 3px; margin-bottom: 2px;"></span>
-          <div class="light-caption small" style="margin: 0px; padding: 0px;">
-            Kinderzimmer Abends
-          </div>
-          <div id="delete-confirm-btn" style="display: none;">
-            <button type="button" class="btn btn-danger btn-sm">Confirm</button>
-          </div>
-          <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-scene btn-sm">
-              <span class="glyphicon glyphicon-th-list"></span>
-            </button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.style.display = 'none'; getElementById('delete-confirm-btn').style.display = 'block';">
-                Delete
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="tile">
-        <div class="light-caption light-caption-group-header small">Server</div>
-        <img class="img-rounded" src="static/svg/raspberrypi.svg"/>
-        <div class="text-center">
-          <div id="server-warning" style="margin-top: -13px;">
-            <h6>
-              <small>
-                  CPU Load: 0.27
-                  <br/>
-                  RAM Usage: 11%
-              </small>
-            </h6>
-            <button type="button" class="btn btn-danger btn-sm" onclick="getElementById('server-warning').style.display = 'none'; getElementById('server-danger-bttns').style.display = 'block'; ">Admin</button>
-          </div>
-          <div class="btn-group-vertical btn-group-sm" id="server-danger-bttns" style="display: none;">
-            <button type="button" class="btn btn-danger">Shutdown</button>
-            <button type="button" class="btn btn-danger">Reboot</button>
-          </div>
-        </div>
-      </div>
-
     </div>
 
+    <div class="tile" id="light-Kinderzimmer-tile"><div class="light-caption light-caption-group-header small" id="light-Kinderzimmer-caption">Group<br>Kinderzimmer</div><img class="img-rounded" src="static/svg/hds.svg" id="light-Kinderzimmer-image"><div class="color-picker-curtain" style="display: none;" onclick="if (event.target.id == 'light-Kinderzimmer-color-picker-container') { this.style.display = 'none' }" id="light-Kinderzimmer-color-picker-container"><img class="color-picker-overlay" src="static/color_picker.png" id="light-Kinderzimmer-color-picker-overlay"></div><div class="color-picker-button" onclick="if (getElementById('light-Kinderzimmer-tile').style.opacity == 1)  { getElementById('light-Kinderzimmer-color-picker-container').style.display = 'block'; }"><div class="glyphicon glyphicon-tint color-picker-tint-icon"></div></div><div class="text-center"><button type="button" class="btn btn-sm btn-info show-hide-btn group-switch-show-hide-btn" id="light-Kinderzimmer-show-btn">Hide ◄</button></div><div class="progress" id="light-Kinderzimmer-brightness-container"><div class="progress-label-container"><div class="glyphicon glyphicon-minus minus-label"></div><div class="glyphicon glyphicon-plus plus-label"></div></div><div class="progress-bar progress-bar-info"></div></div></div>
+
+    <div class="tile" style="opacity: 1.0;">
+      <div class="light-caption small">Kinderzimmer Tisch</div>
+      <img class="img-rounded" style="background: lightgreen;" src="static/svg/br30.svg"/>
+      <div style="display: none" id="light-0-color-picker">
+        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'"></div>
+        <img class="color-picker-overlay" src="static/color_picker.png"/>
+      </div>
+      <div class="color-picker-button" onclick="getElementById('light-0-color-picker').style.display = 'block'">
+        <div class="glyphicon glyphicon-tint" style="margin: 3px"></div>
+      </div>
+      <div class="text-center">
+        <h6>
+          <small>
+            Hue Bulb A19
+            <br/>
+            Extended Color Light
+          </small>
+        </h6>
+      </div>
+      <div class="progress">
+        <div class="progress-label-container">
+          <div class="glyphicon glyphicon-minus minus-label">
+          </div>
+          <div class="glyphicon glyphicon-plus plus-label">
+          </div>
+          <div class="percentage-label">
+              <small>85%</small>
+          </div>
+        </div>
+        <div class="progress-bar progress-bar-info" role="progressbar" style="width: 85%;"></div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="light-caption light-caption-group-header small">Scenes</div>
+      <img class="img-rounded" src="static/svg/tap.svg" style="cursor: default;"/>
+      <div style="display: none" id="scenes-tile-scene-creator">
+        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
+          <div class="scene-creator-frame">
+            <div class="light-checkbox-container small">
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Decke <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Kugel <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Schlafzimmer Tisch <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Hocker       <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Kugel        <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 1   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 2   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 3   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 4   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 5   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Leuchter 6   <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Schrank      <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Stube Wand         <br/>
+              <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
+            </div>
+            <div class="scene-create-form input-group">
+              <input type="text" class="form-control input-sm" maxlength="30" value="New Scene">
+              <span class="input-group-btn">
+                <button class="btn btn-sm btn-info">Create</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-center">
+        <h6>
+          <small>
+              6 Scenes
+          </small>
+        </h6>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-scene plus-btn" onclick="getElementById('scenes-tile-scene-creator').style.display = 'block'">
+            <span class="glyphicon glyphicon-plus"></span>
+          </button>
+          <button type="button" class="btn btn-info show-hide-btn">Show ►</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="light-caption small">Fernsehen</div>
+      <div class="circle-container">
+        <div class="circle" style="background: orange;"></div>
+        <div class="circle" style="background: green;"></div>
+        <div class="circle" style="background: white;"></div>
+        <div class="circle" style="background: blue;"></div>
+        <div class="circle" style="background: red;"></div>
+        <div class="circle" style="background: white; border-color: lightgrey;"></div>
+        <div class="circle" style="background: grey;"></div>
+        <div class="circle" style="background: pink;"></div>
+        <div class="circle" style="background: black;"></div>
+      </div>
+      <div class="text-center">
+        <h6>
+          <small>
+              Stube, Küche, …
+          </small>
+        </h6>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-scene btn-sm">
+            <span class="glyphicon glyphicon-th-list"></span>
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.style.display = 'none'; getElementById('delete-confirm-btn').style.display = 'block';">
+              Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile" style="opacity: 1.0;">
+      <div class="light-caption light-caption-group-header small">Imported<br/>Scenes</div>
+      <div class="btn-group-vertical btn-group-xs scene-btn-group">
+        <button class="btn btn-scene"><small>Kinderzimmer Abe…</small></button>
+        <button class="btn btn-scene"><small>Schlafzimmer Abe…</small></button>
+        <button class="btn btn-scene"><small>Lesen</small></button>
+        <button class="btn btn-scene"><small>Besuch</small></button>
+        <button class="btn btn-scene"><small>Fernsehen</small></button>
+        <button class="btn btn-scene"><small>Farbig</small></button>
+        <button class="btn btn-scene"><small>Gemütlich</small></button>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="light-caption light-caption-group-header small">Schedules</div>
+      <img class="img-rounded" src="static/svg/clock.svg" style="cursor: default;"/>
+      <div style="display: none" id="schedules-tile-schedules-creator">
+        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
+          <div class="scene-creator-frame">
+            <div class="small">
+              at
+              <select id="hour">
+                <option value="0"> 0 </option>
+                <option value="1"> 1 </option>
+                <option value="2"> 2 </option>
+                <option value="16" selected="selected">16</option>
+              </select>
+              hour
+              <select id="minute">
+                <option value="0"> 0 </option>
+                <option value="1"> 5 </option>
+                <option value="6" selected="selected"> 30</option>
+              </select>
+              minutes
+              <br/>
+              <br/>
+              activate scene
+              <select id="scene">
+                <option value="0"> Besuch</option>
+                <option value="1"> Abends</option>
+              </select>
+              but only on
+              <br/>
+              <br/>
+              <input type="checkbox" id="cb" checked="checked">Mon
+              <input type="checkbox" id="cb" checked="checked">Tue
+              <input type="checkbox" id="cb" checked="checked">Wed
+              <input type="checkbox" id="cb" checked="checked">Thu
+              <input type="checkbox" id="cb" checked="checked">Fri
+              <input type="checkbox" id="cb" checked="checked">Sat
+              <input type="checkbox" id="cb" checked="checked">Sun
+            </div>
+            <br/>
+            <div class="input-group">
+              <input type="text" class="form-control input-sm" maxlength="30" value="New Schedule">
+              <span class="input-group-btn">
+                <button class="btn btn-sm btn-info" onclick="window.alert(getElementById('myselect').value)">Create</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="text-center">
+        <h6>
+          <small style="color: green;">
+              <span class="glyphicon glyphicon-ok"></span>
+              Server Time Matches
+          </small>
+        </h6>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-scene plus-btn" onclick="getElementById('schedules-tile-schedules-creator').style.display = 'block'"">
+            <span class="glyphicon glyphicon-plus"></span>
+          </button>
+          <button type="button" class="btn btn-info show-hide-btn">Show ►</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="light-caption small">Aufwachen</div>
+      <div class="text-center">
+        <div style="font-size: 18pt; font-weight: 300;">
+          <span style="vertical-align: middle;" class="glyphicon glyphicon-time"></span>
+          <span style="vertical-align: middle;">16:30</span>
+        </div>
+        <div>
+          <span class="day-enabled">Mo<span/>
+          <span class="day-enabled">Tu<span/>
+          <span class="day-enabled">We<span/>
+          <span class="day-disabled">Th<span/>
+          <span class="day-disabled">Fr<span/>
+          <span class="day-enabled">Sa<span/>
+          <span class="day-enabled">Su<span/>
+        </div>
+        <span class="glyphicon glyphicon-chevron-down schedule-chevron-down"></span>
+        <div class="light-caption small" style="margin: 0px; padding: 0px;">
+          Kinderzimmer Abends
+        </div>
+        <div id="delete-confirm-btn" style="display: none;">
+          <button type="button" class="btn btn-danger btn-sm">Confirm</button>
+        </div>
+        <div class="btn-group btn-group-sm">
+          <button type="button" class="btn btn-scene btn-sm">
+            <span class="glyphicon glyphicon-th-list"></span>
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="this.parentNode.style.display = 'none'; getElementById('delete-confirm-btn').style.display = 'block';">
+              Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile">
+      <div class="light-caption light-caption-group-header small">Server</div>
+      <img class="img-rounded" src="static/svg/raspberrypi.svg"/>
+      <div class="text-center">
+        <div id="server-warning">
+          <h6>
+            <small>
+                CPU Load: 0.27
+                <br/>
+                RAM Usage: 11%
+            </small>
+          </h6>
+          <button type="button" class="btn btn-danger btn-sm" onclick="getElementById('server-warning').style.display = 'none'; getElementById('server-danger-bttns').style.display = 'block'; ">Admin</button>
+        </div>
+        <div class="btn-group-vertical btn-group-sm" id="server-danger-bttns" style="display: none;">
+          <button type="button" class="btn btn-danger">Shutdown</button>
+          <button type="button" class="btn btn-danger">Reboot</button>
+        </div>
+      </div>
+    </div>
+
+ </div>
 </body>
 </html>
 
