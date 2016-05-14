@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- <meta name="apple-mobile-web-app-capable" content="yes"> -->
   <title>Hue Dashboard</title>
   <link rel="icon" href="static/favicon.png">
   <!-- Bootstrap -->
@@ -108,14 +108,30 @@
     .title-bar
     {
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
+        box-shadow: inset 0 1px  rgba(255, 255, 255, .15), 0 1px 5px rgba(0, 0, 0, .075);
+        position: fixed;
+        left: 0px;
+        right: 0px;
+        margin: auto;
+        z-index: 2;
         padding: 5px;
-        height: 33px;
+        height: 30px;
+        width: 268px;
         border-style: solid;
-        border-width: 0px 0px 1px 0px;
+        border-width: 0px 1px 1px 1px;
         border-color: #ddd;
-        line-height: 22px;
+        border-radius: 0px 0px 8px 8px;
+        line-height: 19px;
         color: #666;
+    }
+    .title-bar .icon
+    {
+        height: 21px;
+        padding-left: 3px;
+        padding-right: 1px;
+        margin-top: -2px;
+        float: left;
+        opacity: 0.5;
     }
     .title-bar .title
     {
@@ -123,15 +139,28 @@
         padding-right: 5px;
         float: left;
     }
+    .title-bar .separator
+    {
+        height: 29px;
+        width: 1px;
+        background: #ddd;
+        margin-top: -5px;
+        margin-left: 5px;
+        margin-right: 5px;
+        float: left;
+    }
+    .title-bar .image
+    {
+        height: 24px;
+        float: left;
+        margin-top: -3px;
+        margin-left: 1px;
+        opacity: 0.5;
+    }
     .title-bar a
     {
         padding-left: 5px;
         padding-right: 5px;
-        float: right;
-    }
-    .title-bar .spinner
-    {
-        height: 24px;
         float: left;
     }
     .tile-display
@@ -379,11 +408,16 @@
   <noscript>Please enable JavaScript</noscript>
   <!-- Header -->
   <div class="title-bar">
+    <img src="static/favicon.png" class="icon"/>
     <span class="title">Hue Dashboard</span>
-    <img src="static/spinner.gif" class="spinner" id="navbar-spinner" />
+    <div class="separator"></div>
     <a href="https://www.github.com/blitzcode/hue-dashboard">Help</a>
-    <div style="both: clear"></div>
+    <div class="separator"></div>
+    <img src="static/svg/refresh.svg" onclick="window.location.reload(false)" style="cursor: pointer;" class="image" />
+    <div class="separator"></div>
+    <img src="static/spinner.gif" class="image" id="navbar-spinner" />
   </div>
+  <div style="height: 30px;"></div>
   <!-- Content -->
   <div class="tile-display" id="lights">
     <div class="tile" style="display: none;"></div>

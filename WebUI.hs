@@ -91,7 +91,6 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
-    -- TODO: Fixed-size navbar on top, more careful layout
     -- TODO: Log amount of tiles and UI handlers generated
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
@@ -146,7 +145,7 @@ setup ae@AppEnv { .. } window = do
     --
     sequence_ . reverse $ page ^. pgUIActions
     -- We're done building the page, hide spinner
-    void $ getElementByIdSafe window "navbar-spinner" & set style [("display", "none")]
+    void $ getElementByIdSafe window "navbar-spinner" & set UI.src "static/svg/checkmark.svg"
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
