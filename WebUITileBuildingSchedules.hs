@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import Data.Monoid
 import Data.List
 import Data.Maybe
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Data.HashSet as HS
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>), element)
@@ -51,9 +52,6 @@ days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 -- 'Schedules' group is visible and subsequent elements should be added hidden or not
 --
 -- TODO: Schedule creation and deletion currently requires a page reload
--- TODO: Detect when there is a large time discrepancy between server and client,
---       otherwise users might wonder why their schedules are running at the wrong time,
---       maybe display a special error tile
 -- TODO: Add 'run once' option
 --
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
@@ -71,9 +69,17 @@ addSchedulesTile sceneNames userID window = do
       queryGroupShown                      =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
+  -- Client and server epoch time in ms
+  clientTime <- liftIO $ runUI window (callFunction $ ffi "(new Date()).getTime()" :: UI Double)
+  serverTime <- (1000 *) . realToFrac <$> liftIO getPOSIXTime :: PageBuilder Double
+  let timeDiff          = abs $ clientTime - serverTime
+      timeDiffThreshold = 120 * 1000
+  when (timeDiff > timeDiffThreshold) $
+      traceS TLWarn $ printf "Time difference between client and server is %i seconds"
+                      (round $ timeDiff / 1000 :: Int)
   -- Tile
   addPageTile $
-    H.div H.! A.class_ "thumbnail" $ do
+    H.div H.! A.class_ "tile" $ do
       -- Caption and scene icon
       H.div H.! A.class_ "light-caption light-caption-group-header small"
             H.! A.style "cursor: default;"
@@ -131,21 +137,29 @@ addSchedulesTile sceneNames userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue scheduleCreatorBtnID)
                        $ "Create"
-      -- Group show / hide widget and 'New' button
-      H.div H.! A.class_ "text-center" $
-        H.div H.! A.class_ "btn-group-vertical btn-group-sm"
-              H.! A.style "margin-top: 9px;" $ do
+      H.div H.! A.class_ "text-center" $ do
+        -- Server / client time status
+        H.h6 $
+            if   timeDiff > timeDiffThreshold
+            then H.small H.! A.style "color: red;" $ do
+                   H.span H.! A.class_ "glyphicon glyphicon-remove" $ return ()
+                   H.toHtml (" Server Time Differs" :: String)
+            else H.small H.! A.style "color: green;" $ do
+                   H.span H.! A.class_ "glyphicon glyphicon-ok" $ return ()
+                   H.toHtml (" Server Time Matches" :: String)
+        -- Group show / hide widget and 'New' button
+        H.div H.! A.class_ "btn-group btn-group-sm" $ do
           H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info"
-                   H.! A.id (H.toValue schedulesTileHideShowBtnID)
-                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info"
+                   H.! A.class_ "btn btn-scene plus-btn"
                    H.! A.onclick
                      ( H.toValue $
                          "getElementById('" <> scheduleCreatorID <>"').style.display = 'block'"
-                     )
-                   $ "New"
+                     ) $
+                     H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-info show-hide-btn"
+                   H.! A.id (H.toValue schedulesTileHideShowBtnID)
+                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window scheduleCreatorBtnID >>= \btn ->
@@ -249,7 +263,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
       minutePretty       = if length minute == 1 then "0" <> minute else minute
   -- Tile
   addPageTile $
-    H.div H.! A.class_ (H.toValue $ "thumbnail " <> scheduleTilesClass)
+    H.div H.! A.class_ (H.toValue $ "tile " <> scheduleTilesClass)
           H.! A.style  ( H.toValue $ ( if   shown
                                        then "display: block;"
                                        else "display: none;"
