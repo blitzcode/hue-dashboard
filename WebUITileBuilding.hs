@@ -32,6 +32,7 @@ import AppDefs
 import PersistConfig
 import WebUIHelpers
 import WebUIREST
+import ProcFS
 
 -- Code for building the individual tiles making up our user interface
 
@@ -452,13 +453,14 @@ addColorPicker tileID containerID overlayID = do
 
 -- Tile for shutting down / rebooting server
 --
--- TODO: Show server information like CPU load, memory usage, uptime, local time, etc.
 -- TODO: Add option to backup / restore configuration
 -- TODO: Add a 'Log' button to see record of last ten errors / warnings
 --
 addServerTile :: Window -> PageBuilder ()
 addServerTile window = do
   AppEnv { .. } <- ask
+  -- System status
+  (avg15m, ramUsage) <- liftIO getSystemStatus
   -- Build tile
   void $ do
     addPageTile $
@@ -471,14 +473,16 @@ addServerTile window = do
               H.! A.style "cursor: default;"
         H.div H.! A.id "server-warning" $ do
           H.h6 $
-            H.small $
-              "Administrative Options"
+            H.small $ do
+              H.toHtml $ (printf "CPU Load: %.2f" avg15m :: String)
+              H.br
+              H.toHtml $ (printf "RAM Usage: %.1f%%" ramUsage :: String)
           H.button H.! A.type_ "button"
                    H.! A.class_ "btn btn-danger btn-sm"
                    H.! A.onclick ( "getElementById('server-warning').style.display='none';" <>
                                    "getElementById('server-danger-bttns').style.display='block';"
                                  )
-                   $ "Show"
+                   $ "Admin"
         H.div H.! A.class_ "btn-group-vertical btn-group-sm"
               H.! A.id "server-danger-bttns"
               H.! A.style "display: none;" $ do
