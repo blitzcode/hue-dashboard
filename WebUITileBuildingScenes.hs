@@ -90,9 +90,11 @@ addScenesTile userID window = do
     return . map (\(lgtID, lgt) -> (lgt ^. lgtName, lgtID)) .
       sortBy (compare `Data.Function.on` (^. _2 . lgtName)) . HM.toList =<<
         (liftIO . atomically $ readTVar _aeLights)
+  -- Scene count
+  numScenes <- length . _pcScenes <$> (liftIO . atomically $ readTVar _aePC)
   -- Tile
   addPageTile $
-    H.div H.! A.class_ "thumbnail" $ do
+    H.div H.! A.class_ "tile" $ do
       -- Caption and scene icon
       H.div H.! A.class_ "light-caption light-caption-group-header small"
             H.! A.style "cursor: default;"
@@ -130,21 +132,27 @@ addScenesTile userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue sceneCreatorBtnID)
                        $ "Create"
-      -- Group show / hide widget and 'New' button
-      H.div H.! A.class_ "text-center" $
-        H.div H.! A.class_ "btn-group-vertical btn-group-sm"
-              H.! A.style "margin-top: 9px;" $ do
+      H.div H.! A.class_ "text-center" $ do
+        -- Scene count
+        H.h6 $
+          H.small $
+            H.toHtml $ case numScenes of
+                         0 -> "No Scenes"
+                         1 -> "1 Scene"
+                         _ -> show numScenes <> " Scenes"
+        -- Group show / hide widget and 'New' button
+        H.div H.! A.class_ "btn-group btn-group-sm" $ do
           H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info"
-                   H.! A.id (H.toValue scenesTileHideShowBtnID)
-                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
-          H.button H.! A.type_ "button"
-                   H.! A.class_ "btn btn-info"
+                   H.! A.class_ "btn btn-scene plus-btn"
                    H.! A.onclick
                      ( H.toValue $
                          "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
-                     )
-                   $ "New"
+                     ) $
+                     H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
+          H.button H.! A.type_ "button"
+                   H.! A.class_ "btn btn-info show-hide-btn"
+                   H.! A.id (H.toValue scenesTileHideShowBtnID)
+                   $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
@@ -231,7 +239,7 @@ addSceneTile sceneName scene shown window = do
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   -- Tile
   addPageTile $
-    H.div H.! A.class_ (H.toValue $ "thumbnail " <> sceneTilesClass)
+    H.div H.! A.class_ (H.toValue $ "tile " <> sceneTilesClass)
           H.! A.style  ( H.toValue $ ( if   shown
                                        then "display: block;"
                                        else "display: none;"
@@ -345,7 +353,7 @@ addImportedScenesTile shown window = do
       topScenes = take 8 fixNames
   -- Build scenes tile
   addPageTile $
-    H.div H.! A.class_ (H.toValue $ "thumbnail " <> sceneTilesClass)
+    H.div H.! A.class_ (H.toValue $ "tile " <> sceneTilesClass)
           H.! A.style  ( H.toValue $ ( if   shown
                                        then "display: block;"
                                        else "display: none;"
