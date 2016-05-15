@@ -114,8 +114,6 @@ addScenesTile userID window = do
             $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "light-checkbox-container small" $
-            -- TODO: Use Bootstrap styled form elements
-            -- TODO: Add explanation text, dialog title
             -- TODO: More light selection options: all, none, all on, by group, etc.
             forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do -- Light checkboxes
               H.input H.! A.type_ "checkbox"
@@ -126,12 +124,20 @@ addScenesTile userID window = do
             H.input H.! A.type_ "text"
                     H.! A.class_ "form-control input-sm"
                     H.! A.maxlength "30"
-                    H.! A.placeholder "Name"
+                    H.! A.placeholder "Name Required"
                     H.! A.id (H.toValue sceneCreatorNameID)
             H.span H.! A.class_ "input-group-btn" $
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue sceneCreatorBtnID)
                        $ "Create"
+          H.h6 $
+            H.small $
+              H.toHtml $
+                ( "Scenes capture the state of one or more lights, " <>
+                  "including them being turned off. " <>
+                  "Please select the lights to be saved and provide a name."
+                  :: String
+                )
       -- Scene count
       H.h6 $
         H.small $

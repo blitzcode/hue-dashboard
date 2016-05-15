@@ -350,8 +350,6 @@
     }
     .tile-display .scene-create-form
     {
-        position: absolute;
-        bottom: 10px;
         width: 300px;
         margin: auto;
     }
@@ -360,8 +358,12 @@
         column-count: 2;
         -moz-column-count: 2;
         -webkit-column-count: 2;
+        -webkit-column-gap: 5px;
+        -moz-column-gap: 5px;
+        column-gap: 5px;
+        vertical-align: middle;
         margin-top: -5px;
-        margin-bottom: 40px;
+        margin-bottom: 10px;
         line-height: 85%;
         text-align: left;
     }
@@ -490,7 +492,7 @@
       <div class="light-caption light-caption-group-header small">Scenes</div>
       <img class="img-rounded" src="static/svg/tap.svg" style="cursor: default;"/>
       <div style="display: none" id="scenes-tile-scene-creator">
-        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
+        <div class="color-picker-curtain" onclick="/*this.parentNode.style.display = 'none'*/">
           <div class="scene-creator-frame">
             <div class="light-checkbox-container small">
               <input type="checkbox" id="inlineCheckbox1"> Kinderzimmer Decke <br/>
@@ -529,11 +531,17 @@
               <input type="checkbox" id="inlineCheckbox1"> Kueche Decke       <br/>
             </div>
             <div class="scene-create-form input-group">
-              <input type="text" class="form-control input-sm" maxlength="30" value="New Scene">
+              <input type="text" class="form-control input-sm" maxlength="30" placeholder="Name Required">
               <span class="input-group-btn">
-                <button class="btn btn-sm btn-info">Create</button>
+                <button class="btn btn-sm btn-info">Create / Update</button>
               </span>
             </div>
+            <h6>
+              <small>
+                  Scenes capture the state of one or more lights, including them being turned off.
+                  Please select the lights to be saved and provide a name.
+              </small>
+            </h6>
           </div>
         </div>
       </div>
