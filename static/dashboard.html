@@ -408,13 +408,30 @@
     .tile-display .schedule-chevron-down
     {
         font-size: 18pt;
-        margin-top: 3px;
-        margin-bottom: 2px;
+        margin-top: 1px;
     }
     .tile-display .schedule-time-display
     {
         font-size: 18pt;
         font-weight: 300;
+        margin-bottom: -8px;
+    }
+    .tile-display .schedule-action
+    {
+        color: black;
+        font-size: 7pt;
+        margin-top: -3px;
+    }
+    .tile-display .schedule-day-container
+    {
+        display: table;
+        margin: 0 auto;
+    }
+    .tile-display .schedule-day-container .day
+    {
+        text-align: center;
+        float: left;
+        margin-right: 10px;
     }
     .tile-display .no-padding-margin
     {
@@ -611,7 +628,7 @@
       <div class="light-caption light-caption-group-header small">Schedules</div>
       <img class="img-rounded" src="static/svg/clock.svg" style="cursor: default;"/>
       <div style="display: none" id="schedules-tile-schedules-creator">
-        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
+        <div class="color-picker-curtain" onclick="/*this.parentNode.style.display = 'none'*/">
           <div class="scene-creator-frame">
             <div class="small">
               at
@@ -630,29 +647,58 @@
               minutes
               <br/>
               <br/>
-              activate scene
-              <select id="scene">
-                <option value="0"> Besuch</option>
-                <option value="1"> Abends</option>
+              do
+              <select id="action">
+                <option selected="selected">activate</option>
+                <option>turn lights off in</option>
+                <option>blink lights in</option>
               </select>
-              but only on
               <br/>
               <br/>
-              <input type="checkbox" id="cb" checked="checked">Mon
-              <input type="checkbox" id="cb" checked="checked">Tue
-              <input type="checkbox" id="cb" checked="checked">Wed
-              <input type="checkbox" id="cb" checked="checked">Thu
-              <input type="checkbox" id="cb" checked="checked">Fri
-              <input type="checkbox" id="cb" checked="checked">Sat
-              <input type="checkbox" id="cb" checked="checked">Sun
+              scene
+              <select id="scene">
+                <option value="0">Besuch</option>
+                <option value="1">Abends</option>
+              </select>
+              on
+              <br/>
+              <br/>
+              <div class="schedule-day-container">
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Mon
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Tue
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Wed
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Thu
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Fri
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Sat
+                </div>
+                <div class="day">
+                    <input type="checkbox" id="cb" checked="checked"><br/>Sun
+                </div>
+              </div>
             </div>
             <br/>
             <div class="input-group">
-              <input type="text" class="form-control input-sm" maxlength="30" value="New Schedule">
+              <input type="text" class="form-control input-sm" maxlength="30" placeholder="Name Required">
               <span class="input-group-btn">
-                <button class="btn btn-sm btn-info" onclick="window.alert(getElementById('myselect').value)">Create</button>
+                <button class="btn btn-sm btn-info" onclick="window.alert(getElementById('myselect').value)">Create / Update</button>
               </span>
             </div>
+            <h6>
+              <small>
+                  Schedules allow to program reoccurring changes to the state of lights
+              </small>
+            </h6>
           </div>
         </div>
       </div>
@@ -689,6 +735,7 @@
           <span class="day-enabled">Su<span/>
         </div>
         <span class="glyphicon glyphicon-chevron-down schedule-chevron-down"></span>
+        <div class="schedule-action">Turn Off</div>
         <div class="light-caption small no-padding-margin">
           Kinderzimmer Abends
         </div>

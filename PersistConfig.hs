@@ -6,7 +6,8 @@
              , ScopedTypeVariables
              , FlexibleInstances
              , TypeSynonymInstances
-             , GeneralizedNewtypeDeriving #-}
+             , GeneralizedNewtypeDeriving
+             , DeriveGeneric #-}
 
 module PersistConfig ( configFilePath
                      , PersistConfig(..)
@@ -17,13 +18,15 @@ module PersistConfig ( configFilePath
                      , pcUserData
                      , pcScenes
                      , pcSchedules
-                     , sDays
                      , sHour
                      , sMinute
                      , sScene
+                     , sDays
+                     , sAction
                      , sTrigStatus
                      , Scene
                      , SceneName
+                     , SceneAction(..)
                      , Schedule(..)
                      , ScheduleTriggerStatus(..)
                      , ScheduleName
@@ -42,6 +45,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Data.Monoid
 import Data.Coerce
+import GHC.Generics
 
 import Util
 import Trace
@@ -62,11 +66,18 @@ data ScheduleTriggerStatus = STJustCreated      -- Just added, determine what to
                            | STPending          -- Trigger at earliest convenience after due time
                              deriving (Eq, Show)
 
+data SceneAction = SAActivate | SATurnOff | SABlink
+                   deriving (Eq, Show, Generic)
+
+instance FromJSON SceneAction
+instance ToJSON SceneAction
+
 -- Schedules
 data Schedule = Schedule { _sHour       :: !Int
                          , _sMinute     :: !Int
                          , _sScene      :: !SceneName
                          , _sDays       :: ![Bool]
+                         , _sAction     :: !SceneAction
                            -- We don't serialize or compare this, only for the
                            -- scheduleWatcher thread to keep track of status
                          , _sTrigStatus :: !ScheduleTriggerStatus
@@ -77,7 +88,7 @@ type ScheduleMap  = HM.HashMap ScheduleName Schedule
 makeLenses ''Schedule
 
 defaultSchedule :: Schedule
-defaultSchedule = Schedule 16 30 "SceneName" (replicate 7 True) STJustCreated
+defaultSchedule = Schedule 16 30 "SceneName" (replicate 7 True) SAActivate STJustCreated
 
 instance FromJSON Schedule where
     parseJSON (Object o) =
@@ -85,6 +96,7 @@ instance FromJSON Schedule where
                  <*> o .:? "_sMinute" .!= _sMinute defaultSchedule
                  <*> o .:? "_sScene"  .!= _sScene  defaultSchedule
                  <*> o .:? "_sDays"   .!= _sDays   defaultSchedule
+                 <*> o .:? "_sAction" .!= _sAction defaultSchedule
                  <*> pure STJustCreated
     parseJSON _ = mzero
 
@@ -94,6 +106,7 @@ instance ToJSON Schedule where
              , "_sMinute" .= _sMinute
              , "_sScene"  .= _sScene
              , "_sDays"   .= _sDays
+             , "_sAction" .= _sAction
              ]
 
 -- Ignore sTrigStatus, just a runtime artifact. Don't write
@@ -102,7 +115,8 @@ instance Eq Schedule where
     (==) a b = a ^. sHour   == b ^. sHour   &&
                a ^. sMinute == b ^. sMinute &&
                a ^. sScene  == b ^. sScene  &&
-               a ^. sDays   == b ^. sDays
+               a ^. sDays   == b ^. sDays   &&
+               a ^. sAction == b ^. sAction
 
 -- User data
 

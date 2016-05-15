@@ -93,7 +93,18 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                           Just scene ->
                             -- Trigger scene
                             tell $
-                              [ lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) scene
+                              [ case sched ^. sAction of
+                                  SAActivate ->
+                                    lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) scene
+                                  SATurnOff  ->
+                                    lightsSwitchOnOff (pc ^. pcBridgeIP)
+                                                      (pc ^. pcBridgeUserID)
+                                                      (map fst scene)
+                                                      False
+                                  SABlink    ->
+                                    lightsBreatheCycle (pc ^. pcBridgeIP)
+                                                       (pc ^. pcBridgeUserID)
+                                                       (map fst scene)
                               , traceS TLInfo $ "Schedule '" <> schedName <>
                                                  "' has triggered scene '" <> (sched ^. sScene)
                                                  <> "'"

@@ -39,8 +39,15 @@ scheduleTilesClass :: String
 scheduleTilesClass = "schedule-tiles-hide-show"
 
 -- Overwrite or create schedule
-createSchedule :: TVar PersistConfig -> ScheduleName -> SceneName -> Int -> Int -> [Bool] -> IO ()
-createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays =
+createSchedule :: TVar PersistConfig
+               -> ScheduleName
+               -> SceneName
+               -> Int
+               -> Int
+               -> [Bool]
+               -> SceneAction
+               -> IO ()
+createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays _sAction =
     atomically $ modifyTVar' tvPC (pcSchedules . at scheduleName ?~
         Schedule { _sTrigStatus = STJustCreated, .. })
 
@@ -61,10 +68,14 @@ addSchedulesTile sceneNames userID window = do
       scheduleCreatorBtnID       = "schedule-creator-dialog-btn"        :: String
       scheduleCreatorHourID      = "schedule-creator-dialog-hour"       :: String
       scheduleCreatorMinuteID    = "schedule-creator-dialog-minute"     :: String
+      scheduleCreatorActionID    = "schedule-creator-dialog-action"     :: String
       scheduleCreatorSceneID     = "schedule-creator-dialog-scene"      :: String
       scheduleCreatorDayID day   = "schedule-creator-dialog-day" <> day :: String
       schedulesTileHideShowBtnID = "schedules-tile-hide-show-btn"       :: String
       schedulesTileGroupName     = GroupName "<SchedulesTileGroup>"
+      actionActivate             = "activate"                           :: String
+      actionTurnOff              = "turn-off"                           :: String
+      actionBlink                = "blink"                              :: String
       queryGroupShown            =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
@@ -98,50 +109,57 @@ addSchedulesTile sceneNames userID window = do
             $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
           H.div H.! A.class_ "small" $ do
-            -- TODO: Use Bootstrap styled form elements
-            -- TODO: Add explanation text, dialog title
-            -- TODO: Replace 'activate' with dropdown  with the following options
-            --       'activate'
-            --       'turn off lights in'
-            --       'blink lights in'
-            -- TODO: Put day labels below checkboxes to make layout less cramped
-            -- TODO: Button should say 'Create / Update'
             void $ "at "
             H.select H.! A.id (H.toValue scheduleCreatorHourID) $
               forM_ ([0..23] :: [Int]) $ \h ->
                 if  h == 16 -- Default
-                then H.option H.! A.value "16" H.! A.selected "selected" $ void "16"
+                then H.option H.! A.value "16" H.! A.selected "selected" $ "16"
                 else H.option H.! A.value (H.toValue . show $ h) $ H.toHtml (show h)
             void $ " hour "
             H.select H.! A.id (H.toValue scheduleCreatorMinuteID) $
               forM_ ([0..59] :: [Int]) $ \m ->
                 if  m == 30 -- Default
-                then H.option H.! A.value "30" H.! A.selected "selected" $ void "30"
+                then H.option H.! A.value "30" H.! A.selected "selected" $ "30"
                 else H.option H.! A.value (H.toValue . show $ m) $ H.toHtml (show m)
             void $ " minutes"
             H.br >> H.br
-            void $ "activate scene "
+            void $ "do "
+            H.select H.! A.id (H.toValue scheduleCreatorActionID) $ do
+              H.option H.! A.value (H.toValue actionActivate) $ "activate"
+              H.option H.! A.value (H.toValue actionTurnOff ) $ "turn lights off in"
+              H.option H.! A.value (H.toValue actionBlink   ) $ "blink lights in"
+            H.br >> H.br
+            void $ "scene "
             H.select H.! A.id (H.toValue scheduleCreatorSceneID) $
               forM_ sceneNames $ \s ->
                 H.option H.! A.value (H.toValue s) $ H.toHtml s
             void $ " on"
             H.br >> H.br
-            forM_ days $ \day -> do
-              H.input H.! A.type_ "checkbox"
-                      H.! A.id (H.toValue $ scheduleCreatorDayID day)
-                      H.! A.checked "checked"
-              H.toHtml $ day <> " "
+            H.div H.! A.class_ "schedule-day-container" $
+              forM_ days $ \day ->
+                H.div H.! A.class_ "day" $ do
+                  H.input H.! A.type_ "checkbox"
+                          H.! A.id (H.toValue $ scheduleCreatorDayID day)
+                          H.! A.checked "checked"
+                  H.br
+                  H.toHtml day
           H.br
-          H.div H.! A.class_ "input-group" $ do -- Name & 'Create' button
+          H.div H.! A.class_ "input-group" $ do
             H.input H.! A.type_ "text"
                     H.! A.class_ "form-control input-sm"
                     H.! A.maxlength "30"
-                    H.! A.placeholder "Name"
+                    H.! A.placeholder "Name Required"
                     H.! A.id (H.toValue scheduleCreatorNameID)
             H.span H.! A.class_ "input-group-btn" $
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue scheduleCreatorBtnID)
-                       $ "Create"
+                       $ "Create / Update"
+          H.h6 $
+            H.small $
+              H.toHtml $
+                  ( "Schedules allow to program reoccurring changes to the state of lights"
+                    :: String
+                  )
       -- Server / client time status
       H.h6 $
           if   timeDiff > timeDiffThreshold
@@ -183,6 +201,12 @@ addSchedulesTile sceneNames userID window = do
               -- Active days
               daysActive   <- forM days $ \day ->do
                   get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
+              -- Action
+              actionStr    <- get value =<< getElementByIdSafe window scheduleCreatorActionID
+              let action | actionStr == actionActivate = SAActivate
+                         | actionStr == actionTurnOff  = SATurnOff
+                         | actionStr == actionBlink    = SABlink
+                         | otherwise                   = SAActivate
               -- Don't bother creating schedules without name or active days
               -- TODO: Show an error message to indicate what the problem is
               -- TODO: Deal with the situation where we have no scenes at all
@@ -194,11 +218,13 @@ addSchedulesTile sceneNames userID window = do
                                           hour
                                           minute
                                           daysActive
+                                          action
                   traceS TLInfo $ printf
-                      "Created new schedule '%s' triggering at %i:%i scene '%s' on %s"
+                      "Created new schedule '%s' triggering at %i:%i action '%s' scene '%s' on %s"
                       scheduleName
                       hour
                       minute
+                      (show action)
                       sceneName
                       ( concatMap (\(i, active) -> if   active
                                                    then days !! i
@@ -259,7 +285,6 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
   let editDeleteDivID    = "schedule-" <> scheduleName <> "-edit-delete-div"
       deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
-      editBtnID          = "schedule-" <> scheduleName <> "-edit-btn"
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
   -- Tile
@@ -288,6 +313,11 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
           H.span H.! A.class_ (if dayEnabled then "day-enabled" else "day-disabled") $
             H.toHtml $ take 2 dayName <> " "
       H.span H.! A.class_ "glyphicon glyphicon-chevron-down schedule-chevron-down" $ return ()
+      H.div H.! A.class_ "schedule-action" $
+        case _sAction of
+          SAActivate -> "Activate"
+          SATurnOff  -> "Turn Off"
+          SABlink    -> "Blink"
       H.div H.! A.class_ "light-caption small no-padding-margin"
             H.! A.style "cursor: default;"
             $ do
