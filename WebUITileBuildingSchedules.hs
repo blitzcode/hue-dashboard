@@ -211,11 +211,10 @@ addSchedulesTile sceneNames userID window = do
                          | actionStr == actionTurnOff  = SATurnOff
                          | actionStr == actionBlink    = SABlink
                          | otherwise                   = SAActivate
-              -- Don't bother creating schedules without name or active days
+              -- Don't bother creating schedules without name
               -- TODO: Show an error message to indicate what the problem is
               -- TODO: Deal with the situation where we have no scenes at all
-              -- TODO: Allow no active days, simply say 'disabled'
-              unless (null scheduleName || or daysActive == False) $ do
+              unless (null scheduleName) $ do
                   liftIO $ createSchedule _aePC
                                           scheduleName
                                           sceneName
@@ -292,15 +291,13 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
       sceneMissing       = not $ HM.member _sScene scenes
+      opacity            = if or _sDays then enabledOpacity else disabledOpacity
   -- Tile
   addPageTile $
     H.div H.! A.class_ (H.toValue $ "tile " <> scheduleTilesClass)
-          H.! A.style  ( H.toValue $ ( if   shown
-                                       then "display: block;"
-                                       else "display: none;"
-                                       :: String
-                                     )
-                       )
+          H.! A.style ( H.toValue $ "opacity: " <> show opacity <> ";" <>
+                          if shown then "display: block;" else "display: none;"
+                      )
           $ do
       -- Caption
       H.div H.! A.class_ "light-caption small"
