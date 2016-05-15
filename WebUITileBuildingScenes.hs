@@ -71,18 +71,21 @@ createScene tvLights tvPC sceneName inclLights = atomically $ do
 
 -- TODO: Scene creation and deletion currently requires a page reload
 
+sceneCreatorID, sceneCreatorNameID :: String
+sceneCreatorLightCheckboxID        :: LightID -> String
+sceneCreatorID                    = "scene-creator-dialog-container"
+sceneCreatorNameID                = "scene-creator-dialog-name"
+sceneCreatorLightCheckboxID lgtID = "scene-creator-dialog-check-light-" <> fromLightID lgtID
+
 -- Build the head tile for toggling visibility and creation of scenes. Return if the
 -- 'Scenes' group is visible and subsequent elements should be added hidden or not
 addScenesTile :: CookieUserID -> Window -> PageBuilder Bool
 addScenesTile userID window = do
   AppEnv { .. } <- ask
-  let sceneCreatorID                    = "scene-creator-dialog-container" :: String
-      sceneCreatorNameID                = "scene-creator-dialog-name"      :: String
-      sceneCreatorBtnID                 = "scene-creator-dialog-btn"       :: String
-      sceneCreatorLightCheckboxID lgtID = "scene-creator-dialog-check-light-" <> lgtID
-      scenesTileHideShowBtnID           = "scenes-tile-hide-show-btn"      :: String
-      scenesTileGroupName               = GroupName "<ScenesTileGroup>"
-  let queryGroupShown =
+  let sceneCreatorBtnID       = "scene-creator-dialog-btn"  :: String
+      scenesTileHideShowBtnID = "scenes-tile-hide-show-btn" :: String
+      scenesTileGroupName     = GroupName "<ScenesTileGroup>"
+      queryGroupShown         =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member scenesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
   -- Sorted light names with corresponding IDs for the scene creation dialog
@@ -117,7 +120,7 @@ addScenesTile userID window = do
             -- TODO: More light selection options: all, none, all on, by group, etc.
             forM_ lightNameIDSorted $ \(lgtNm, lgtID) -> do -- Light checkboxes
               H.input H.! A.type_ "checkbox"
-                      H.! A.id (H.toValue . sceneCreatorLightCheckboxID $ fromLightID lgtID)
+                      H.! A.id (H.toValue $ sceneCreatorLightCheckboxID lgtID)
               H.toHtml $ " " <> lgtNm
               H.br
           H.div H.! A.class_ "scene-create-form input-group" $ do -- Name & 'Create' button
@@ -129,13 +132,13 @@ addScenesTile userID window = do
             H.span H.! A.class_ "input-group-btn" $
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue sceneCreatorBtnID)
-                       $ "Create"
+                       $ "Create / Update"
           H.h6 $
             H.small $
               H.toHtml $
                 ( "Scenes capture the state of one or more lights, " <>
                   "including them being turned off. " <>
-                  "Please select the lights to be saved and provide a name."
+                  "Select the lights to be saved and provide a name."
                   :: String
                 )
       -- Scene count
@@ -151,7 +154,7 @@ addScenesTile userID window = do
                  H.! A.class_ "btn btn-scene plus-btn"
                  H.! A.onclick
                    ( H.toValue $
-                       "getElementById('" <> sceneCreatorID <>"').style.display = 'block'"
+                       "getElementById('" <> sceneCreatorID <> "').style.display = 'block'"
                    ) $
                    H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
         H.button H.! A.type_ "button"
@@ -167,7 +170,7 @@ addScenesTile userID window = do
               sceneName        <- T.unpack . T.strip . T.pack <$> -- Trim, autocorrect adds spaces
                                       get value sceneNameElement
               inclLights       <- fmap concat . forM lightNameIDSorted $ \(_, lgtID) -> do
-                  let checkboxID = sceneCreatorLightCheckboxID $ fromLightID lgtID
+                  let checkboxID = sceneCreatorLightCheckboxID lgtID
                   checkboxElement <- getElementByIdSafe window checkboxID
                   checkboxCheck   <- get UI.checked checkboxElement
                   return $ if checkboxCheck then [lgtID] else []
@@ -230,7 +233,6 @@ addSceneTile sceneName scene shown window = do
   let editDeleteDivID    = "scene-" <> sceneName <> "-edit-delete-div"
       deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
       deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
-      editBtnID          = "scene-" <> sceneName <> "-edit-btn"
       circleContainerID  = "scene-" <> sceneName <> "-circle-container"
       styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
@@ -295,8 +297,21 @@ addSceneTile sceneName scene shown window = do
                 then take maxLength groupStr <> "…"
                 else groupStr
       -- Edit and delete button
+      let editOnClick =
+            -- Disable all light check boxes in the dialog
+            "var checkboxes = document.getElementsByClassName('light-checkbox-container')[0]" <>
+                ".getElementsByTagName('input');" <>
+            "for (var i=0; i<checkboxes.length; i++) { checkboxes[i].checked = false; }" <>
+            -- Re-enable lights included in scene (TODO: This fails if a light has been removed)
+            ( flip concatMap scene $ \(lgtID, _) ->
+                "getElementById('" <> sceneCreatorLightCheckboxID lgtID <> "').checked = true;"
+            ) <>
+            -- Set scene name
+            "getElementById('" <> sceneCreatorNameID <> "').value = '" <> sceneName <> "';" <>
+            -- Show dialog
+            "getElementById('" <> sceneCreatorID <> "').style.display = 'block';"
       addEditAndDeleteButton editDeleteDivID
-                             editBtnID
+                             editOnClick
                              deleteConfirmDivID
                              deleteConfirmBtnID
   addPageUIAction $ do
@@ -308,10 +323,6 @@ addSceneTile sceneName scene shown window = do
       getElementByIdSafe window circleContainerID >>= \btn ->
           on UI.click btn $ \_ ->
               lightsSetScene bridgeIP bridgeUserID scene
-      -- Edit
-      getElementByIdSafe window editBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              return () -- TODO: Implement
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do

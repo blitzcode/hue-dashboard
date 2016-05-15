@@ -97,20 +97,19 @@ grpHiddenCaption = "Show ►"
 
 addEditAndDeleteButton :: String -> String -> String -> String -> H.Html
 addEditAndDeleteButton editDeleteDivID
-                       editBtnID
+                       editBtnOnClick
                        deleteConfirmDivID
                        deleteConfirmBtnID = do
    H.div H.! A.id (H.toValue deleteConfirmDivID)
          H.! A.class_ "btn-group btn-group-sm"
          H.! A.style "display: none;" $ do
      H.button H.! A.type_ "button"
-              H.! A.id (H.toValue editBtnID)
               H.! A.class_ "btn btn-scene btn-sm"
               H.! A.onclick ( H.toValue $
                                 "this.parentNode.style.display = 'none'; getElementById('"
                                 <> editDeleteDivID <> "').style.display = 'block';"
                             ) $
-                H.span H.! A.class_ "glyphicon glyphicon-chevron-left" $ return ()
+                H.span H.! A.class_ "glyphicon glyphicon-chevron-left edit-back-btn" $ return ()
      H.button H.! A.type_ "button"
               H.! A.id (H.toValue deleteConfirmBtnID)
               H.! A.class_ "btn btn-danger btn-sm delete-confirm-btn"
@@ -118,9 +117,9 @@ addEditAndDeleteButton editDeleteDivID
    H.div H.! A.id (H.toValue editDeleteDivID)
          H.! A.class_ "btn-group btn-group-sm" $ do
      H.button H.! A.type_ "button"
-              H.! A.id (H.toValue editBtnID)
-              H.! A.class_ "btn btn-scene btn-sm" $
-                H.span H.! A.class_ "glyphicon glyphicon-th-list" $ return ()
+              H.! A.class_ "btn btn-scene btn-sm"
+              H.! A.onclick (H.toValue editBtnOnClick) $
+                H.span H.! A.class_ "glyphicon glyphicon-th-list edit-back-btn" $ return ()
      H.button H.! A.type_ "button"
               H.! A.class_ "btn btn-danger btn-sm delete-confirm-btn"
               H.! A.onclick ( H.toValue $

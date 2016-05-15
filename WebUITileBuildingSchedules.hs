@@ -299,14 +299,10 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
                  $ return ()
       -- Edit and delete button
       addEditAndDeleteButton editDeleteDivID
-                             editBtnID
+                             "" -- TODO
                              deleteConfirmDivID
                              deleteConfirmBtnID
   addPageUIAction $ do
-      -- Edit
-      getElementByIdSafe window editBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              return () -- TODO: Implement
       -- Delete
       getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
           on UI.click btn $ \_ -> do
