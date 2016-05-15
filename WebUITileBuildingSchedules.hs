@@ -55,27 +55,31 @@ createSchedule tvPC scheduleName _sScene _sHour _sMinute _sDays _sAction =
 days :: [String]
 days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
+-- TODO: Schedule creation and deletion currently requires a page reload
+
+scheduleCreatorID, scheduleCreatorNameID, scheduleCreatorHourID, scheduleCreatorMinuteID,
+    scheduleCreatorActionID, scheduleCreatorSceneID, actionActivate, actionTurnOff, actionBlink
+    :: String
+scheduleCreatorDayID :: String -> String
+scheduleCreatorID        = "schedule-creator-dialog-container"
+scheduleCreatorNameID    = "schedule-creator-dialog-name"
+scheduleCreatorHourID    = "schedule-creator-dialog-hour"
+scheduleCreatorMinuteID  = "schedule-creator-dialog-minute"
+scheduleCreatorActionID  = "schedule-creator-dialog-action"
+scheduleCreatorSceneID   = "schedule-creator-dialog-scene"
+scheduleCreatorDayID day = "schedule-creator-dialog-day" <> day
+actionActivate           = "activate"
+actionTurnOff            = "turn-off"
+actionBlink              = "blink"
+
 -- Build the head tile for toggling visibility and creation of schedules. Return if the
 -- 'Schedules' group is visible and subsequent elements should be added hidden or not
---
--- TODO: Schedule creation and deletion currently requires a page reload
---
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
 addSchedulesTile sceneNames userID window = do
   AppEnv { .. } <- ask
-  let scheduleCreatorID          = "schedule-creator-dialog-container"  :: String
-      scheduleCreatorNameID      = "schedule-creator-dialog-name"       :: String
-      scheduleCreatorBtnID       = "schedule-creator-dialog-btn"        :: String
-      scheduleCreatorHourID      = "schedule-creator-dialog-hour"       :: String
-      scheduleCreatorMinuteID    = "schedule-creator-dialog-minute"     :: String
-      scheduleCreatorActionID    = "schedule-creator-dialog-action"     :: String
-      scheduleCreatorSceneID     = "schedule-creator-dialog-scene"      :: String
-      scheduleCreatorDayID day   = "schedule-creator-dialog-day" <> day :: String
+  let scheduleCreatorBtnID       = "schedule-creator-dialog-btn"        :: String
       schedulesTileHideShowBtnID = "schedules-tile-hide-show-btn"       :: String
       schedulesTileGroupName     = GroupName "<SchedulesTileGroup>"
-      actionActivate             = "activate"                           :: String
-      actionTurnOff              = "turn-off"                           :: String
-      actionBlink                = "blink"                              :: String
       queryGroupShown            =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
@@ -199,7 +203,7 @@ addSchedulesTile sceneNames userID window = do
               minute       <- fromMaybe 30 . readMaybe <$>
                                   (get value =<< getElementByIdSafe window scheduleCreatorMinuteID)
               -- Active days
-              daysActive   <- forM days $ \day ->do
+              daysActive   <- forM days $ \day ->
                   get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
               -- Action
               actionStr    <- get value =<< getElementByIdSafe window scheduleCreatorActionID
@@ -287,6 +291,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
       deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
+      sceneMissing       = not $ HM.member _sScene scenes
   -- Tile
   addPageTile $
     H.div H.! A.class_ (H.toValue $ "tile " <> scheduleTilesClass)
@@ -322,14 +327,43 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
             H.! A.style "cursor: default;"
             $ do
         H.toHtml _sScene
-        unless (HM.member _sScene scenes) $ do -- Missing scene?
+        when sceneMissing $ do
           H.toHtml (" " :: String)
           H.span H.! A.class_ "glyphicon glyphicon-alert"
                  H.! A.style "color: red;"
                  $ return ()
       -- Edit and delete button
+      let editOnClick =
+            -- Minutes and hours
+            "getElementById('" <> scheduleCreatorMinuteID <> "').value = '" <>
+              show _sMinute <> "';" <>
+            "getElementById('" <> scheduleCreatorHourID <> "').value = '" <>
+              show _sHour <> "';" <>
+            -- Action
+            "getElementById('" <> scheduleCreatorActionID <> "').value = '" <>
+              ( case _sAction of
+                  SAActivate -> actionActivate
+                  SATurnOff  -> actionTurnOff
+                  SABlink    -> actionBlink
+              ) <> "';" <>
+            -- Scene, only if present
+            ( if   sceneMissing
+              then ""
+              else "getElementById('" <> scheduleCreatorSceneID <> "').value = '" <>
+                     _sScene <> "';"
+            ) <>
+            -- Days
+            ( flip concatMap (zip days _sDays) $ \(dayName, dayEnabled) ->
+                "getElementById('" <> scheduleCreatorDayID dayName <> "').checked = '" <>
+                  (if dayEnabled then "checked" else "") <> "';"
+            ) <>
+            -- Name
+            "getElementById('" <> scheduleCreatorNameID <> "').value = '" <>
+              scheduleName <> "';" <>
+            -- Show dialog
+            "getElementById('" <> scheduleCreatorID <> "').style.display = 'block';"
       addEditAndDeleteButton editDeleteDivID
-                             "" -- TODO
+                             editOnClick
                              deleteConfirmDivID
                              deleteConfirmBtnID
   addPageUIAction $ do
