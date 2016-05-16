@@ -10,6 +10,7 @@ module HueREST ( BridgeRequestMethod(..)
                , BridgeResponse(..)
                ) where
 
+import Control.Monad
 import Control.Applicative
 import Control.Monad.IO.Class
 import Control.Monad.Catch
@@ -64,6 +65,7 @@ bridgeRequestTrace :: forall m body. ( MonadIO m
                                      , MonadThrow m
                                      , MonadCatch m
                                      , ToJSON body
+                                     , Show body
                                      )
                         => BridgeRequestMethod
                         -> IPAddress
@@ -72,6 +74,11 @@ bridgeRequestTrace :: forall m body. ( MonadIO m
                         -> String
                         -> m ()
 bridgeRequestTrace method bridgeIP mbBody userID apiEndPoint = do
+    -- Trace requests where we change state /  request something
+    when (method == MethodPUT || method == MethodPOST) $
+        traceS TLInfo $ "bridgeRequestTrace: " <> show method <> " " <>
+                        apiEndPoint <> " - " <>
+                        case mbBody of Just b -> show b; _ -> ""
     r <- (Just <$> bridgeRequest method bridgeIP mbBody userID apiEndPoint) `catches`
            [ Handler $ \(e :: HttpException) -> do
                -- Network / IO error
@@ -103,6 +110,7 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                                                      ---      response, we actually never
                                                      --       print the result...
                                             , ToJSON body
+                                            , Show body
                                             )
                         => BridgeRequestMethod
                         -> IPAddress
@@ -111,6 +119,11 @@ bridgeRequestRetryTrace :: forall m a body. ( MonadIO m
                         -> String
                         -> m a
 bridgeRequestRetryTrace method bridgeIP mbBody userID apiEndPoint = do
+    -- Trace requests where we change state /  request something
+    when (method == MethodPUT || method == MethodPOST) $
+        traceS TLInfo $ "bridgeRequestRetryTrace: " <> show method <> " " <>
+                        apiEndPoint <> " - " <>
+                        case mbBody of Just b -> show b; _ -> ""
     -- TODO: It makes sense to retry if we have a connection error, but in case of
     --       something like a parsing error or an access denied type response, an
     --       endless retry loop might not do anything productive

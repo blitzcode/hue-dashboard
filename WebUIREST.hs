@@ -32,7 +32,7 @@ import HueREST
 
 -- http://www.developers.meethue.com/documentation/lights-api#16_set_light_state
 
-lightsSetState :: (MonadIO m, ToJSON body)
+lightsSetState :: (MonadIO m, ToJSON body, Show body)
                => IPAddress
                -> BridgeUserID
                -> [LightID]

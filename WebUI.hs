@@ -154,13 +154,13 @@ setup ae@AppEnv { .. } window = do
     tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
-    on UI.disconnect window . const . liftIO $
+    on UI.disconnect window . const . liftIO $ do
         -- TODO: This is a potential resource leak, see
         --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/133
         --
-        -- TODO: Log disconnects and keep track of the number of connections to
-        --       better investigate potential resource leaks, also log lightUpdateWorker
-        --       entry / exit
+        -- TODO: Keep track of the number of connections to better investigate potential
+        --       resource leaks, also log lightUpdateWorker entry / exit
+        traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected"
         cancel updateWorker
 
 -- Update DOM elements with light update messages received
