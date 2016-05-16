@@ -116,6 +116,18 @@ isColorLT = \case LT_ColorLight         -> True
                   LT_ExtendedColorLight -> True
                   _                     -> False
 
+isCTOnlyLight :: ZLL_LightType -> Bool
+isCTOnlyLight = \case LT_ColorTemperatureLight -> True
+                      _                        -> False
+
+isDimmableLT :: ZLL_LightType -> Bool
+isDimmableLT = \case LT_ColorLight            -> True
+                     LT_ExtendedColorLight    -> True
+                     LT_ColorTemperatureLight -> True
+                     LT_DimmableLight         -> True
+                     LT_DimmablePlugInUnit    -> True
+                     _                        -> False
+
 -- Light model
 --
 -- http://www.developers.meethue.com/documentation/supported-lights
@@ -131,6 +143,7 @@ data LightModel = LM_HueBulbA19
                 | LM_HueA19Lux
                 | LM_ColorLightModule
                 | LM_ColorTemperatureModule
+                | LM_HueA19WhiteAmbience
                 | LM_HueGo
                 | LM_HueLightStripsPlus
                 | LM_Unknown !String
@@ -155,6 +168,8 @@ instance FromJSON LightModel where
             "LLM010" -> return LM_ColorTemperatureModule
             "LLM011" -> return LM_ColorTemperatureModule
             "LLM012" -> return LM_ColorTemperatureModule
+            "LTW001" -> return LM_HueA19WhiteAmbience
+            "LTW004" -> return LM_HueA19WhiteAmbience
             "LLC020" -> return LM_HueGo
             "LST002" -> return LM_HueLightStripsPlus
             str      -> return $ LM_Unknown str 
@@ -172,6 +187,7 @@ instance Show LightModel where
     show LM_HueA19Lux                 = "Hue A19 Lux"
     show LM_ColorLightModule          = "Color Light Module"
     show LM_ColorTemperatureModule    = "Color Temp. Module"
+    show LM_HueA19WhiteAmbience       = "Hue A19 White Ambience"
     show LM_HueGo                     = "Hue Go"
     show LM_HueLightStripsPlus        = "Hue Light Strips Plus"
     show (LM_Unknown s)               = "Unknown (" <> s <> ")"

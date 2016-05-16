@@ -72,18 +72,20 @@ lightsBreatheCycle :: MonadIO m => IPAddress -> BridgeUserID -> [LightID] ->  m 
 lightsBreatheCycle bridgeIP userID lightIDs =
     lightsSetState bridgeIP userID lightIDs $ HM.fromList [("alert" :: String, "select" :: String)]
 
-filterOnAndColor :: MonadIO m => TVar Lights -> [LightID] -> m [LightID]
-filterOnAndColor lights' lightIDs = do
+filterLights :: MonadIO m => TVar Lights -> [LightID] -> (Light -> Bool) -> m [LightID]
+filterLights lights' lightIDs p = do
     lights <- liftIO . atomically $ readTVar lights'
-    let onAndCol l  = (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT)
-    let onAndColIDs = filter (maybe False onAndCol . flip HM.lookup lights) lightIDs
+    let onAndColIDs = filter (maybe False p . flip HM.lookup lights) lightIDs
     return onAndColIDs
 
 -- Turn on the color loop effect for the specified lights
 lightsColorLoop :: MonadIO m => IPAddress -> BridgeUserID -> TVar Lights -> [LightID] ->  m ()
 lightsColorLoop bridgeIP userID lights lightIDs = do
     -- Can only change the color of lights which are turned on and support this feature
-    onAndColIDs <- filterOnAndColor lights lightIDs
+    onAndColIDs <- filterLights
+                       lights
+                       lightIDs
+                       (\l -> (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT))
     lightsSetState bridgeIP userID onAndColIDs $
         HM.fromList [ ("effect" :: String, String "colorloop")
                       -- The effect uses the current saturation, make sure it
@@ -98,12 +100,13 @@ lightsChangeBrightness :: MonadIO m
                        -> [LightID]
                        -> Int
                        -> m ()
-lightsChangeBrightness bridgeIP userID lights' lightIDs change = do
-    -- First check which of the lights we got are turned on. Changing the brightness
-    -- of a light in the off state will just result in an error response
-    lights <- liftIO . atomically $ readTVar lights'
-    let onLightIDs = filter (maybe False (^. lgtState . lsOn) . flip HM.lookup lights) lightIDs
-    lightsSetState bridgeIP userID onLightIDs $ HM.fromList [("bri_inc" :: String, change)]
+lightsChangeBrightness bridgeIP userID lights lightIDs change = do
+    -- Can only change the brightness of lights which are turned on and support this feature
+    onAndDimmableIDs <- filterLights
+                            lights
+                            lightIDs
+                            (\l -> (l ^. lgtState . lsOn) && (l ^. lgtType . to isDimmableLT))
+    lightsSetState bridgeIP userID onAndDimmableIDs $ HM.fromList [("bri_inc" :: String, change)]
 
 lightsSetColorXY :: MonadIO m
                  => IPAddress
@@ -115,7 +118,10 @@ lightsSetColorXY :: MonadIO m
                  -> m ()
 lightsSetColorXY bridgeIP userID lights lightIDs xyX xyY = do
     -- Can only change the color of lights which are turned on and support this feature
-    onAndColIDs <- filterOnAndColor lights lightIDs
+    onAndColIDs <- filterLights
+                       lights
+                       lightIDs
+                       (\l -> (l ^. lgtState . lsOn) && (l ^. lgtType . to isColorLT))
     lightsSetState bridgeIP userID onAndColIDs $
         HM.fromList [ -- Make sure 'colorloop' is disabled
                       --

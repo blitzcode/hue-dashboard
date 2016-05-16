@@ -54,7 +54,8 @@ createScene tvLights tvPC sceneName inclLights = atomically $ do
             -- For lights that are off we only have to store the off state
             if not $ lgt ^. lgtState . lsOn then HM.fromList [("on", Bool False)] else
               -- On, store all relevant light state
-              -- TODO: Skip color temperature for now, seems to override color
+              -- TODO: Skipping color temperature for now, seems to override color. Include
+              --       it only for lights that exclusively support it
               let lsToNA = Array . V.fromList . map (Number . realToFrac)
                   bri    = lgt ^. lgtState . lsBrightness
                   effect = lgt ^. lgtState . lsEffect

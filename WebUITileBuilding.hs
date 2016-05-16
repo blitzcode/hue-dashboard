@@ -47,13 +47,15 @@ addLightTile light lightID shown window = do
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
   bridgeUserID <- liftIO . atomically $ (^. pcBridgeUserID) <$> readTVar _aePC
   -- Build tile
-  let opacity       = if light ^. lgtState . lsOn then enabledOpacity else disabledOpacity
-      brightPercent = printf "%.0f%%"
-                        ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
-                          * 100 / 255 :: Float
-                        ) :: String
-      colorStr      = htmlColorFromLightState $ light ^. lgtState
-      colorSupport  = isColorLT $ light ^. lgtType
+  let opacity        = if light ^. lgtState . lsOn then enabledOpacity else disabledOpacity
+      brightPercent  = printf "%.0f%%"
+                         ( fromIntegral (light ^. lgtState . lsBrightness . non 255)
+                           * 100 / 255 :: Float
+                         ) :: String
+      colorStr       = htmlColorFromLightState $ light ^. lgtState
+      colorSupport   = isColorLT     $ light ^. lgtType
+      onlyCTSupport  = isCTOnlyLight $ light ^. lgtType
+      dimmingSupport = isDimmableLT  $ light ^. lgtType
   addPageTile $
     H.div H.! A.class_ "tile"
           H.! A.style ( H.toValue $ "opacity: " <> show opacity <> ";" <>
@@ -68,9 +70,10 @@ addLightTile light lightID shown window = do
             H.! A.style (H.toValue $ "background: " <> colorStr <> ";")
             H.! A.src (H.toValue . iconFromLM $ light ^. lgtModelID)
             H.! A.id (H.toValue $ buildLightID lightID "image")
-      -- Only add color picker elements for lights that support colors
-      when colorSupport $
-              addColorPicker (buildLightID lightID "tile"                  )
+      -- Only add color picker elements for lights that support colors / color temperature
+      when (colorSupport || onlyCTSupport) $
+              addColorPicker onlyCTSupport
+                             (buildLightID lightID "tile"                  )
                              (buildLightID lightID "color-picker-container")
                              (buildLightID lightID "color-picker-overlay"  )
       -- Model type and text
@@ -79,20 +82,21 @@ addLightTile light lightID shown window = do
           H.toHtml . show $ light ^. lgtModelID
           H.br
           H.toHtml . show $ light ^. lgtType
-      -- Brightness widget
-      H.div H.! A.class_ "progress"
-            H.! A.id (H.toValue $ buildLightID lightID "brightness-container") $ do
-        H.div H.! A.class_ "progress-label-container" $ do
-          H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
-          H.div H.! A.class_ "glyphicon glyphicon-plus plus-label" $ return ()
-          H.div H.! A.class_ "percentage-label" $
-            H.small $
-              H.span H.! A.id (H.toValue $ buildLightID lightID "brightness-percentage") $
-                H.toHtml brightPercent
-        H.div H.! A.class_ "progress-bar progress-bar-info"
-              H.! A.style (H.toValue $ "width: " <> brightPercent <> ";")
-              H.! A.id (H.toValue $ buildLightID lightID "brightness-bar")
-              $ return ()
+      -- Only add brightness widget for lights that support it
+      when dimmingSupport $
+        H.div H.! A.class_ "progress"
+              H.! A.id (H.toValue $ buildLightID lightID "brightness-container") $ do
+          H.div H.! A.class_ "progress-label-container" $ do
+            H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
+            H.div H.! A.class_ "glyphicon glyphicon-plus plus-label" $ return ()
+            H.div H.! A.class_ "percentage-label" $
+              H.small $
+                H.span H.! A.id (H.toValue $ buildLightID lightID "brightness-percentage") $
+                  H.toHtml brightPercent
+          H.div H.! A.class_ "progress-bar progress-bar-info"
+                H.! A.style (H.toValue $ "width: " <> brightPercent <> ";")
+                H.! A.id (H.toValue $ buildLightID lightID "brightness-bar")
+                $ return ()
   addPageUIAction $ do
      -- Have light blink once after clicking the caption
      getElementByIdSafe window (buildLightID lightID "caption") >>= \caption ->
@@ -118,17 +122,18 @@ addLightTile light lightID shown window = do
      --       maybe also make the adjustment curve non-linear (more precision at the
      --       beginning)
      --
-     getElementByIdSafe window (buildLightID lightID "brightness-container") >>= \image ->
-         on UI.mousedown image $ \(mx, _) -> do
-             -- Construct and perform REST API call
-             lightsChangeBrightness bridgeIP
-                                    bridgeUserID
-                                    _aeLights
-                                    [lightID]
-                                    -- Click on left part decrements, right part increments
-                                    (if mx < 50 then (-brightnessChange) else brightnessChange)
-     -- Respond to clicks on the color picker
-     when colorSupport $
+     when dimmingSupport $
+         getElementByIdSafe window (buildLightID lightID "brightness-container") >>= \image ->
+             on UI.mousedown image $ \(mx, _) -> do
+                 -- Construct and perform REST API call
+                 lightsChangeBrightness bridgeIP
+                                        bridgeUserID
+                                        _aeLights
+                                        [lightID]
+                                        -- Click on left part decrements, right part increments
+                                        (if mx < 50 then (-brightnessChange) else brightnessChange)
+     -- Respond to clicks on the color picker (TODO: Support CT lights)
+     when (colorSupport || onlyCTSupport) $
          getElementByIdSafe window (buildLightID lightID "color-picker-overlay") >>= \image ->
              on UI.mousedown image $ \(mx, my) -> do
                  case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
@@ -176,6 +181,9 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueA19Lux                 -> "white_e27"
                           LM_ColorLightModule          -> "white_and_color_e27"
                           LM_ColorTemperatureModule    -> "white_e27"
+                          LM_HueA19WhiteAmbience       -> -- The color temp. bulbs look more like
+                                                          -- the normal color ones, flat top
+                                                          "white_and_color_e27"
                           LM_HueGo                     -> "go"
                           LM_HueLightStripsPlus        -> "lightstrip"
                           LM_Unknown _                 -> "white_e27"
@@ -193,7 +201,9 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
             anyLightsInGroup groupName lightGroups lights condition
       queryGroupShown                  =
           queryUserData _aePC userID (udVisibleGroupNames . to (HS.member groupName))
-  grpHasColor <- queryAnyLightsInGroup (^. lgtType . to isColorLT)
+  grpHasColor   <- queryAnyLightsInGroup (^. lgtType . to isColorLT    )
+  grpHasOnlyCT  <- queryAnyLightsInGroup (^. lgtType . to isCTOnlyLight)
+  grpHasDimming <- queryAnyLightsInGroup (^. lgtType . to isDimmableLT )
   -- Tile
   queryAnyLightsInGroup (^. lgtState . lsOn) >>= \grpOn ->
     liftIO (atomically queryGroupShown) >>= \grpShown ->
@@ -213,9 +223,10 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
           H.img H.! A.class_ "img-rounded"
                 H.! A.src "static/svg/hds.svg"
                 H.! A.id (H.toValue $ buildGroupID groupName "image")
-          -- Only add color picker elements for lights that support colors
-          when grpHasColor $
-              addColorPicker (buildGroupID groupName "tile"                  )
+          -- Only add color picker elements for lights that support colors / color temperature
+          when (grpHasColor || grpHasOnlyCT) $
+              addColorPicker (not grpHasColor) -- Use CT-only picker when there are no color lights
+                             (buildGroupID groupName "tile"                  )
                              (buildGroupID groupName "color-picker-container")
                              (buildGroupID groupName "color-picker-overlay"  )
           -- Group show / hide widget
@@ -223,13 +234,14 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                    H.! A.class_ "btn btn-sm btn-info show-hide-btn group-switch-show-hide-btn"
                    H.! A.id (H.toValue $ buildGroupID groupName "show-btn")
                    $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
-          -- Brightness widget
-          H.div H.! A.class_ "progress"
-                H.! A.id (H.toValue $ buildGroupID groupName "brightness-container") $ do
-            H.div H.! A.class_ "progress-label-container" $ do
-              H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
-              H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
-            H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
+          -- Only add brightness widget for lights that support dimming
+          when grpHasDimming $
+            H.div H.! A.class_ "progress"
+                  H.! A.id (H.toValue $ buildGroupID groupName "brightness-container") $ do
+              H.div H.! A.class_ "progress-label-container" $ do
+                H.div H.! A.class_ "glyphicon glyphicon-minus minus-label" $ return ()
+                H.div H.! A.class_ "glyphicon glyphicon-plus plus-label"   $ return ()
+              H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
   addPageUIAction $ do
       -- Have light blink once after clicking the caption
       getElementByIdSafe window (buildGroupID groupName "caption") >>= \caption ->
@@ -247,17 +259,18 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                                     groupLightIDs
                                     (not grpOn)
       -- Register click handler for changing group brightness
-      getElementByIdSafe window (buildGroupID groupName "brightness-container") >>= \image ->
-          on UI.mousedown image $ \(mx, _) ->
-              -- Construct and perform REST API call
-              lightsChangeBrightness bridgeIP
-                                     bridgeUserID
-                                     _aeLights
-                                     groupLightIDs
-                                     -- Click on left part decrements, right part increments
-                                     (if mx < 50 then (-brightnessChange) else brightnessChange)
-      -- Respond to clicks on the color picker
-      when grpHasColor $
+      when grpHasDimming $
+          getElementByIdSafe window (buildGroupID groupName "brightness-container") >>= \image ->
+              on UI.mousedown image $ \(mx, _) ->
+                  -- Construct and perform REST API call
+                  lightsChangeBrightness bridgeIP
+                                         bridgeUserID
+                                         _aeLights
+                                         groupLightIDs
+                                         -- Click on left part decrements, right part increments
+                                         (if mx < 50 then (-brightnessChange) else brightnessChange)
+      -- Respond to clicks on the color picker (TODO: Support color temperature lights)
+      when (grpHasColor || grpHasOnlyCT) $
           getElementByIdSafe window (buildGroupID groupName "color-picker-overlay") >>= \image ->
               on UI.mousedown image $ \(mx, my) ->
                   -- TODO: We have to specify a single light type for the color conversion,
@@ -416,8 +429,8 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
 -- TODO: Maybe add a brightness adjustment area to the color picker?
 -- TODO: Reduce height of central element in color picker (better for smaller screens)
 --
-addColorPicker :: String -> String -> String -> H.Html
-addColorPicker tileID containerID overlayID = do
+addColorPicker :: Bool -> String -> String -> String -> H.Html
+addColorPicker ctOnly tileID containerID overlayID = do
   H.div H.! A.class_ "color-picker-curtain"
         H.! A.style "display: none;"
         H.! A.onclick
@@ -426,9 +439,13 @@ addColorPicker tileID containerID overlayID = do
               "if (event.target.id == '" <> containerID <> "') { this.style.display = 'none' }"
           )
         H.! A.id (H.toValue containerID) $
-    H.img H.! A.class_ "color-picker-overlay"
-          H.! A.src "static/color_picker.png"
+    H.div H.! A.class_ "color-picker-overlay"
           H.! A.id (H.toValue overlayID)
+          H.! A.style ( if   ctOnly
+                        then "height: 62px;" -- Shrink to show only color temperature portion
+                        else ""
+                      )
+          $ return ()
   H.div H.! A.class_ "color-picker-button"
         H.! A.onclick
           -- Click button to make color picker visible, but not

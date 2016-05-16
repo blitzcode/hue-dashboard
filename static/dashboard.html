@@ -302,19 +302,21 @@
     }
     .tile-display .color-picker-overlay
     {
-        background: white;
+        background-color: white;
+        background-image: url('static/color_picker.png');
+        background-repeat: no-repeat;
+        background-position: 10px 10px;
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         margin: auto;
         width: 322px;
-        height: 402px;
+        height: 402px; /* 62 */
         border-width: 1px;
         border-style: solid;
         border-radius: 0px 0px 6px 6px;
         border-color: white black black black;
-        padding: 10px;
         cursor: crosshair;
         box-shadow: 0px 0px 15px rgba(0, 0, 0, .8);
     }
@@ -482,8 +484,9 @@
       <div class="light-caption small">Kinderzimmer Tisch</div>
       <img class="img-rounded" style="background: lightgreen;" src="static/svg/br30.svg"/>
       <div style="display: none" id="light-0-color-picker">
-        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'"></div>
-        <img class="color-picker-overlay" src="static/color_picker.png"/>
+        <div class="color-picker-curtain" onclick="this.parentNode.style.display = 'none'">
+          <div class="color-picker-overlay"></div>
+        </div>
       </div>
       <div class="color-picker-button" onclick="getElementById('light-0-color-picker').style.display = 'block'">
         <div class="glyphicon glyphicon-tint" style="margin: 3px"></div>
