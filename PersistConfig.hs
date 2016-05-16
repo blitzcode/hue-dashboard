@@ -148,6 +148,10 @@ instance FromJSON (HM.HashMap CookieUserID UserData) where
 instance ToJSON (HM.HashMap CookieUserID UserData) where
     toJSON v = toJSON (coerce v :: HM.HashMap String UserData)
 
+-- TODO: Over time orphan data such as visibility information for non-existing groups
+--       and user data for already discarded cookies can build up in here, bloating the
+--       configuration file. Consider keeping timestamps on things, purging them
+
 data PersistConfig = PersistConfig
     { _pcBridgeIP     :: !IPAddress    -- IP address of the bridge
     , _pcBridgeUserID :: !BridgeUserID -- Hue bridge user ID for

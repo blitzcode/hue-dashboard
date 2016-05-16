@@ -250,7 +250,7 @@ addSceneTile sceneName scene shown window = do
                                      )
                        )
           $ do
-      -- Caption
+      -- Caption (TODO: Clicking the caption should make the lights in the scene blink)
       H.div H.! A.class_ "light-caption small"
             H.! A.style "cursor: default;"
             $ H.toHtml sceneName

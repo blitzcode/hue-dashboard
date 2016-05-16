@@ -305,7 +305,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
             $ H.toHtml scheduleName
       -- Schedule information
       H.div H.! A.class_ "schedule-time-display" $ do
-        H.span H.! A.class_ "glyphicon glyphicon-time"
+        H.span H.! A.class_ "glyphicon glyphicon-time" -- TODO: Use SVG clock to show actual time
                H.! A.style "vertical-align: middle;"
                $ return ()
         H.span H.! A.style "vertical-align: middle;" $

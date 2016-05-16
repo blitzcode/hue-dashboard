@@ -56,8 +56,6 @@ webUIStart ae = do
 
 setup :: AppEnv -> Window -> UI ()
 setup ae@AppEnv { .. } window = do
-    -- Duplicate broadcast channel
-    tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Obtain user ID from cookie
     userID <- CookieUserID <$> (callFunction $ ffi "getUserID()" :: UI String)
     -- Get user data for user ID, create new data if none is present
@@ -92,6 +90,12 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
     -- TODO: Drop down menu in the fixed navbar for quickly jumping to important tiles
+    -- TODO: Generate placeholder divs for scenes and tiles, then fill their content
+    --       later. This separation should allow for updating them without reloading
+    --       the entire page
+    -- TODO: The contrast for disabled tiles is not great, making it both difficult to
+    --       read them and to distinguish them from enabled ones. Having a darker or
+    --       black body background improves readability
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
@@ -146,6 +150,8 @@ setup ae@AppEnv { .. } window = do
     sequence_ . reverse $ page ^. pgUIActions
     -- We're done building the page, hide spinner
     void $ getElementByIdSafe window "navbar-spinner" & set UI.src "static/svg/checkmark.svg"
+    -- Duplicate broadcast channel
+    tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Worker thread for receiving light updates
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
     on UI.disconnect window . const . liftIO $
