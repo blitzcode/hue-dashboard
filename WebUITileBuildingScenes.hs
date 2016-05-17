@@ -54,19 +54,30 @@ createScene tvLights tvPC sceneName inclLights = atomically $ do
             -- For lights that are off we only have to store the off state
             if not $ lgt ^. lgtState . lsOn then HM.fromList [("on", Bool False)] else
               -- On, store all relevant light state
-              -- TODO: Skipping color temperature for now, seems to override color. Include
-              --       it only for lights that exclusively support it
               let lsToNA = Array . V.fromList . map (Number . realToFrac)
                   bri    = lgt ^. lgtState . lsBrightness
                   effect = lgt ^. lgtState . lsEffect
+                  cm     = lgt ^. lgtState . lsColorMode
                   xy     = lgt ^. lgtState . lsXY
-                  -- ct     = lgt ^. lgtState . lsColorTemp
+                  ct     = lgt ^. lgtState . lsColorTemp
+                  hue    = lgt ^. lgtState . lsHue
+                  sat    = lgt ^. lgtState . lsSaturation
               in  HM.empty
                     &                 at "on"     ?~ Bool True
-                    & maybe id (\v -> at "bri"    ?~ (Number . fromIntegral $ v)) bri
-                    & maybe id (\v -> at "effect" ?~ (String $ T.pack v)        ) effect
-                    & maybe id (\v -> at "xy"     ?~ (lsToNA v)                 ) xy
-                    -- & maybe id (\v -> at "ct"     ?~ (Number . fromIntegral $ v)) ct
+                    & maybe id (\v -> at "bri"    ?~ (Number $ fromIntegral v)) bri
+                    & maybe id (\v -> at "effect" ?~ (String $ T.pack v)      ) effect
+                    -- Check the color mode and store the active value
+                    & case cm of
+                          Just CMXY ->
+                              maybe id (\v -> at "xy"  ?~ (lsToNA v)) xy
+                          Just CMHS ->
+                              (\hm -> hm
+                                  & maybe id (\v -> at "hue" ?~ (Number $ fromIntegral v)) hue
+                                  & maybe id (\v -> at "sat" ?~ (Number $ fromIntegral v)) sat
+                              )
+                          Just CMCT ->
+                              maybe id (\v -> at "ct"  ?~ (Number $ fromIntegral v)) ct
+                          _         -> id
       )
     )
 

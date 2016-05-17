@@ -5,6 +5,10 @@ module LightColor ( rgbFromLightState
                   , rgbToXY
                   , htmlColorFromLightState
                   , htmlColorFromRGB
+                  , hsToRGB
+                  , ctToRGB
+                  , mirecToKelvin
+                  , kelvinToMirec
                   ) where
 
 import Text.Printf
