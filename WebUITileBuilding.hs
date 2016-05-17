@@ -284,7 +284,7 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                                          groupLightIDs
                                          -- Click on left part decrements, right part increments
                                          (if mx < 50 then (-brightnessChange) else brightnessChange)
-      -- Respond to clicks on the color picker (TODO: Support color temperature lights)
+      -- Respond to clicks on the color picker
       when (grpHasColor || grpHasOnlyCT) $
           getElementByIdSafe window (buildGroupID groupName "color-picker-overlay") >>= \image ->
               on UI.mousedown image $ \(mx, my) ->
