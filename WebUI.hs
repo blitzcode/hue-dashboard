@@ -57,6 +57,7 @@ webUIStart ae = do
 setup :: AppEnv -> Window -> UI ()
 setup ae@AppEnv { .. } window = do
     -- Obtain user ID from cookie
+    -- TODO: Round trip, would be nice to just get the cookie the normal way
     userID <- CookieUserID <$> (callFunction $ ffi "getUserID()" :: UI String)
     -- Get user data for user ID, create new data if none is present
     (newUser, userData) <- liftIO . atomically $ do

@@ -84,6 +84,7 @@ addSchedulesTile sceneNames userID window = do
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
   grpShown <- liftIO (atomically queryGroupShown)
   -- Client and server epoch time in ms, compute difference and complain if it differs too much
+  -- TODO: Round trip, maybe just send the server time and move this logic client side?
   clientTime <- liftIO $ runUI window (callFunction $ ffi "(new Date()).getTime()" :: UI Double)
   serverTime <- (1000 *) . realToFrac <$> liftIO getPOSIXTime :: PageBuilder Double
   let timeDiff          = abs $ clientTime - serverTime
