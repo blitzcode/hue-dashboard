@@ -77,7 +77,7 @@ instance FromJSON LightState where
     parseJSON _ = fail "Expected object"
 
 data ColorMode = CMXY | CMCT | CMHS
-                 deriving (Show, Enum)
+                 deriving (Eq, Show, Enum)
 
 instance FromJSON ColorMode where
     parseJSON (String s) = case T.unpack s of

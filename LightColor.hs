@@ -1,24 +1,29 @@
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module LightColor ( rgbFromLightState
                   , rgbToXY
                   , htmlColorFromLightState
                   , htmlColorFromRGB
                   ) where
 
-import Data.Maybe
 import Text.Printf
 import Control.Lens
 
 import HueJSON
 
--- Color conversions between RGB and the parameters the Hue API understands
+-- Color conversions between RGB/XY/HS/CT for the Hue API
 --
 -- http://www.developers.meethue.com/documentation/color-conversions-rgb-xy
+-- http://www.developers.meethue.com/documentation/core-concepts#color_gets_more_complicated
+-- http://www.developers.meethue.com/documentation/lights-api#14_get_light_attributes_and_state
 
 -- Compute a normalized RGB triplet for the given light state
 rgbFromLightState :: LightState -> (Float, Float, Float)
 rgbFromLightState ls
-    | hasXY =
+    |  ls ^. lsColorMode == Just CMXY
+    || ls ^. lsColorMode == Nothing
+    ,  Just [xyX, xyY] <- ls ^. lsXY =
           let -- XYZ conversion
               x = xyX
               y = xyY
@@ -65,14 +70,61 @@ rgbFromLightState ls
                             else (rGamma, gGamma, bGamma)
                         | otherwise = (rGamma, gGamma, bGamma)
           in (r, g, b)
-    | otherwise = (255, 255, 255) -- TODO: Handle color temperature, might need
-                                  --       to check color mode field as well
-  where
-        xy         = ls ^. lsXY
-        hasXY      = isJust xy
-        [xyX, xyY] = xy ^. non [0, 0]
+    |  ls ^. lsColorMode == Just CMHS
+    || ls ^. lsColorMode == Nothing
+    ,  Just hue <- ls ^. lsHue
+    ,  Just sat <- ls ^. lsSaturation =
+        -- HSV conversion
+        -- Code is from http://hackage.haskell.org/package/colour
+        let h = (fromIntegral hue / 65535) * 360
+            s = fromIntegral sat / 254
+            v = 1
+            hi = floor (h / 60) `mod` 6 :: Int
+            f = mod1 (h / 60)
+            p = v * (1 - s)
+            q = v * (1 - f * s)
+            t = v * (1 - (1 - f) * s)
+        in  (\(r, g, b) -> (r * 255, g * 255, b * 255)) $ case hi of
+                0 -> (v, t, p)
+                1 -> (q, v, p)
+                2 -> (p, v, t)
+                3 -> (p, q, v)
+                4 -> (t, p, v)
+                5 -> (v, p, q)
+                _ -> (1, 1, 1)
+        -- HSL conversion
+        -- let hk = fromIntegral hue / 65535
+        --     s = fromIntegral sat / 254
+        --     l = 0.5
+        --     tr = mod1 (hk + 1 / 3)
+        --     tg = mod1 hk
+        --     tb = mod1 (hk - 1 / 3)
+        --     q | l < 0.5 = l * (1 + s)
+        --       | otherwise = l + s - l * s
+        --     p = 2 * l - q
+        --     component t | t < 1 / 6 = p + ((q - p) * 6 * t)
+        --                 | t < 1 / 2 = q
+        --                 | t < 2 / 3 = p + ((q - p) * 6 * (2 / 3 - t))
+        --                 | otherwise = p
+        --     mod1 x | pf < 0 = pf + 1
+        --            | otherwise = pf
+        --       where
+        --         (_ :: Int, pf) = properFraction x
+        -- in  ((component tr) * 255, (component tg) * 255, (component tb) * 255)
+    |  ls ^. lsColorMode == Just CMCT
+    || ls ^. lsColorMode == Nothing
+    ,  Just ct <- ls ^. lsColorTemp =
+        (0, 0, 0)
+    | otherwise =
+        (255, 255, 255) -- Has no color, assume white light
 
--- Compute an XY value for the given light model from an normalized RGB triplet
+mod1 :: RealFrac a => a -> a
+mod1 x | pf < 0 = pf + 1
+       | otherwise = pf
+  where
+    (_ :: Int, pf) = properFraction x
+
+-- Compute an XY value for the given light model from a normalized RGB triplet
 --
 -- TODO: We currently ignore the light model parameter and rely on the bridge to
 --       clamp XY values outside the color gamut for the given light
@@ -93,7 +145,7 @@ rgbToXY (r, g, b) _ =
         then (0, 0)
         else (xX / xyzSum, yY / xyzSum)
 
--- Get an HTML background color string from a light satte. Return a colorful gradient
+-- Get an HTML background color string from a light state. Return a colorful gradient
 -- if the light is in 'colorloop' mode
 htmlColorFromLightState :: LightState -> String
 htmlColorFromLightState ls =
