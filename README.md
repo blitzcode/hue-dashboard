@@ -10,7 +10,7 @@ Accessing the web interface from an iPhone:
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-1.jpg)
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-2.jpg)
 
-And the same on the iPad:
+And the same on the iPad (somewhat older screenshot):
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ipad.jpg)
 
@@ -24,31 +24,49 @@ Another view on a Mac desktop browser:
 - No hierarchy, menu diving or anything like that; switching on the lights should be fast & simple!
 - Works with any modern browser
 - Adjusting individual lights or the automatically created groups is comfortable both with a mouse and touch based input
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-group-and-light.png)
+
 - Light groups can be shown / hidden, preferences are stored on a per-browser basis
-- Existing scenes created in other Hue applications can be activated as well
-- Scene creation interface allows easy building of scenes from the current light state
+- Scene creation interface allows easy building of scenes from the current light state, also editing and updating of scenes is supported
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-scene-creator.png)
 
-- Supports putting lights in a 'color loop' mode where they cycle between all available colors
+- Scenes are displayed with a preview of the lights they are going to change, and which groups they touch
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-scenes.png)
+
+- Existing scenes created in other Hue applications can be activated as well
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-scenes-imported.png)
+
+- Lights can be put in a 'color loop' mode where they cycle between all available colors
 - Clicking a light / group caption makes the lamps blink (can be used as a crude form of communication!)
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
+- Color temperature lights get their own simpler color picker
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ct-picker.png)
+
 - The UI is done with vector graphics and looks crisp on retina displays
-- Schedule system allows automatic triggering of scenes at specified times
+- Schedule system allows automatic triggering of scenes at specified times, supports special actions like turning a scene off or making the lights blink, can be scheduled only on certain weekdays, checks for differences between client & server time to avoid surprises, schedules can be deactivated as well
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-1.png)
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-2.png)
 
 - On-screen light status responds in real-time to changes with smooth animations and transitions
 - Reliable enough to run 24/7 and be used by many people from many devices simultaneously
+- A special tile to turn all lights off
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-all-lights.png)
+
 - Server has been tested on OS X and Ubuntu, needs very little system resources to run
-- Can be deployed on an Raspberry Pi, even features a server control panel for shutdown / reboot
+- Can be deployed on a Raspberry Pi, even features a server control panel for shutdown / reboot and monitoring CPU / RAM usage
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-admin.png)
 
 ### Implementation
 
-Hue Dashboard is implemented in [Haskell](http://www.haskell.org), talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
+Hue Dashboard is implemented in [Haskell](http://www.haskell.org), talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui) and [blaze-html](https://hackage.haskell.org/package/blaze-html). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.
 
 Also see [the project page on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#hue-dashboard).
 
@@ -64,6 +82,15 @@ This project uses [stack](http://docs.haskellstack.org/en/stable/README/), so bu
 
 and run with
 
+    stack exec hue-dashboard
+
+If you've never build a Haskell application before and have nothing prepared on the system, the complete list of steps on OS X would be something like this, assuming you have at least [Homebrew](http://brew.sh/) setup:
+
+    brew install haskell-stack
+    git clone https://github.com/blitzcode/hue-dashboard.git
+    cd hue-dashboard
+    stack setup
+    stack build
     stack exec hue-dashboard
 
 Like any Hue API application you'll have to authorize access to your bridge by pushlinking. The program will discover your bridge and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this configuration from the created `config.yaml`.
