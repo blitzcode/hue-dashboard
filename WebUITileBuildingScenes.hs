@@ -270,25 +270,35 @@ addSceneTile sceneName scene shown window = do
       H.div H.! A.class_ "circle-container"
             H.! A.id (H.toValue circleContainerID) $ do
         forM_ (take 9 $ scene) $ \(_, lgSt) ->
-          let col :: String
-              col | HM.lookup "on" lgSt == Just (Bool False) = "background: black;"
+          -- Build mock LightState from scene light. This is basically the body
+          -- we pass to the set light state API, doesn't contain a color mode
+          let lsBase = LightState True
+                                  Nothing
+                                  Nothing
+                                  Nothing
+                                  ((\(String t) -> T.unpack t) <$> HM.lookup "effect" lgSt)
+                                  Nothing
+                                  Nothing
+                                  "none"
+                                  Nothing
+                                  True
+              col :: String
+              col | HM.lookup "on" lgSt == Just (Bool False) = "black"
                   | Just (Array vXY)         <- HM.lookup "xy" lgSt,
                     [Number xXY, Number yXY] <- V.toList vXY =
-                      printf "background: %s;" . htmlColorFromLightState $
-                        -- Build mock LightState
-                        LightState True
-                                   Nothing
-                                   Nothing
-                                   Nothing
-                                   ((\(String t) -> T.unpack t) <$> HM.lookup "effect" lgSt)
-                                   (Just [realToFrac xXY, realToFrac yXY])
-                                   Nothing
-                                   "none"
-                                   Nothing
-                                   True
-                  | otherwise = "background: white;"
+                      htmlColorFromLightState $
+                        lsBase & lsXY .~ (Just [realToFrac xXY, realToFrac yXY])
+                  | Just (Number hue)        <- HM.lookup "hue" lgSt,
+                    Just (Number sat)        <- HM.lookup "sat" lgSt =
+                      htmlColorFromLightState $
+                        lsBase & lsHue        .~ (Just $ round hue)
+                               & lsSaturation .~ (Just $ round sat)
+                  | Just (Number ct)         <- HM.lookup "ct" lgSt =
+                      htmlColorFromLightState $
+                        lsBase & lsColorTemp .~ (Just $ round ct)
+                  | otherwise = "white;"
           in  H.div H.! A.class_ "circle"
-                    H.! A.style (H.toValue col)
+                    H.! A.style (H.toValue $ "background: " <> col <> ";")
                     $ return ()
         forM_ [0..8 - length scene] $ \_ -> -- Fill remainder with grey circles
           H.div H.! A.class_ "circle"
