@@ -59,7 +59,7 @@ data LightState = LightState { _lsOn         :: !Bool
                              , _lsXY         :: !(Maybe [Float])
                              , _lsColorTemp  :: !(Maybe Word16)
                              , _lsAlert      :: !String
-                             , _lsColorMode  :: !(Maybe String)
+                             , _lsColorMode  :: !(Maybe ColorMode)
                              , _lsReachable  :: !Bool
                              } deriving Show
 
@@ -75,6 +75,17 @@ instance FromJSON LightState where
                                       <*> o .:? "colormode"
                                       <*> o .:  "reachable"
     parseJSON _ = fail "Expected object"
+
+data ColorMode = CMXY | CMCT | CMHS
+                 deriving (Show, Enum)
+
+instance FromJSON ColorMode where
+    parseJSON (String s) = case T.unpack s of
+                               "xy" -> return CMXY
+                               "ct" -> return CMCT
+                               "hs" -> return CMHS
+                               str  -> fail $ "Invalid color mode: " <> str
+    parseJSON _ = fail "Expected string"
 
 -- Light type
 --
@@ -172,7 +183,7 @@ instance FromJSON LightModel where
             "LTW004" -> return LM_HueA19WhiteAmbience
             "LLC020" -> return LM_HueGo
             "LST002" -> return LM_HueLightStripsPlus
-            str      -> return $ LM_Unknown str 
+            str      -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
 instance Show LightModel where
