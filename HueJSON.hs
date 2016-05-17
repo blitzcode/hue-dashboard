@@ -131,6 +131,11 @@ isCTOnlyLight :: ZLL_LightType -> Bool
 isCTOnlyLight = \case LT_ColorTemperatureLight -> True
                       _                        -> False
 
+isCTLight :: ZLL_LightType -> Bool
+isCTLight = \case LT_ColorTemperatureLight -> True
+                  LT_ExtendedColorLight    -> True
+                  _                        -> False
+
 isDimmableLT :: ZLL_LightType -> Bool
 isDimmableLT = \case LT_ColorLight            -> True
                      LT_ExtendedColorLight    -> True
@@ -198,7 +203,7 @@ instance Show LightModel where
     show LM_HueA19Lux                 = "Hue A19 Lux"
     show LM_ColorLightModule          = "Color Light Module"
     show LM_ColorTemperatureModule    = "Color Temp. Module"
-    show LM_HueA19WhiteAmbience       = "Hue A19 White Ambience"
+    show LM_HueA19WhiteAmbience       = "Hue A19 White Amb."
     show LM_HueGo                     = "Hue Go"
     show LM_HueLightStripsPlus        = "Hue Light Strips Plus"
     show (LM_Unknown s)               = "Unknown (" <> s <> ")"

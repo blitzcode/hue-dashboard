@@ -132,32 +132,47 @@ addLightTile light lightID shown window = do
                                         [lightID]
                                         -- Click on left part decrements, right part increments
                                         (if mx < 50 then (-brightnessChange) else brightnessChange)
-     -- Respond to clicks on the color picker (TODO: Support CT lights)
+     -- Respond to clicks on the color picker
      when (colorSupport || onlyCTSupport) $
          getElementByIdSafe window (buildLightID lightID "color-picker-overlay") >>= \image ->
-             on UI.mousedown image $ \(mx, my) -> do
-                 case xyFromColorPickerCoordinates _aeColorPickerImg mx my (light ^. lgtModelID) of
-                     CPR_Margin       -> return ()
-                     CPR_SetColorLoop ->
-                         lightsColorLoop bridgeIP
-                                         bridgeUserID
-                                         _aeLights
-                                         [lightID]
-                     CPR_Random       -> do
-                         (xyX, xyY) <- liftIO getRandomXY
-                         lightsSetColorXY bridgeIP
-                                          bridgeUserID
-                                          _aeLights
-                                          [lightID]
-                                          xyX
-                                          xyY
-                     CPR_XY xyX xyY   ->
-                         lightsSetColorXY bridgeIP
-                                          bridgeUserID
-                                          _aeLights
-                                          [lightID]
-                                          xyX
-                                          xyY
+             on UI.mousedown image $ \(mx, my) ->
+                 -- Do we have the CT-only or the normal color picker?
+                 if   onlyCTSupport
+                 then case ctFromColorPickerCoordinates _aeColorPickerImg
+                                                        mx
+                                                        my of
+                          Nothing       -> return ()
+                          Just ctKelvin ->
+                              lightsSetColorTemperature bridgeIP
+                                                        bridgeUserID
+                                                        _aeLights
+                                                        [lightID]
+                                                        ctKelvin
+                 else case xyFromColorPickerCoordinates _aeColorPickerImg
+                                                        mx
+                                                        my
+                                                        (light ^. lgtModelID) of
+                          CPR_Margin       -> return ()
+                          CPR_SetColorLoop ->
+                              lightsColorLoop bridgeIP
+                                              bridgeUserID
+                                              _aeLights
+                                              [lightID]
+                          CPR_Random       -> do
+                              (xyX, xyY) <- liftIO getRandomXY
+                              lightsSetColorXY bridgeIP
+                                               bridgeUserID
+                                               _aeLights
+                                               [lightID]
+                                               xyX
+                                               xyY
+                          CPR_XY xyX xyY   ->
+                              lightsSetColorXY bridgeIP
+                                               bridgeUserID
+                                               _aeLights
+                                               [lightID]
+                                               xyX
+                                               xyY
 
 getRandomXY :: IO (Float, Float)
 getRandomXY = do
@@ -273,32 +288,57 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
       when (grpHasColor || grpHasOnlyCT) $
           getElementByIdSafe window (buildGroupID groupName "color-picker-overlay") >>= \image ->
               on UI.mousedown image $ \(mx, my) ->
-                  -- TODO: We have to specify a single light type for the color conversion,
-                  --       but we potentially set many different lights. Do a custom
-                  --       conversion for each color light in the group
-                  case xyFromColorPickerCoordinates _aeColorPickerImg mx my LM_HueBulbA19 of
-                      CPR_Margin       -> return ()
-                      CPR_SetColorLoop ->
-                          lightsColorLoop bridgeIP
-                                          bridgeUserID
-                                          _aeLights
-                                          groupLightIDs
-                      CPR_Random       -> do
-                          -- TODO: Assign different random color to each light
-                          (xyX, xyY) <- liftIO getRandomXY
-                          lightsSetColorXY bridgeIP
-                                           bridgeUserID
-                                           _aeLights
-                                           groupLightIDs
-                                           xyX
-                                           xyY
-                      CPR_XY xyX xyY   ->
-                          lightsSetColorXY bridgeIP
-                                           bridgeUserID
-                                           _aeLights
-                                           groupLightIDs
-                                           xyX
-                                           xyY
+                   -- Do we have the CT-only or the normal color picker?
+                   if   (not grpHasColor)
+                   then case ctFromColorPickerCoordinates _aeColorPickerImg
+                                                          mx
+                                                          my of
+                            Nothing       -> return ()
+                            Just ctKelvin ->
+                                lightsSetColorTemperature bridgeIP
+                                                          bridgeUserID
+                                                          _aeLights
+                                                          groupLightIDs
+                                                          ctKelvin
+                  else -- TODO: We have to specify a single light type for the color conversion,
+                       --       but we potentially set many different lights. Do a custom
+                       --       conversion for each color light in the group
+                       --
+                       -- TODO: We don't support color setting in groups with mixed color
+                       --       temperature and (extended) color lights. Either we're all
+                       --       color temperature and show the smaller CT-only picker, or
+                       --       we show the full picker and skip the color temperature and
+                       --       dimming only lights when setting. The problem is, what to
+                       --       do when the user selects a color like green or an option
+                       --       like the color loop, which both can't be accepted by the
+                       --       color temperature lights
+                       --
+                       case xyFromColorPickerCoordinates _aeColorPickerImg
+                                                         mx
+                                                         my
+                                                         LM_HueBulbA19 of
+                           CPR_Margin       -> return ()
+                           CPR_SetColorLoop ->
+                               lightsColorLoop bridgeIP
+                                               bridgeUserID
+                                               _aeLights
+                                               groupLightIDs
+                           CPR_Random       -> do
+                               -- TODO: Assign different random color to each light
+                               (xyX, xyY) <- liftIO getRandomXY
+                               lightsSetColorXY bridgeIP
+                                                bridgeUserID
+                                                _aeLights
+                                                groupLightIDs
+                                                xyX
+                                                xyY
+                           CPR_XY xyX xyY   ->
+                               lightsSetColorXY bridgeIP
+                                                bridgeUserID
+                                                _aeLights
+                                                groupLightIDs
+                                                xyX
+                                                xyY
       -- Show / hide group lights
       getElementByIdSafe window (buildGroupID groupName "show-btn") >>= \btn ->
           on UI.click btn $ \_ -> do
@@ -386,9 +426,6 @@ data ColorPickerResult = CPR_Margin         -- Click on the margin
                        | CPR_XY Float Float -- Clicked on the color / color temperature parts, XY
 
 -- Classify results from a click on the color picker image
---
--- TODO: Add support for color temperature lights
---
 xyFromColorPickerCoordinates :: JP.Image JP.PixelRGB8
                              -> Int
                              -> Int
@@ -423,6 +460,21 @@ xyFromColorPickerCoordinates colorPickerImg mx' my' lm =
               | otherwise ->
                     -- Margin between the buttons
                     CPR_Margin
+
+-- Hack for color temperature lights. We only show the CT portion of the color picker,
+-- which looks like it goes from about 2k to 10k Kelvin. Just use the x coordinate to
+-- interpolate, probably easier than trying to convert the picked color to a Kelvin value
+ctFromColorPickerCoordinates :: JP.Image JP.PixelRGB8 -> Int -> Int -> Maybe Float
+ctFromColorPickerCoordinates colorPickerImg mx' my' =
+    let mx     = mx' - margin
+        my     = my' - margin
+        wdh    = JP.imageWidth  colorPickerImg
+        hgt    = JP.imageHeight colorPickerImg
+        margin = 10
+    in  case () of
+            _ | mx < 0 || my < 0 || mx >= wdh || my >= hgt -> Nothing
+            _ | otherwise                                  ->
+                    Just $ (fromIntegral mx / fromIntegral wdh) * (10000 - 2000) + 2000
 
 -- Add color picker and 'tint' button
 --

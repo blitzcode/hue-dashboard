@@ -8,6 +8,7 @@ module WebUIREST ( lightsSetState
                  , lightsColorLoop
                  , lightsChangeBrightness
                  , lightsSetColorXY
+                 , lightsSetColorTemperature
                  , recallScene
                  , switchAllLights
                  ) where
@@ -26,6 +27,7 @@ import Util
 import PersistConfig
 import HueJSON
 import HueREST
+import LightColor
 
 -- Make a REST- API call in another thread to change the state on the bridge. The calls
 -- are fire & forget, we don't retry in case of an error
@@ -131,6 +133,23 @@ lightsSetColorXY bridgeIP userID lights lightIDs xyX xyY = do
                       ("effect", String "none")
                     , ("xy" :: String, Array [Number $ realToFrac xyX, Number $ realToFrac xyY])
                     ]
+
+lightsSetColorTemperature :: MonadIO m
+                          => IPAddress
+                          -> BridgeUserID
+                          -> TVar Lights
+                          -> [LightID]
+                          -> Float
+                          -> m ()
+lightsSetColorTemperature bridgeIP userID lights lightIDs ctKelvin = do
+    -- Note that we only change pure color temperature lights here, not extended color lights
+    onAndCTIDs <- filterLights
+                      lights
+                      lightIDs
+                      (\l -> (l ^. lgtState . lsOn) && (l ^. lgtType . to isCTOnlyLight))
+    lightsSetState bridgeIP userID onAndCTIDs $
+        HM.fromList
+            [ ("ct" :: String, Number $ fromIntegral (round $ kelvinToMirec ctKelvin :: Int)) ]
 
 -- http://www.developers.meethue.com/documentation/groups-api#253_body_example
 
