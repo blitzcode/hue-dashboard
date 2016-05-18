@@ -97,6 +97,8 @@ setup ae@AppEnv { .. } window = do
     -- TODO: The contrast for disabled tiles is not great, making it both difficult to
     --       read them and to distinguish them from enabled ones. Having a darker or
     --       black body background improves readability
+    -- TODO: Use jQuery more. Groups and modal dialogs should fade in, not just pop in,
+    --       jQuery syntax should be used for all DOM manipulation
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- 'All Lights' tile
