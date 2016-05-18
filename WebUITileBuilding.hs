@@ -64,8 +64,13 @@ addLightTile light lightID shown window = do
           H.! A.id (H.toValue $ buildLightID lightID "tile") $ do
       -- Caption and light icon
       H.div H.! A.class_ "light-caption small"
-            H.! A.id (H.toValue $ buildLightID lightID "caption") $
+            H.! A.id (H.toValue $ buildLightID lightID "caption") $ do
               H.toHtml $ light ^. lgtName
+              when (not $ light ^. lgtState . lsReachable) $ do -- Not reachable?
+                H.toHtml (" " :: String)
+                H.span H.! A.class_ "glyphicon glyphicon-alert"
+                       H.! A.style "color: red;"
+                       $ return ()
       H.img H.! A.class_ "img-rounded"
             H.! A.style (H.toValue $ "background: " <> colorStr <> ";")
             H.! A.src (H.toValue . iconFromLM $ light ^. lgtModelID)
