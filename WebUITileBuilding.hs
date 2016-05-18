@@ -364,13 +364,11 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                         then [ void $ element btn & set UI.text grpHiddenCaption ]
                         else [ void $ element btn & set UI.text grpShownCaption  ]
                       ) <>
-                      ( (flip map) groupLightIDs $ \lightID -> getElementByIdSafe
-                            window (buildLightID lightID "tile") >>= \e ->
-                                void $ return e & set style
-                                  [ if   grpShown
-                                    then ("display", "none" )
-                                    else ("display", "block")
-                                  ]
+                      ( (flip map) groupLightIDs $ \lightID ->
+                            runFunction . ffi $ "$('#" <> buildLightID lightID "tile" <> "')." <>
+                                if   grpShown
+                                then "fadeOut(400, 'swing')"
+                                else "fadeIn(200)"
                       )
               sequence_ uiActions
 
@@ -488,7 +486,7 @@ addColorPicker ctOnly tileID containerID overlayID = do
         H.! A.onclick
           -- Close after a click, but only on the curtain itself, not the picker
           ( H.toValue $
-              "if (event.target.id == '" <> containerID <> "') { this.style.display = 'none' }"
+              "if (event.target.id == '" <> containerID <> "') { $(this).fadeOut(150); }"
           )
         H.! A.id (H.toValue containerID) $
     H.div H.! A.class_ "color-picker-overlay"
@@ -508,8 +506,7 @@ addColorPicker ctOnly tileID containerID overlayID = do
           --       and overlay out of the tile so their opacity
           --       is not affected
           --
-          ( H.toValue $ ( printf ( "if (getElementById('%s').style.opacity == 1) " ++
-                                   " { getElementById('%s').style.display = 'block'; }"
+          ( H.toValue $ ( printf ( "if ($('#%s').css('opacity') == 1) { $('#%s').fadeIn(150); }"
                                  )
                           tileID
                           containerID

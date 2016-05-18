@@ -124,7 +124,7 @@ addScenesTile userID window = do
             H.! A.onclick
               -- Close after a click, but only on the curtain itself, not the dialog
               ( H.toValue $
-                  "if (event.target.id=='" <> sceneCreatorID <> "') { this.style.display='none' }"
+                  "if (event.target.id=='" <> sceneCreatorID <> "') { $(this).fadeOut(150); }"
               )
             $ do
         H.div H.! A.class_ "scene-creator-frame" $ do
@@ -166,7 +166,7 @@ addScenesTile userID window = do
                  H.! A.class_ "btn btn-scene plus-btn"
                  H.! A.onclick
                    ( H.toValue $
-                       "getElementById('" <> sceneCreatorID <> "').style.display = 'block'"
+                       "$('#" <> sceneCreatorID <> "').fadeIn(150)"
                    ) $
                    H.span H.! A.class_ "glyphicon glyphicon-plus" $ return ()
         H.button H.! A.type_ "button"
@@ -226,15 +226,15 @@ addScenesTile userID window = do
                       -- them from names in our scene database. This ensures we don't try
                       -- to set a non-existing element in case another users has created
                       -- a scene not yet present in our DOM as a tile
-                      ( [ getElementsByClassName window sceneTilesClass >>= \elems ->
-                            forM_ elems $ \e ->
-                              element e & set style
-                                [ if   grpShownNow
-                                  then ("display", "none" )
-                                  else ("display", "block")
-                                ]
-                        ]
-                      )
+                      ( if   grpShownNow
+                        then [ void $ element btn & set UI.text grpHiddenCaption ]
+                        else [ void $ element btn & set UI.text grpShownCaption  ]
+                      ) <>
+                      [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
+                            if   grpShownNow
+                            then "fadeOut(400, 'swing')"
+                            else "fadeIn(200)"
+                      ]
               sequence_ uiActions
   return grpShown
 

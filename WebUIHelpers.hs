@@ -5,6 +5,7 @@ module WebUIHelpers where
 
 import Data.Monoid
 import Data.Maybe
+import Data.Hashable
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
 import Control.Lens
@@ -56,7 +57,12 @@ buildLightID :: LightID -> String -> String
 buildLightID lightID elemName = "light-" <> fromLightID lightID <> "-" <> elemName
 
 buildGroupID :: GroupName -> String -> String
-buildGroupID groupName elemName = "light-" <> fromGroupName groupName <> "-" <> elemName
+buildGroupID groupName elemName =
+    "light-" <>
+    -- We use the hash of the group name, just in case the user
+    -- used characters not valid for element IDs
+    (show . hash $ fromGroupName groupName) <>
+    "-" <> elemName
 
 -- The getElementById function returns a Maybe, but actually just throws an exception if
 -- the element is not found. The exception is unfortunately a JS exception on the client,
