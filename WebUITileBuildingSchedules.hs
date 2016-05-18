@@ -271,7 +271,7 @@ addSchedulesTile sceneNames userID window = do
                       -- a schedule not yet present in our DOM as a tile
                       [ runFunction . ffi $ "$('." <> scheduleTilesClass <> "')." <>
                             if   grpShownNow
-                            then "fadeOut(400, 'swing')"
+                            then "hide()"
                             else "fadeIn(200)"
                       ]
               sequence_ uiActions

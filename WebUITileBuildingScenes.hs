@@ -232,7 +232,7 @@ addScenesTile userID window = do
                       ) <>
                       [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
                             if   grpShownNow
-                            then "fadeOut(400, 'swing')"
+                            then "hide()"
                             else "fadeIn(200)"
                       ]
               sequence_ uiActions
