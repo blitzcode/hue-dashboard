@@ -64,6 +64,10 @@ Another view on a Mac desktop browser:
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-admin.png)
 
+- Quick navigation menu to reduce scrolling on devices with smaller screens
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-navigation.png)
+
 ### Implementation
 
 Hue Dashboard is implemented in [Haskell](http://www.haskell.org), talking to the [Hue bridge](http://www2.meethue.com/en-us/productdetail/philips-hue-bridge) through its [REST API](http://www.developers.meethue.com/) using [http-conduit](https://www.stackage.org/package/http-conduit). The web interface is done using [threepenny-gui](https://wiki.haskell.org/Threepenny-gui) and [blaze-html](https://hackage.haskell.org/package/blaze-html). [Bootstrap](http://getbootstrap.com/) and [jQuery](https://jquery.com/) are used client-side.

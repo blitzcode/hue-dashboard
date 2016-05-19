@@ -5,6 +5,7 @@ module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
                          , addAllLightsTile
                          , addServerTile
+                         , addTitleBarNavDropDown
                          ) where
 
 import Text.Printf
@@ -398,7 +399,7 @@ addAllLightsTile window = do
                             <> ";"
                         )
             H.! A.id (H.toValue $ buildGroupID (GroupName "all-lights") "tile") $ do
-        H.div H.! A.class_ "light-caption light-caption-group-header small" 
+        H.div H.! A.class_ "light-caption light-caption-group-header small"
               H.! A.style "cursor: default;"
               $ "All Lights"
         H.img H.! A.class_ "img-rounded"
@@ -574,4 +575,27 @@ addServerTile window = do
       getElementByIdSafe window "server-reboot-bttn" >>= \bttn ->
           on UI.click bttn $ \_ -> do
               liftIO $ callCommand "sudo shutdown -r now"
+
+-- Add hidden dropdown div triggered by the 'Jump' element of the title nav bar
+addTitleBarNavDropDown :: [GroupName] -> PageBuilder ()
+addTitleBarNavDropDown groups =
+  addPageTile $
+    H.div H.! A.class_ "title-bar-nav-dropdown"
+          H.! A.onclick "$(this).slideToggle(100);" $ do
+      H.div H.! A.class_ "nav-link"
+             H.! A.onclick "$('html, body').animate({ scrollTop: 0 });"
+             $ "Scenes"
+      H.hr
+      forM_ groups $ \groupName -> do
+        H.div H.! A.class_ "nav-link"
+               H.! A.onclick ( H.toValue $ "$('html, body').animate({ scrollTop: $('#"
+                                           <> buildGroupID groupName "tile" <>
+                                           "').offset().top - 35 });"
+                             )
+               $ H.toHtml (fromGroupName groupName)
+      H.hr
+      H.div H.! A.class_ "nav-link"
+             H.! A.onclick "$('html, body').animate({ scrollTop: $(document).height() });"
+             $ "Schedules"
+      H.a H.! A.href "https://github.com/blitzcode/hue-dashboard" $ "About"
 

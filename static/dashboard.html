@@ -113,16 +113,50 @@
         left: 0px;
         right: 0px;
         margin: auto;
-        z-index: 10;
+        z-index: 11;
         padding: 5px;
         height: 30px;
-        width: 240px;
+        width: 256px;
         border-style: solid;
         border-width: 0px 1px 1px 1px;
         border-color: #ddd;
         border-radius: 0px 0px 8px 8px;
         line-height: 19px;
         color: #666;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    .title-bar-nav-dropdown
+    {
+        background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
+        box-shadow: 0px 0px 2px rgba(0, 0, 0, .2);
+        top: 30px;
+        position: fixed;
+        left: 0px;
+        right: 0px;
+        width: 165px;
+        margin: auto;
+        z-index: 10;
+        position: fixed;
+        display: none;
+        padding: 5px;
+        border-style: solid;
+        border-width: 0px 1px 1px 1px;
+        border-color: #ddd;
+        border-radius: 0px 0px 8px 8px;
+        color: #666;
+        text-align: center;
+        line-height: 185%;
+    }
+    .title-bar-nav-dropdown hr
+    {
+        margin: 5px;
+        padding: 0px;
+        line-height: 100%;
     }
     .title-bar .icon
     {
@@ -131,7 +165,7 @@
         padding-right: 1px;
         margin-top: -2px;
         float: left;
-        opacity: 0.5;
+        opacity: 0.57;
     }
     .title-bar .title
     {
@@ -139,12 +173,6 @@
         padding-right: 5px;
         float: left;
         cursor: pointer;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -khtml-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
     }
     .title-bar .separator
     {
@@ -162,13 +190,21 @@
         float: left;
         margin-top: -3px;
         margin-left: 1px;
-        opacity: 0.5;
+        opacity: 0.57;
     }
-    .title-bar a
+    .title-bar .nav-link
     {
         padding-left: 5px;
         padding-right: 5px;
+        cursor: pointer;
         float: left;
+    }
+    .title-bar-nav-dropdown .nav-link
+    {
+        cursor: pointer;
+        left: 0px;
+        right: 0px;
+        margin: auto;
     }
     .tile-display
     {
@@ -453,7 +489,7 @@
     <img src="static/favicon.png" class="icon"/>
     <span class="title" onclick="window.scrollTo(0, 0);">Hue Dashboard</span>
     <div class="separator"></div>
-    <a href="https://www.github.com/blitzcode/hue-dashboard">About</a>
+    <span class="nav-link" onclick="$('.title-bar-nav-dropdown').slideToggle(100)">Jump ▼</span>
     <div class="separator"></div>
     <img src="static/spinner.gif" class="image" id="navbar-spinner" />
   </div>

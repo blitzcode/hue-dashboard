@@ -90,17 +90,16 @@ setup ae@AppEnv { .. } window = do
     -- TODO: Add support for a 'dark mode' theme
     -- TODO: Zoom buttons to make tiles larger / smaller
     -- TODO: Configuration tile, allow hiding / reordering of other tiles
-    -- TODO: Drop down menu in the fixed navbar for quickly jumping to important tiles
     -- TODO: Generate placeholder divs for scenes and tiles, then fill their content
     --       later. This separation should allow for updating them without reloading
     --       the entire page
     -- TODO: The contrast for disabled tiles is not great, making it both difficult to
     --       read them and to distinguish them from enabled ones. Having a darker or
     --       black body background improves readability
-    -- TODO: Use jQuery more. Groups and modal dialogs should fade in, not just pop in,
-    --       jQuery syntax should be used for all DOM manipulation
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
+        -- Navigation dropdown
+        addTitleBarNavDropDown (map fst lightGroupsList)
         -- 'All Lights' tile
         addAllLightsTile window
         -- 'Scenes' header tile
