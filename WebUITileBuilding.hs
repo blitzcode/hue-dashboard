@@ -597,5 +597,6 @@ addTitleBarNavDropDown groups =
       H.div H.! A.class_ "nav-link"
              H.! A.onclick "$('html, body').animate({ scrollTop: $(document).height() });"
              $ "Schedules"
+      H.hr
       H.a H.! A.href "https://github.com/blitzcode/hue-dashboard" $ "About"
 
