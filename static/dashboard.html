@@ -11,7 +11,7 @@
   <link rel="icon" href="static/favicon.png">
   <!-- Bootstrap -->
   <link href="static/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-  <!-- <link href="static/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet"> -->
+  <link href="static/bootstrap/css/bootstrap-theme.min.css" rel="stylesheet">
   <!-- threepenny-gui -->
   <link rel="stylesheet" type="text/css" href="haskell.css"/>
   <script src="haskell.js"></script>
@@ -108,7 +108,7 @@
     .title-bar
     {
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
-        box-shadow: 0px 0px 3px rgba(0, 0, 0, .2);
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, .085);
         position: fixed;
         left: 0px;
         right: 0px;
@@ -133,7 +133,7 @@
     .title-bar-nav-dropdown
     {
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
-        box-shadow: 0px 0px 2px rgba(0, 0, 0, .2);
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, .085);
         top: 30px;
         position: fixed;
         left: 0px;
@@ -205,6 +205,13 @@
         left: 0px;
         right: 0px;
         margin: auto;
+        border-radius: 3px;
+    }
+    .title-bar-nav-dropdown .nav-link:hover
+    {
+        color: #333;
+        background-color: #e6e6e6;
+        border-color: #adadad;
     }
     .tile-display
     {
@@ -223,7 +230,7 @@
         padding: 0px 5px 0px 5px;
         transition: opacity 0.2s linear 0.0s;
         background-image: linear-gradient(to bottom, #fff 0%, #f8f8f8 100%);
-        box-shadow: 1px 1px 3px rgba(0, 0, 0, .075);
+        box-shadow: 1px 1px 3px rgba(0, 0, 0, .085);
         text-align: center;
     }
     .tile-display .light-caption
