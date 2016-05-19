@@ -66,6 +66,7 @@ data ScheduleTriggerStatus = STJustCreated      -- Just added, determine what to
                            | STPending          -- Trigger at earliest convenience after due time
                              deriving (Eq, Show)
 
+-- TODO: Add a 'slow activate' action, fading lights in
 data SceneAction = SAActivate | SATurnOff | SABlink
                    deriving (Eq, Show, Generic)
 

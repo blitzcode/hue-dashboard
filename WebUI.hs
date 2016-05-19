@@ -96,6 +96,7 @@ setup ae@AppEnv { .. } window = do
     -- TODO: The contrast for disabled tiles is not great, making it both difficult to
     --       read them and to distinguish them from enabled ones. Having a darker or
     --       black body background improves readability
+    -- TODO: Show warning / error traces in a pop up window that fades out automatically
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- Navigation dropdown
