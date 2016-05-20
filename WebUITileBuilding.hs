@@ -473,7 +473,7 @@ ctFromColorPickerCoordinates colorPickerImg mx' my' =
     let mx     = mx' - margin
         my     = my' - margin
         wdh    = JP.imageWidth  colorPickerImg
-        hgt    = JP.imageHeight colorPickerImg
+        hgt    = JP.imageHeight colorPickerImg - 40 -- Just the CT portion
         margin = 10
     in  case () of
             _ | mx < 0 || my < 0 || mx >= wdh || my >= hgt -> Nothing
