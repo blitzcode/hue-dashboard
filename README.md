@@ -48,7 +48,7 @@ Another view on a Mac desktop browser:
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ct-picker.png)
 
 - The UI is done with vector graphics and looks crisp on retina displays
-- Schedule system allows automatic triggering of scenes at specified times, supports special actions like turning a scene off or making the lights blink, can be scheduled only on certain weekdays, checks for differences between client & server time to avoid surprises, schedules can be deactivated as well
+- Schedule system allows automatic triggering of scenes at specified times, supports special actions like turning a scene off, having it slowly fade in or making the lights blink, can be scheduled only on certain weekdays, checks for differences between client & server time to avoid surprises, schedules can be deactivated as well
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-1.png)
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-schedules-2.png)

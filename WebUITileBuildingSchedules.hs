@@ -69,6 +69,7 @@ scheduleCreatorActionID  = "schedule-creator-dialog-action"
 scheduleCreatorSceneID   = "schedule-creator-dialog-scene"
 scheduleCreatorDayID day = "schedule-creator-dialog-day" <> day
 actionActivate           = "activate"
+actionActivateSlow       = "activate slow"
 actionTurnOff            = "turn-off"
 actionBlink              = "blink"
 
@@ -130,9 +131,10 @@ addSchedulesTile sceneNames userID window = do
             H.br >> H.br
             void $ "do "
             H.select H.! A.id (H.toValue scheduleCreatorActionID) $ do
-              H.option H.! A.value (H.toValue actionActivate) $ "activate"
-              H.option H.! A.value (H.toValue actionTurnOff ) $ "turn lights off in"
-              H.option H.! A.value (H.toValue actionBlink   ) $ "blink lights in"
+              H.option H.! A.value (H.toValue actionActivate    ) $ "activate"
+              H.option H.! A.value (H.toValue actionActivateSlow) $ "activate slowly"
+              H.option H.! A.value (H.toValue actionTurnOff     ) $ "turn lights off in"
+              H.option H.! A.value (H.toValue actionBlink       ) $ "blink lights in"
             H.br >> H.br
             void $ "scene "
             H.select H.! A.id (H.toValue scheduleCreatorSceneID) $
@@ -208,10 +210,11 @@ addSchedulesTile sceneNames userID window = do
                   get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
               -- Action
               actionStr    <- get value =<< getElementByIdSafe window scheduleCreatorActionID
-              let action | actionStr == actionActivate = SAActivate
-                         | actionStr == actionTurnOff  = SATurnOff
-                         | actionStr == actionBlink    = SABlink
-                         | otherwise                   = SAActivate
+              let action | actionStr == actionActivate     = SAActivate
+                         | actionStr == actionActivateSlow = SAActivateSlow
+                         | actionStr == actionTurnOff      = SATurnOff
+                         | actionStr == actionBlink        = SABlink
+                         | otherwise                       = SAActivate
               -- Don't bother creating schedules without name
               -- TODO: Show an error message to indicate what the problem is
               -- TODO: Deal with the situation where we have no scenes at all
@@ -314,9 +317,10 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
       H.span H.! A.class_ "glyphicon glyphicon-chevron-down schedule-chevron-down" $ return ()
       H.div H.! A.class_ "schedule-action" $
         case _sAction of
-          SAActivate -> "Activate"
-          SATurnOff  -> "Turn Off"
-          SABlink    -> "Blink"
+          SAActivate     -> "Activate"
+          SAActivateSlow -> "Activate Slowly"
+          SATurnOff      -> "Turn Off"
+          SABlink        -> "Blink"
       H.div H.! A.class_ "light-caption small no-padding-margin"
             H.! A.style "cursor: default;"
             $ do
@@ -336,9 +340,10 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
             -- Action
             "getElementById('" <> scheduleCreatorActionID <> "').value = '" <>
               ( case _sAction of
-                  SAActivate -> actionActivate
-                  SATurnOff  -> actionTurnOff
-                  SABlink    -> actionBlink
+                  SAActivate     -> actionActivate
+                  SAActivateSlow -> actionActivateSlow
+                  SATurnOff      -> actionTurnOff
+                  SABlink        -> actionBlink
               ) <> "';" <>
             -- Scene, only if present
             ( if   sceneMissing

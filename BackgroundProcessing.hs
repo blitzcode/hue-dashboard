@@ -6,6 +6,7 @@ module BackgroundProcessing ( pcWriterThread
                             ) where
 
 import Data.Monoid
+import Data.Aeson
 import Control.Monad
 import Control.Monad.Writer
 import Control.Lens
@@ -96,6 +97,9 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                               [ case sched ^. sAction of
                                   SAActivate ->
                                     lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) scene
+                                  SAActivateSlow -> -- 15s transition time
+                                    lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) $
+                                      scene & traversed . _2 . at "transitiontime" ?~ Number 150
                                   SATurnOff  ->
                                     lightsSwitchOnOff (pc ^. pcBridgeIP)
                                                       (pc ^. pcBridgeUserID)
