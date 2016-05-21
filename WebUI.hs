@@ -18,6 +18,7 @@ import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.State
+import Data.Time.Clock
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import Text.Blaze.Html.Renderer.String
@@ -56,6 +57,7 @@ webUIStart ae = do
 
 setup :: AppEnv -> Window -> UI ()
 setup ae@AppEnv { .. } window = do
+    start <- liftIO getCurrentTime
     -- Obtain user ID from cookie
     -- TODO: Round trip, would be nice to just get the cookie the normal way
     userID <- CookieUserID <$> (callFunction $ ffi "getUserID()" :: UI String)
@@ -69,9 +71,10 @@ setup ae@AppEnv { .. } window = do
                           return (True, ud)
             Just ud -> return (False, ud)
     traceS TLInfo $ "New connection from user ID '" <> fromCookieUserID userID <>
-        if   newUser
-        then "' (new user, creating default data)"
-        else "' (known user)"
+        ( if   newUser
+          then "' (new user, creating default data), "
+          else "' (known user), "
+        )
     -- Read all scenes, schedules, lights and light groups, display sorted by name.
     -- Light IDs in the group are already sorted by name
     (scenes, schedules, lights, lightGroupsList) <- liftIO . atomically $
@@ -97,6 +100,7 @@ setup ae@AppEnv { .. } window = do
     --       read them and to distinguish them from enabled ones. Having a darker or
     --       black body background improves readability
     -- TODO: Show warning / error traces in a pop up window that fades out automatically
+    -- TODO: Add support for searching / pairing / deleting lights
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- Navigation dropdown
@@ -144,6 +148,7 @@ setup ae@AppEnv { .. } window = do
     -- HTML. Also, if we did not do it this way and escaped the string ourselves, any
     -- %-sign in the HTML would trigger string substitution and the call would fail
     runFunction $ ffi "document.getElementById('lights').innerHTML = %1" tilesHtml
+    finishPage <- liftIO getCurrentTime
     -- Now that we build the page, execute all the UI actions to register event handlers
     --
     -- TODO: Since we can't batch this, it'll still take a second or more to register
@@ -153,6 +158,7 @@ setup ae@AppEnv { .. } window = do
     sequence_ . reverse $ page ^. pgUIActions
     -- We're done building the page, hide spinner
     void $ getElementByIdSafe window "navbar-spinner" & set UI.src "static/svg/checkmark.svg"
+    finishEvents <- liftIO getCurrentTime
     -- Duplicate broadcast channel
     tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Worker thread for receiving light updates
@@ -165,6 +171,12 @@ setup ae@AppEnv { .. } window = do
         --       resource leaks, also log lightUpdateWorker entry / exit
         traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected"
         cancel updateWorker
+    -- Trace some info and statistics
+    traceS TLInfo
+        ( printf "Page building: %.2fs / Event registration: %.2fs"
+                 (realToFrac $ diffUTCTime finishPage   start      :: Double)
+                 (realToFrac $ diffUTCTime finishEvents finishPage :: Double)
+        )
 
 -- Update DOM elements with light update messages received
 --
