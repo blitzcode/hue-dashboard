@@ -191,32 +191,24 @@ setup ae@AppEnv { .. } window = do
 lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
 lightUpdateWorker window tchan = runUI window $ loop
   where
-    enabledOpacityStyle  = ("opacity", show enabledOpacity )
-    disabledOpacityStyle = ("opacity", show disabledOpacity)
-    loop                 = do
+    turnOnOff elementID onOff =
+        -- We can't just set the opacity directly and use CSS 'transition', as this
+        -- breaks the fade[In|Out]() methods we use when showing / hiding groups
+        runFunction . ffi ("$('#" <> elementID <> "').animate({opacity: %1}, 400)") $
+            if onOff then enabledOpacity else disabledOpacity
+    loop = forever $
       (liftIO . atomically $ readTChan tchan) >>=
         \(lightID, update) -> case update of
           -- Light turned on / off
-          LU_OnOff s ->
-            getElementByIdSafe window (buildLightID lightID "tile") >>= \e ->
-                void $ return e & set style
-                    [if s then enabledOpacityStyle else disabledOpacityStyle]
+          LU_OnOff s -> turnOnOff (buildLightID lightID "tile") s
           -- All lights off, grey out 'All Lights' tile
-          LU_LastOff ->
-            getElementByIdSafe window (buildGroupID (GroupName "all-lights") "tile") >>= \e ->
-              void $ return e & set style [disabledOpacityStyle]
+          LU_LastOff -> turnOnOff (buildGroupID (GroupName "all-lights") "tile") False
           -- At least one light on, activate 'All Lights' tile
-          LU_FirstOn ->
-            getElementByIdSafe window (buildGroupID (GroupName "all-lights") "tile") >>= \e ->
-              void $ return e & set style [enabledOpacityStyle]
+          LU_FirstOn -> turnOnOff (buildGroupID (GroupName "all-lights") "tile") True
           -- All lights in a group off, grey out group switch tile
-          LU_GroupLastOff grp ->
-            getElementByIdSafe window (buildGroupID grp "tile") >>= \e ->
-              void $ return e & set style [disabledOpacityStyle]
+          LU_GroupLastOff grp -> turnOnOff (buildGroupID grp "tile") False
           -- At least one light in a group on, activate group switch tile
-          LU_GroupFirstOn grp ->
-            getElementByIdSafe window (buildGroupID grp "tile") >>= \e ->
-              void $ return e & set style [enabledOpacityStyle]
+          LU_GroupFirstOn grp -> turnOnOff (buildGroupID grp "tile") True
           -- Brightness change
           LU_Brightness brightness -> do
             let brightPercent = printf "%.0f%%" (fromIntegral brightness * 100 / 255 :: Float)
@@ -228,5 +220,4 @@ lightUpdateWorker window tchan = runUI window $ loop
           LU_Color col ->
             getElementByIdSafe window (buildLightID lightID "image") >>= \e ->
               void $ return e & set style [("background", col)]
-      loop
 
