@@ -58,7 +58,8 @@ days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 -- TODO: Schedule creation and deletion currently requires a page reload
 
 scheduleCreatorID, scheduleCreatorNameID, scheduleCreatorHourID, scheduleCreatorMinuteID,
-    scheduleCreatorActionID, scheduleCreatorSceneID, actionActivate, actionTurnOff, actionBlink
+    scheduleCreatorActionID, scheduleCreatorSceneID, actionActivate, actionActivateSlow,
+    actionTurnOff, actionBlink
     :: String
 scheduleCreatorDayID :: String -> String
 scheduleCreatorID        = "schedule-creator-dialog-container"
@@ -274,7 +275,7 @@ addSchedulesTile sceneNames userID window = do
                       -- a schedule not yet present in our DOM as a tile
                       [ runFunction . ffi $ "$('." <> scheduleTilesClass <> "')." <>
                             if   grpShownNow
-                            then "fadeOut()"
+                            then "hide()"
                             else "fadeIn()"
                       ]
               sequence_ uiActions

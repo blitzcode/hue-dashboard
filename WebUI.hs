@@ -193,7 +193,8 @@ lightUpdateWorker window tchan = runUI window $ loop
   where
     turnOnOff elementID onOff =
         -- We can't just set the opacity directly and use CSS 'transition', as this
-        -- breaks the fade[In|Out]() methods we use when showing / hiding groups
+        -- breaks the fade[In|Out]() methods we use when showing / hiding groups, use
+        -- jQuery instead to do the animation of the opacity
         runFunction . ffi ("$('#" <> elementID <> "').animate({opacity: %1}, 400)") $
             if onOff then enabledOpacity else disabledOpacity
     loop = forever $

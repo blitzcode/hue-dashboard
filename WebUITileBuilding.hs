@@ -373,7 +373,7 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                       ( (flip map) groupLightIDs $ \lightID ->
                             runFunction . ffi $ "$('#" <> buildLightID lightID "tile" <> "')." <>
                                 if   grpShown
-                                then "fadeOut()"
+                                then "hide()"
                                 else "fadeIn()"
                       )
               sequence_ uiActions

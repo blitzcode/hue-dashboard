@@ -228,7 +228,7 @@ addScenesTile userID window = do
                       -- a scene not yet present in our DOM as a tile
                       [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
                             if   grpShownNow
-                            then "fadeOut()"
+                            then "hide()"
                             else "fadeIn()"
                       ]
               sequence_ uiActions
