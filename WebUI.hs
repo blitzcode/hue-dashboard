@@ -101,6 +101,7 @@ setup ae@AppEnv { .. } window = do
     --       black body background improves readability
     -- TODO: Show warning / error traces in a pop up window that fades out automatically
     -- TODO: Add support for searching / pairing / deleting lights
+    -- TODO: Ability to select UI language on a per user basis
     --
     page <- liftIO . flip runReaderT ae . flip execStateT (Page [] []) $ do
         -- Navigation dropdown
@@ -171,7 +172,7 @@ setup ae@AppEnv { .. } window = do
         --       resource leaks, also log lightUpdateWorker entry / exit
         traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected"
         cancel updateWorker
-    -- Trace some info and statistics
+    -- Trace some performance measurements
     traceS TLInfo
         ( printf "Page building: %.2fs / Event registration: %.2fs"
                  (realToFrac $ diffUTCTime finishPage   start      :: Double)

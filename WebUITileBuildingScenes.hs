@@ -226,10 +226,6 @@ addScenesTile userID window = do
                       -- them from names in our scene database. This ensures we don't try
                       -- to set a non-existing element in case another users has created
                       -- a scene not yet present in our DOM as a tile
-                      ( if   grpShownNow
-                        then [ void $ element btn & set UI.text grpHiddenCaption ]
-                        else [ void $ element btn & set UI.text grpShownCaption  ]
-                      ) <>
                       [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
                             if   grpShownNow
                             then "hide()"

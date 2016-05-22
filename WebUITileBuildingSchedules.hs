@@ -78,8 +78,8 @@ actionBlink              = "blink"
 addSchedulesTile :: [SceneName] -> CookieUserID -> Window -> PageBuilder Bool
 addSchedulesTile sceneNames userID window = do
   AppEnv { .. } <- ask
-  let scheduleCreatorBtnID       = "schedule-creator-dialog-btn"        :: String
-      schedulesTileHideShowBtnID = "schedules-tile-hide-show-btn"       :: String
+  let scheduleCreatorBtnID       = "schedule-creator-dialog-btn"  :: String
+      schedulesTileHideShowBtnID = "schedules-tile-hide-show-btn" :: String
       schedulesTileGroupName     = GroupName "<SchedulesTileGroup>"
       queryGroupShown            =
         queryUserData _aePC userID (udVisibleGroupNames . to (HS.member schedulesTileGroupName))
