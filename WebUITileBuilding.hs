@@ -192,6 +192,7 @@ iconFromLM lm = basePath </> fn <.> ext
     basePath = "static/svg"
     ext      = "svg"
     fn       = case lm of LM_HueBulbA19                -> "white_and_color_e27"
+                          LM_HueBulbA19V2              -> "white_and_color_e27"
                           LM_HueSpotBR30               -> "br30"
                           LM_HueSpotGU10               -> "gu10"
                           LM_HueLightStrips            -> "lightstrip"
@@ -207,6 +208,12 @@ iconFromLM lm = basePath </> fn <.> ext
                                                           "white_and_color_e27"
                           LM_HueGo                     -> "go"
                           LM_HueLightStripsPlus        -> "lightstrip"
+                          LM_LivingWhitesPlug          -> "power_socket"
+                          LM_LightifyFlex              -> "lightstrip"
+                          LM_LightifyClassicA60RGBW    -> "white_and_color_e27"
+                          LM_LightifyClassicA60TW      -> "white_and_color_e27"
+                          LM_LightifyPAR16             -> "par16"
+                          LM_LightifyPlug              -> "power_socket"
                           LM_Unknown _                 -> "white_e27"
 
 -- Build group switch tile for light group
