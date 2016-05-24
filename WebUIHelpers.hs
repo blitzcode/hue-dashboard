@@ -101,6 +101,11 @@ grpShownCaption, grpHiddenCaption :: String
 grpShownCaption  = "Hide ◄"
 grpHiddenCaption = "Show ►"
 
+trucateEllipsis :: Int -> String -> String
+trucateEllipsis maxLength str
+    | length str > maxLength = take maxLength str <> "…"
+    | otherwise              = str
+
 addEditAndDeleteButton :: String -> String -> String -> String -> H.Html
 addEditAndDeleteButton editDeleteDivID
                        editBtnOnClick

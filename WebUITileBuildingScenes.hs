@@ -310,10 +310,7 @@ addSceneTile sceneName scene shown window = do
                       then [grpName]
                       else []
                 groupStr      = concat . intersperse ", " . sort $ map fromGroupName groupsTouched
-                maxLength     = 20
-            in  if   length groupStr > maxLength
-                then take maxLength groupStr <> "…"
-                else groupStr
+            in  trucateEllipsis 19 groupStr
       -- Edit and delete button
       let editOnClick =
             -- Disable all light check boxes in the dialog

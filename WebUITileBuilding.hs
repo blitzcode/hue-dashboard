@@ -85,7 +85,7 @@ addLightTile light lightID shown window = do
       -- Model type and text
       H.h6 $
         H.small $ do
-          H.toHtml . show $ light ^. lgtModelID
+          H.toHtml . trucateEllipsis 19 . show $ light ^. lgtModelID
           H.br
           H.toHtml . show $ light ^. lgtType
       -- Only add brightness widget for lights that support it
