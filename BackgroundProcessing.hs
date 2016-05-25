@@ -86,36 +86,36 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                         case HM.lookup (sched ^. sScene) (pc ^. pcScenes) of
                           Nothing ->
                             -- Invalid scene
-                            tell $
+                            tell
                               [ traceS TLWarn $ "Schedule '" <> schedName <>
                                                 "' tried to trigger non-existent scene '"
                                                 <> (sched ^. sScene) <> "'"
                               ]
                           Just scene ->
                             -- Trigger scene
-                            tell $
+                            tell
                               [ case sched ^. sAction of
                                   SAActivate ->
                                     lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) scene
                                   SAActivateSlow -> -- 15s transition time
                                     lightsSetScene (pc ^. pcBridgeIP) (pc ^. pcBridgeUserID) $
                                       scene & traversed . _2 . at "transitiontime" ?~ Number 150
-                                  SATurnOff  ->
+                                  SATurnOff ->
                                     lightsSwitchOnOff (pc ^. pcBridgeIP)
                                                       (pc ^. pcBridgeUserID)
                                                       (map fst scene)
                                                       False
-                                  SABlink    ->
+                                  SABlink ->
                                     lightsBreatheCycle (pc ^. pcBridgeIP)
                                                        (pc ^. pcBridgeUserID)
                                                        (map fst scene)
                               , traceS TLInfo $ "Schedule '" <> schedName <>
-                                                 "' has triggered scene '" <> (sched ^. sScene)
-                                                 <> "'"
+                                                "' has triggered scene '" <> (sched ^. sScene)
+                                                <> "'"
                               ]
                       else
                         -- Not today
-                            tell $
+                            tell
                               [ traceS TLInfo $ "Schedule '" <> schedName <>
                                                 "' skipped, not active today"
                               ]
