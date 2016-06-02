@@ -324,7 +324,7 @@ addSceneTile sceneName scene shown window = do
             -- Set scene name
             "getElementById('" <> sceneCreatorNameID <> "').value = '" <> sceneName <> "';" <>
             -- Show dialog
-            "getElementById('" <> sceneCreatorID <> "').style.display = 'block';"
+            "$('#" <> sceneCreatorID <> "').fadeIn(150);"
       addEditAndDeleteButton editDeleteDivID
                              editOnClick
                              deleteConfirmDivID

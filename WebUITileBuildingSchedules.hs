@@ -361,7 +361,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
             "getElementById('" <> scheduleCreatorNameID <> "').value = '" <>
               scheduleName <> "';" <>
             -- Show dialog
-            "getElementById('" <> scheduleCreatorID <> "').style.display = 'block';"
+            "$('#" <> scheduleCreatorID  <> "').fadeIn(150);"
       addEditAndDeleteButton editDeleteDivID
                              editOnClick
                              deleteConfirmDivID
