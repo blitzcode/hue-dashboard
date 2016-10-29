@@ -25,6 +25,8 @@ import HueJSON
 -- http://hackage.haskell.org/package/colour
 -- https://www.npmjs.com/package/color-temperature
 -- https://github.com/neilbartlett/color-temperature/blob/master/index.js
+--
+-- TODO: The color temperature and HS code could use some improvements and testing
 
 -- Compute a normalized RGB triplet for the given light state
 rgbFromLightState :: LightState -> (Float, Float, Float)
@@ -108,7 +110,7 @@ hsToRGB hue sat =
         p = v * (1 - s)
         q = v * (1 - f * s)
         t = v * (1 - (1 - f) * s)
-    in  (\(r, g, b) -> (r * 255, g * 255, b * 255)) $ case hi of
+    in  case hi of
             0 -> (v, t, p)
             1 -> (q, v, p)
             2 -> (p, v, t)
