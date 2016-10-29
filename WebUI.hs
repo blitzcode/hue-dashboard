@@ -33,7 +33,7 @@ import WebUITileBuilding
 import WebUITileBuildingScenes
 import WebUITileBuildingSchedules
 import PersistConfig
-import HueJSON (GroupName(..))
+import HueJSON (GroupName(..), Light(..))
 
 -- Threepenny based user interface for inspecting and controlling Hue devices
 
@@ -76,7 +76,6 @@ setup ae@AppEnv { .. } window = do
           else "' (known user), "
         )
     -- Read all scenes, schedules, lights and light groups, display sorted by name.
-    -- Light IDs in the group are already sorted by name
     (scenes, schedules, lights, lightGroupsList) <- liftIO . atomically $
       (,,,)
         <$> (sortBy (compare `Data.Function.on` fst) . HM.toList . _pcScenes    <$> readTVar _aePC)
@@ -121,8 +120,12 @@ setup ae@AppEnv { .. } window = do
             addGroupSwitchTile groupName (HS.toList groupLightIDs) userID window
             -- Is the current group visible?
             let grpShown = userData ^. udVisibleGroupNames . to (HS.member groupName)
+            -- Lights in the group are hashed by ID, sort by name for display
+            let sortedIDs = sortBy ( compare `Data.Function.on`
+                                       (\k -> maybe "" _lgtName $ HM.lookup k lights)
+                                   ) $ HS.toList groupLightIDs
             -- Create all light tiles for the current light group
-            forM_ groupLightIDs $ \lightID ->
+            forM_ sortedIDs $ \lightID ->
                 case HM.lookup lightID lights of
                     Nothing    -> return ()
                     Just light -> addLightTile light lightID grpShown window
