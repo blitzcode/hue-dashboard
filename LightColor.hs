@@ -88,7 +88,7 @@ rgbFromLightState ls
     ,  Just ct <- ls ^. lsColorTemp =
         ctToRGB . mirecToKelvin $ fromIntegral ct
     | otherwise =
-        (255, 255, 255) -- Has no color, assume white light
+        (1, 1, 1) -- Has no color, assume white light
 
 mirecToKelvin :: Float -> Float
 mirecToKelvin m = 1000000 / m
@@ -165,7 +165,7 @@ ctToRGB kelvin =
                    in  -254.76935184120902 + 0.8274096064007395 * blue' +
                            115.67994401066147 * log blue'
         clamp x = max 0 $ min 255 x
-   in  (clamp red, clamp green, clamp blue)
+   in  (clamp red / 255, clamp green / 255, clamp blue / 255)
 
 -- Compute an XY value for the given light model from a normalized RGB triplet
 --
