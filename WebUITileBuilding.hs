@@ -206,6 +206,7 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueA19WhiteAmbience       -> -- The color temp. bulbs look more like
                                                           -- the normal color ones, flat top
                                                           "white_and_color_e27"
+                          LM_HueGU10WhiteAmbience      -> "gu10"
                           LM_HueGo                     -> "go"
                           LM_HueLightStripsPlus        -> "lightstrip"
                           LM_LivingWhitesPlug          -> "power_socket"

@@ -162,6 +162,7 @@ data LightModel = LM_HueBulbA19
                 | LM_ColorLightModule
                 | LM_ColorTemperatureModule
                 | LM_HueA19WhiteAmbience
+                | LM_HueGU10WhiteAmbience
                 | LM_HueGo
                 | LM_HueLightStripsPlus
                 | LM_LivingWhitesPlug
@@ -178,6 +179,9 @@ instance FromJSON LightModel where
             "LCT001"           -> return LM_HueBulbA19
             "LCT007"           -> return LM_HueBulbA19V2
             "LCT002"           -> return LM_HueSpotBR30
+            -- LCT011 is a 'Hue BR30', not sure what the difference
+            -- to a 'Hue Spot BR30' is. Treat it the same for now
+            "LCT011"           -> return LM_HueSpotBR30
             "LCT003"           -> return LM_HueSpotGU10
             "LST001"           -> return LM_HueLightStrips
             "LLC010"           -> return LM_HueLivingColorsIris
@@ -194,6 +198,8 @@ instance FromJSON LightModel where
             "LLM012"           -> return LM_ColorTemperatureModule
             "LTW001"           -> return LM_HueA19WhiteAmbience
             "LTW004"           -> return LM_HueA19WhiteAmbience
+            "LTW013"           -> return LM_HueGU10WhiteAmbience
+            "LTW014"           -> return LM_HueGU10WhiteAmbience
             "LLC020"           -> return LM_HueGo
             "LST002"           -> return LM_HueLightStripsPlus
             "LWL001"           -> return LM_LivingWhitesPlug
@@ -219,6 +225,7 @@ instance Show LightModel where
     show LM_ColorLightModule          = "Color Light Module"
     show LM_ColorTemperatureModule    = "Color Temp. Module"
     show LM_HueA19WhiteAmbience       = "Hue A19 White Amb."
+    show LM_HueGU10WhiteAmbience      = "Hue GU10 White Amb."
     show LM_HueGo                     = "Hue Go"
     show LM_HueLightStripsPlus        = "Hue Light Strips Plus"
     show LM_LivingWhitesPlug          = "LivingWhites Plug"
