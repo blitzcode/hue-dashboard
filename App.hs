@@ -53,6 +53,8 @@ _traceBridgeState = do
 -- TODO: Consider replacing the prefix system with manually created groups,
 --       same dialog as scene creation
 --
+-- TODO: Consider supporting the new room / group feature of the Hue API instead
+--
 buildLightGroups :: Lights -> LightGroups
 buildLightGroups lights =
     let lightIDAndName'   = -- Build (light ID, light name) list
@@ -80,11 +82,13 @@ buildLightGroups lights =
                                         , -- Extract list of light IDs
                                           HS.fromList $ map fst lightGroup
                                         )
-        lightGroups       = -- Add singleton groups back in as single 'No Group' group. The
-                            -- Unicode quotation marks should also ensure this sorts dead last
-                            HM.insert (GroupName "“No Group”")
-                                      (HS.fromList $ map fst singletons)
-                                      lightGroups'
+        lightGroups       | null singletons = lightGroups'
+                          | otherwise       =
+                              -- Add singleton groups back in as single 'No Group' group. The
+                              -- Unicode quotation marks should also ensure this sorts dead last
+                              HM.insert (GroupName "“No Group”")
+                                        (HS.fromList $ map fst singletons)
+                                        lightGroups'
     in lightGroups
 
 -- Update our local cache of the relevant bridge state, propagate changes to all UI threads
