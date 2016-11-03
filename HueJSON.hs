@@ -169,6 +169,7 @@ data LightModel = LM_HueBulbA19
                 | LM_LightifyFlex
                 | LM_LightifyClassicA60RGBW
                 | LM_LightifyClassicA60TW
+                | LM_LightifyClassicB40TW
                 | LM_LightifyPAR16
                 | LM_LightifyPlug
                 | LM_Unknown !String
@@ -176,38 +177,39 @@ data LightModel = LM_HueBulbA19
 instance FromJSON LightModel where
     parseJSON (String s) =
         case T.unpack s of
-            "LCT001"           -> return LM_HueBulbA19
-            "LCT007"           -> return LM_HueBulbA19V2
-            "LCT002"           -> return LM_HueSpotBR30
+            "LCT001"                    -> return LM_HueBulbA19
+            "LCT007"                    -> return LM_HueBulbA19V2
+            "LCT002"                    -> return LM_HueSpotBR30
             -- LCT011 is a 'Hue BR30', not sure what the difference
             -- to a 'Hue Spot BR30' is. Treat it the same for now
-            "LCT011"           -> return LM_HueSpotBR30
-            "LCT003"           -> return LM_HueSpotGU10
-            "LST001"           -> return LM_HueLightStrips
-            "LLC010"           -> return LM_HueLivingColorsIris
-            "LLC011"           -> return LM_HueLivingColorsBloom
-            "LLC012"           -> return LM_HueLivingColorsBloom
-            "LLC006"           -> return LM_LivingColorsGen3Iris
-            "LLC007"           -> return LM_LivingColorsGen3BloomAura
-            "LWB004"           -> return LM_HueA19Lux
-            "LWB006"           -> return LM_HueA19Lux
-            "LWB007"           -> return LM_HueA19Lux
-            "LLM001"           -> return LM_ColorLightModule
-            "LLM010"           -> return LM_ColorTemperatureModule
-            "LLM011"           -> return LM_ColorTemperatureModule
-            "LLM012"           -> return LM_ColorTemperatureModule
-            "LTW001"           -> return LM_HueA19WhiteAmbience
-            "LTW004"           -> return LM_HueA19WhiteAmbience
-            "LTW013"           -> return LM_HueGU10WhiteAmbience
-            "LTW014"           -> return LM_HueGU10WhiteAmbience
-            "LLC020"           -> return LM_HueGo
-            "LST002"           -> return LM_HueLightStripsPlus
-            "LWL001"           -> return LM_LivingWhitesPlug
-            "Flex RGBW"        -> return LM_LightifyFlex
-            "Classic A60 RGBW" -> return LM_LightifyClassicA60RGBW
-            "Classic A60 TW"   -> return LM_LightifyClassicA60TW
-            "PAR16 50 TW"      -> return LM_LightifyPAR16
-            "Plug - LIGHTIFY"  -> return LM_LightifyPlug
+            "LCT011"                    -> return LM_HueSpotBR30
+            "LCT003"                    -> return LM_HueSpotGU10
+            "LST001"                    -> return LM_HueLightStrips
+            "LLC010"                    -> return LM_HueLivingColorsIris
+            "LLC011"                    -> return LM_HueLivingColorsBloom
+            "LLC012"                    -> return LM_HueLivingColorsBloom
+            "LLC006"                    -> return LM_LivingColorsGen3Iris
+            "LLC007"                    -> return LM_LivingColorsGen3BloomAura
+            "LWB004"                    -> return LM_HueA19Lux
+            "LWB006"                    -> return LM_HueA19Lux
+            "LWB007"                    -> return LM_HueA19Lux
+            "LLM001"                    -> return LM_ColorLightModule
+            "LLM010"                    -> return LM_ColorTemperatureModule
+            "LLM011"                    -> return LM_ColorTemperatureModule
+            "LLM012"                    -> return LM_ColorTemperatureModule
+            "LTW001"                    -> return LM_HueA19WhiteAmbience
+            "LTW004"                    -> return LM_HueA19WhiteAmbience
+            "LTW013"                    -> return LM_HueGU10WhiteAmbience
+            "LTW014"                    -> return LM_HueGU10WhiteAmbience
+            "LLC020"                    -> return LM_HueGo
+            "LST002"                    -> return LM_HueLightStripsPlus
+            "LWL001"                    -> return LM_LivingWhitesPlug
+            "Flex RGBW"                 -> return LM_LightifyFlex
+            "Classic A60 RGBW"          -> return LM_LightifyClassicA60RGBW
+            "Classic A60 TW"            -> return LM_LightifyClassicA60TW
+            "Classic B40 TW - LIGHTIFY" -> return LM_LightifyClassicB40TW
+            "PAR16 50 TW"               -> return LM_LightifyPAR16
+            "Plug - LIGHTIFY"           -> return LM_LightifyPlug
             str                -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
@@ -232,6 +234,7 @@ instance Show LightModel where
     show LM_LightifyFlex              = "LIGHTIFY Flex"
     show LM_LightifyClassicA60RGBW    = "LIGHTIFY Cl. A60 RGBW"
     show LM_LightifyClassicA60TW      = "LIGHTIFY Cl. A60 TW"
+    show LM_LightifyClassicB40TW      = "LIGHTIFY Cl. B40 TW"
     show LM_LightifyPAR16             = "LIGHTIFY PAR16 TW"
     show LM_LightifyPlug              = "LIGHTIFY Plug"
     show (LM_Unknown s)               = "Unknown (" <> s <> ")"

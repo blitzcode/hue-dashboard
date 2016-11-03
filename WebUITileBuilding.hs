@@ -213,6 +213,7 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_LightifyFlex              -> "lightstrip"
                           LM_LightifyClassicA60RGBW    -> "white_and_color_e27"
                           LM_LightifyClassicA60TW      -> "white_and_color_e27"
+                          LM_LightifyClassicB40TW      -> "candelabra_e14"
                           LM_LightifyPAR16             -> "par16"
                           LM_LightifyPlug              -> "power_socket"
                           LM_Unknown _                 -> "white_e27"

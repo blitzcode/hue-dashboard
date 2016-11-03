@@ -66,6 +66,7 @@ data ScheduleTriggerStatus = STJustCreated      -- Just added, determine what to
                            | STPending          -- Trigger at earliest convenience after due time
                              deriving (Eq, Show)
 
+ -- TODO: Add action that does the 15s blinking alert
 data SceneAction = SAActivate | SAActivateSlow | SATurnOff | SABlink
                    deriving (Eq, Show, Generic)
 
