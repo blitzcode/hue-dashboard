@@ -209,7 +209,7 @@ instance FromJSON LightModel where
             "Classic A60 TW"            -> return LM_LightifyClassicA60TW
             "Classic B40 TW - LIGHTIFY" -> return LM_LightifyClassicB40TW
             "PAR16 50 TW"               -> return LM_LightifyPAR16
-            "Plug - LIGHTIFY"           -> return LM_LightifyPlug
+            "Plug 01"                   -> return LM_LightifyPlug
             str                -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
