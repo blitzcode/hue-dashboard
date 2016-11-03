@@ -10,7 +10,7 @@ Accessing the web interface from an iPhone:
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-1.jpg)
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-2.jpg)
 
-And the same on the iPad (somewhat older screenshot):
+And the same on the iPad:
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-ipad.jpg)
 
@@ -42,6 +42,10 @@ Another view on a Mac desktop browser:
 
 - Lights can be put in a 'color loop' mode where they cycle between all available colors
 - Clicking a light / group caption makes the lamps blink (can be used as a crude form of communication!)
+- Supports various OSRAM LIGHTIFY products that complement the existing Hue ecosystem, i.e. E14 candelabra bulbs and switchable outlets
+
+![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-osram-lightify.png)
+
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - Color temperature lights get their own simpler color picker
 
@@ -134,6 +138,8 @@ The program traces a lot of information and all errors / warnings to the console
 ![Raspberry Pi](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/raspberry-pi.jpg)
 
 The server for Hue Dashboard needs to live somewhere, and a small ARM machine is an obvious choice if you don't already have a PC running 24/7 in your home. The state of Haskell on ARM is rather unsatisfactory at the moment, so here's a list of steps that worked for me. Hue Dashboard itself has very modest needs, the only real challenge is getting it build. It might be easier to build on an emulator like QEMU or perhaps by renting a cheap ARM VPS with more RAM, but this guide will focus on building on the actual Raspberry Pi.
+
+**Update: There's now a Haskell Stack binary for ARM and newer versions of GHC resolve many of the bugs described here. Looks like there is hope that soon deploying Hue Dashboard on ARM will be as straighforward as x86, making many of these steps obsolete**
 
 * This worked for an Raspbery Pi 3 Model B, other models may or may not give the same results
 * Prepare an SD card with `2016-03-18-raspbian-jessie-lite.img` as the OS image, download from [here](http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2016-03-18/) or current version [here](https://www.raspberrypi.org/downloads/raspbian/). See [this guide](https://www.raspberrypi.org/documentation/installation/installing-images/) for how to write the SD card. You want at least a 16GB card, Haskell builds are large
