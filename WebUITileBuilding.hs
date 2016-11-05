@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, RecordWildCards, RankNTypes, LambdaCase #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards, RankNTypes, LambdaCase, ScopedTypeVariables #-}
 
 module WebUITileBuilding ( addLightTile
                          , addGroupSwitchTile
@@ -11,8 +11,11 @@ module WebUITileBuilding ( addLightTile
 import Text.Printf
 import Data.Monoid
 import Data.List
+import Data.Time.LocalTime
+import Data.Time
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
+import Control.Exception
 import Control.Concurrent.STM
 import Control.Lens hiding ((#), set, (<.>), element)
 import Control.Monad
@@ -530,6 +533,35 @@ addColorPicker ctOnly tileID containerID overlayID = do
           ) $
     H.div H.! A.class_ "glyphicon glyphicon-tint color-picker-tint-icon" $ return ()
 
+-- Return the uptime of the host system as human readable string
+getSystemUptime :: IO String
+getSystemUptime = do
+    -- Invoke uptime command to determine time since our host is running
+    -- TODO: The -s flag does not exist in BSD's uptime, maybe there's a more portable way?
+    bootTime <- catch (readProcess "uptime" ["-s"] "")
+                      (\(_ :: IOError) -> return "")
+    -- Parse boot time and compute difference to current time
+    diff <-
+      case parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M:%S" bootTime :: Maybe LocalTime of
+        Nothing            ->
+            return $ fromInteger 0 -- Failed to parse the time, return zero uptime
+        Just bootTimeLocal -> do
+            -- Convert to UTC
+            zone <- getCurrentTimeZone
+            let bootTimeUTC = localTimeToUTC zone bootTimeLocal
+            -- Get current time and return difference
+            current <- getCurrentTime
+            return $ diffUTCTime current bootTimeUTC
+    -- Convert difference to human readable string
+    let secondsDiff = round diff :: Int
+        dayLen      = 24 * 60 * 60
+        hourLen     = 60 * 60
+        minuteLen   = 60
+        days        =  secondsDiff                                    `div` dayLen
+        hours       = (secondsDiff - days * dayLen                  ) `div` hourLen
+        minutes     = (secondsDiff - days * dayLen - hours * hourLen) `div` minuteLen
+    return $ printf "%id %ih %im" days hours minutes
+
 -- Tile for shutting down / rebooting server
 --
 -- TODO: Add option to backup / restore configuration
@@ -540,6 +572,7 @@ addServerTile window = do
   AppEnv { .. } <- ask
   -- System status
   (avg15m, ramUsage) <- liftIO getSystemStatus
+  uptime             <- liftIO getSystemUptime
   -- Build tile
   void $ do
     addPageTile $
@@ -553,9 +586,9 @@ addServerTile window = do
         H.div H.! A.id "server-warning" $ do
           H.h6 $
             H.small $ do
-              H.toHtml $ (printf "CPU Load: %.2f" avg15m :: String)
+              H.toHtml $ (printf "CPU %.2f · RAM %.1f%%" avg15m ramUsage :: String)
               H.br
-              H.toHtml $ (printf "RAM Usage: %.1f%%" ramUsage :: String)
+              H.toHtml $ ("Up " <> uptime)
           H.button H.! A.type_ "button"
                    H.! A.class_ "btn btn-danger btn-sm"
                    H.! A.onclick "getElementById('server-danger-bttns').style.display='block';"
