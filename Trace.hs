@@ -63,6 +63,8 @@ withTrace traceFn echoOn appendOn colorOn level f =
         )
         ( \ts -> do traceT TLInfo "Shutting down trace system"
                     void . takeMVar $ traceSettings
+                    -- TODO: If the program hangs or crashes, the trace is often
+                    --       incomplete. Add option to flush on every trace
                     case tsFile ts of Just h -> hClose h
                                       _      -> return ()
                     when (tsEchoOn ts) $ hFlush stdout

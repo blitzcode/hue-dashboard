@@ -139,6 +139,8 @@ addSchedulesTile sceneNames userID window = do
             H.br >> H.br
             void $ "scene "
             H.select H.! A.id (H.toValue scheduleCreatorSceneID) $
+              -- TODO: Maybe also add light names here to allow schedules for single
+              --       lights without being forced to create a scene?
               forM_ sceneNames $ \s ->
                 H.option H.! A.value (H.toValue s) $ H.toHtml s
             void $ " on"
@@ -152,6 +154,9 @@ addSchedulesTile sceneNames userID window = do
                   H.br
                   H.toHtml day
           H.br
+          -- TODO: Do schedules actually need to have names? It often feels redundant
+          --       to come up with one, what a schedule does is often very clear from
+          --       the actual parameters displayed
           H.div H.! A.class_ "input-group" $ do
             H.input H.! A.type_ "text"
                     H.! A.class_ "form-control input-sm"
@@ -162,6 +167,8 @@ addSchedulesTile sceneNames userID window = do
               H.button H.! A.class_ "btn btn-sm btn-info"
                        H.! A.id (H.toValue scheduleCreatorBtnID)
                        $ "Create / Update"
+          -- TODO: Consider adding a 'Turn off X minutes later' section to cover this
+          --       common use case without having to create two schedules
           H.h6 $
             H.small $
               H.toHtml $
@@ -190,6 +197,7 @@ addSchedulesTile sceneNames userID window = do
                  H.! A.class_ "btn btn-info show-hide-btn"
                  H.! A.id (H.toValue schedulesTileHideShowBtnID)
                  $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
+      -- TODO: Consider adding global toggle to suspend all schedules
   addPageUIAction $ do
       -- Create a new scene
       getElementByIdSafe window scheduleCreatorBtnID >>= \btn ->

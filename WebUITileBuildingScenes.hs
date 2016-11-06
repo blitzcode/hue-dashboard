@@ -311,7 +311,7 @@ addSceneTile sceneName scene shown window = do
                       else []
                 groupStr      = concat . intersperse ", " . sort $ map fromGroupName groupsTouched
             in  trucateEllipsis 19 groupStr
-      -- Edit and delete button
+      -- Edit and delete button (TODO: Add 'turn off' button)
       let editOnClick =
             -- Disable all light check boxes in the dialog
             "var checkboxes = document.getElementsByClassName('light-checkbox-container')[0]" <>

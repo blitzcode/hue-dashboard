@@ -175,7 +175,7 @@ setup ae@AppEnv { .. } window = do
         --       resource leaks, also log lightUpdateWorker entry / exit
         traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected"
         cancel updateWorker
-    -- Trace some performance measurements
+    -- Trace some performance measurements (TODO: Show page size in characters)
     traceS TLInfo
         ( printf "Page building: %.2fs / Event registration: %.2fs"
                  (realToFrac $ diffUTCTime finishPage   start      :: Double)

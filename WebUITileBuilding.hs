@@ -496,6 +496,7 @@ ctFromColorPickerCoordinates colorPickerImg mx' my' =
 --
 -- TODO: Maybe add a brightness adjustment area to the color picker?
 -- TODO: Reduce height of central element in color picker (better for smaller screens)
+-- TODO: Instead of having a color picker for each light / group, reuse one for all
 --
 addColorPicker :: Bool -> String -> String -> String -> H.Html
 addColorPicker ctOnly tileID containerID overlayID = do
@@ -566,6 +567,7 @@ getSystemUptime = do
 --
 -- TODO: Add option to backup / restore configuration
 -- TODO: Add a 'Log' button to see record of last ten errors / warnings
+-- TODO: Show an error / warning icon if there have been any in the last hour
 --
 addServerTile :: Window -> PageBuilder ()
 addServerTile window = do
