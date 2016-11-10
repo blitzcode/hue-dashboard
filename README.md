@@ -5,6 +5,12 @@
 
 Hue Dashboard is a web application for comfortably controlling [Philips Hue lights](http://www2.meethue.com/en-XX) from any device with a browser.
 
+### What is Hue?
+
+[Hue](http://www2.meethue.com/en-XX) is Philips' product range of "smart" light bulbs and switches. Hue devices use [ZigBee Light Link](http://www.zigbee.org/zigbee-for-developers/applicationstandards/zigbee-light-link/) mesh networking to communicate. Part of the Hue system is a bridge which connects the Hue devices to the network. The bridge offers both an integration into Apple's [HomeKit](http://www.apple.com/ios/homekit/) framework and its own [REST / HTTP / JSON API](http://www.developers.meethue.com/). There's a growing number of [apps](http://www.developers.meethue.com/otherapps/otherAppsIOS.html), home automation systems and 3rd party ZigBee devices working with Hue.
+
+### Screenshots
+
 Accessing the web interface from an iPhone:
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-iphone-1.jpg)
@@ -64,7 +70,7 @@ Another view on a Mac desktop browser:
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-all-lights.png)
 
 - Server has been tested on OS X and Ubuntu, needs very little system resources to run
-- Can be deployed on a Raspberry Pi, even features a server control panel for shutdown / reboot and monitoring CPU / RAM usage
+- Can be deployed on a Raspberry Pi, even features a server control panel for shutdown / reboot and monitoring CPU / RAM usage, device uptime
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-admin.png)
 
@@ -78,11 +84,9 @@ Hue Dashboard is implemented in [Haskell](http://www.haskell.org), talking to th
 
 Also see [the project page on Blitzcode.net](http://www.blitzcode.net/haskell.shtml#hue-dashboard).
 
-### What is Hue?
+# Installation
 
-[Hue](http://www2.meethue.com/en-XX) is Philips' product range of "smart" light bulbs and switches. Hue devices use [ZigBee Light Link](http://www.zigbee.org/zigbee-for-developers/applicationstandards/zigbee-light-link/) mesh networking to communicate. Part of the Hue system is a bridge which connects the Hue devices to the network. The bridge offers both an integration into Apple's [HomeKit](http://www.apple.com/ios/homekit/) framework and its own [REST / HTTP / JSON API](http://www.developers.meethue.com/). There's a growing number of [apps](http://www.developers.meethue.com/otherapps/otherAppsIOS.html), home automation systems and 3rd party ZigBee devices working with Hue.
-
-# Build & Setup
+### Compiling
 
 This project uses [stack](http://docs.haskellstack.org/en/stable/README/), so build with
 
@@ -92,7 +96,7 @@ and run with
 
     stack exec hue-dashboard
 
-If you've never build a Haskell application before and have nothing prepared on the system, the complete list of steps on OS X would be something like this, assuming you have at least [Homebrew](http://brew.sh/) setup:
+If you've never build a Haskell application before and have nothing prepared on the system, the complete list of steps on OS X would be something like this, assuming you have at least [Homebrew](http://brew.sh/) and [Git](https://git-scm.com/) setup:
 
     brew install haskell-stack
     git clone https://github.com/blitzcode/hue-dashboard.git
@@ -101,9 +105,11 @@ If you've never build a Haskell application before and have nothing prepared on 
     stack build
     stack exec hue-dashboard
 
-Like any Hue API application you'll have to authorize access to your bridge by pushlinking. The program will discover your bridge and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this configuration from the created `config.yaml`.
+### Setup
 
-After startup connect to `localhost:8001` to view the dashboard. Be advised that the dashboard might also be visible to others on the network.
+Like any Hue API application you'll have to authorize access to your bridge by pushlinking. On startup, the program will discover your bridge IP address and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this and other configuration details from the created `config.yaml`.
+
+After startup navigate to `http://localhost:8001` with your browser to view the dashboard. Be advised that the dashboard might also be visible to others on the network.
 
 There's also a range of command line options to customize behavior:
 
@@ -125,11 +131,13 @@ Usage: hue-dashboard [OPTION...]
   -h          --help                   print usage information
 ```
 
-The groups displayed are based on a prefix word. So 'Kitchen Ceiling' and 'Kitchen Table' will be put into the 'Kitchen' group. You might need to rename your lights to take full advantage of this feature.
+### Groups
+
+The groups displayed are based on a prefix word. So 'Kitchen Ceiling' and 'Kitchen Table' will be put into the 'Kitchen' group. You might need to rename your lights to take full advantage of this feature, but the naming convention works well for other reasons (like unique light names for HomeKit) as well. Custom grouping schemes or the build-in groups / rooms of the Hue system are not supported yet.
 
 # Compatibility
 
-This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Raspbian) with a v2 Hue bridge (the square HomeKit one) and a current (early 2016) firmware with a selection of original Hue lights and switches. It's of course possible that an older / newer bridge and 3rd party lights will not work correctly as no testing with them has been performed.
+This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Raspbian) with a v2 Hue bridge (the square HomeKit one) and a current (2016) firmware with a selection of original Hue lights / switches and  OSRAM LIGHTIFY products. It's of course possible that an older / newer bridge and other 3rd party lights will not work correctly as no testing with them has been performed.
 
 The program traces a lot of information and all errors / warnings to the console, please look for any error messages if things don't work as expected.
 
