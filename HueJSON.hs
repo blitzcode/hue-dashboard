@@ -151,8 +151,10 @@ isDimmableLT = \case LT_ColorLight            -> True
 
 data LightModel = LM_HueBulbA19
                 | LM_HueBulbA19V2
+                | LM_HueBulbA19V3
                 | LM_HueSpotBR30
                 | LM_HueSpotGU10
+                | LM_HueBR30
                 | LM_HueLightStrips
                 | LM_HueLivingColorsIris
                 | LM_HueLivingColorsBloom
@@ -179,11 +181,11 @@ instance FromJSON LightModel where
         case T.unpack s of
             "LCT001"                    -> return LM_HueBulbA19
             "LCT007"                    -> return LM_HueBulbA19V2
+            "LCT010"                    -> return LM_HueBulbA19V3
+            "LCT014"                    -> return LM_HueBulbA19V3
             "LCT002"                    -> return LM_HueSpotBR30
-            -- LCT011 is a 'Hue BR30', not sure what the difference
-            -- to a 'Hue Spot BR30' is. Treat it the same for now
-            "LCT011"                    -> return LM_HueSpotBR30
             "LCT003"                    -> return LM_HueSpotGU10
+            "LCT011"                    -> return LM_HueBR30
             "LST001"                    -> return LM_HueLightStrips
             "LLC010"                    -> return LM_HueLivingColorsIris
             "LLC011"                    -> return LM_HueLivingColorsBloom
@@ -216,8 +218,10 @@ instance FromJSON LightModel where
 instance Show LightModel where
     show LM_HueBulbA19                = "Hue Bulb A19"
     show LM_HueBulbA19V2              = "Hue Bulb A19 V2"
+    show LM_HueBulbA19V3              = "Hue Bulb A19 V3"
     show LM_HueSpotBR30               = "Hue Spot BR30"
     show LM_HueSpotGU10               = "Hue Spot GU10"
+    show LM_HueBR30                   = "Hue BR30"
     show LM_HueLightStrips            = "Hue Light Strips"
     show LM_HueLivingColorsIris       = "Hue Living Colors Iris"
     show LM_HueLivingColorsBloom      = "Hue Living Colors Bl."
