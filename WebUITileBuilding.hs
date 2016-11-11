@@ -205,6 +205,7 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueLivingColorsBloom      -> "bloom"
                           LM_LivingColorsGen3Iris      -> "iris"
                           LM_LivingColorsGen3BloomAura -> "bloom"
+                          LM_LivingColorsAura          -> "aura"
                           LM_HueA19Lux                 -> "white_e27"
                           LM_ColorLightModule          -> "white_and_color_e27"
                           LM_ColorTemperatureModule    -> "white_e27"

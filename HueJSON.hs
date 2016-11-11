@@ -160,6 +160,7 @@ data LightModel = LM_HueBulbA19
                 | LM_HueLivingColorsBloom
                 | LM_LivingColorsGen3Iris
                 | LM_LivingColorsGen3BloomAura
+                | LM_LivingColorsAura
                 | LM_HueA19Lux
                 | LM_ColorLightModule
                 | LM_ColorTemperatureModule
@@ -192,6 +193,7 @@ instance FromJSON LightModel where
             "LLC012"                    -> return LM_HueLivingColorsBloom
             "LLC006"                    -> return LM_LivingColorsGen3Iris
             "LLC007"                    -> return LM_LivingColorsGen3BloomAura
+            "LLC014"                    -> return LM_LivingColorsAura
             "LWB004"                    -> return LM_HueA19Lux
             "LWB006"                    -> return LM_HueA19Lux
             "LWB007"                    -> return LM_HueA19Lux
@@ -212,7 +214,7 @@ instance FromJSON LightModel where
             "Classic B40 TW - LIGHTIFY" -> return LM_LightifyClassicB40TW
             "PAR16 50 TW"               -> return LM_LightifyPAR16
             "Plug 01"                   -> return LM_LightifyPlug
-            str                -> return $ LM_Unknown str
+            str                         -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
 instance Show LightModel where
@@ -227,6 +229,7 @@ instance Show LightModel where
     show LM_HueLivingColorsBloom      = "Hue Living Colors Bl."
     show LM_LivingColorsGen3Iris      = "Living Colors G3 Iris"
     show LM_LivingColorsGen3BloomAura = "Living Colors G3 B/A"
+    show LM_LivingColorsAura          = "Living Colors Aura"
     show LM_HueA19Lux                 = "Hue A19 Lux"
     show LM_ColorLightModule          = "Color Light Module"
     show LM_ColorTemperatureModule    = "Color Temp. Module"
@@ -264,7 +267,7 @@ parseHueTimeMaybe :: Maybe String -> Maybe UTCTime
 parseHueTimeMaybe Nothing = Nothing
 parseHueTimeMaybe (Just t) =
     case parseTimeM True defaultTimeLocale "%FT%T" t of
-        Just d -> Just d
+        Just d  -> Just d
         Nothing -> Nothing
 
 instance FromJSON BridgeScene where
