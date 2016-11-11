@@ -207,6 +207,8 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_LivingColorsGen3BloomAura -> "bloom"
                           LM_LivingColorsAura          -> "aura"
                           LM_HueA19Lux                 -> "white_e27"
+                          LM_HueA19White               -> "white_e27"
+                          LM_HueA19WhiteV2             -> "white_e27"
                           LM_ColorLightModule          -> "white_and_color_e27"
                           LM_ColorTemperatureModule    -> "white_e27"
                           LM_HueA19WhiteAmbience       -> -- The color temp. bulbs look more like

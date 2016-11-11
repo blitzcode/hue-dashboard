@@ -162,6 +162,8 @@ data LightModel = LM_HueBulbA19
                 | LM_LivingColorsGen3BloomAura
                 | LM_LivingColorsAura
                 | LM_HueA19Lux
+                | LM_HueA19White
+                | LM_HueA19WhiteV2
                 | LM_ColorLightModule
                 | LM_ColorTemperatureModule
                 | LM_HueA19WhiteAmbience
@@ -186,7 +188,7 @@ instance FromJSON LightModel where
             "LCT014"                    -> return LM_HueBulbA19V3
             "LCT002"                    -> return LM_HueSpotBR30
             "LCT003"                    -> return LM_HueSpotGU10
-            "LCT011"                    -> return LM_HueBR30
+            "LCT011"                    -> return LM_HueBR30 -- What's the diff. to the 'Spot'?
             "LST001"                    -> return LM_HueLightStrips
             "LLC010"                    -> return LM_HueLivingColorsIris
             "LLC011"                    -> return LM_HueLivingColorsBloom
@@ -195,8 +197,10 @@ instance FromJSON LightModel where
             "LLC007"                    -> return LM_LivingColorsGen3BloomAura
             "LLC014"                    -> return LM_LivingColorsAura
             "LWB004"                    -> return LM_HueA19Lux
-            "LWB006"                    -> return LM_HueA19Lux
-            "LWB007"                    -> return LM_HueA19Lux
+            "LWB006"                    -> return LM_HueA19White
+            "LWB007"                    -> return LM_HueA19White
+            "LWB010"                    -> return LM_HueA19WhiteV2 -- 10 & 14 assumed to be Gen2
+            "LWB014"                    -> return LM_HueA19WhiteV2
             "LLM001"                    -> return LM_ColorLightModule
             "LLM010"                    -> return LM_ColorTemperatureModule
             "LLM011"                    -> return LM_ColorTemperatureModule
@@ -209,11 +213,11 @@ instance FromJSON LightModel where
             "LST002"                    -> return LM_HueLightStripsPlus
             "LWL001"                    -> return LM_LivingWhitesPlug
             "Flex RGBW"                 -> return LM_LightifyFlex
-            "Classic A60 RGBW"          -> return LM_LightifyClassicA60RGBW
-            "Classic A60 TW"            -> return LM_LightifyClassicA60TW
+            "Classic A60 RGBW"          -> return LM_LightifyClassicA60RGBW -- Model ID Unverified
+            "Classic A60 TW"            -> return LM_LightifyClassicA60TW -- Model ID Unverified
             "Classic B40 TW - LIGHTIFY" -> return LM_LightifyClassicB40TW
-            "PAR16 50 TW"               -> return LM_LightifyPAR16
-            "Plug 01"                   -> return LM_LightifyPlug
+            "PAR16 50 TW"               -> return LM_LightifyPAR16 -- Model ID Unverified
+            "Plug 01"                   -> return LM_LightifyPlug -- Also 'Plug - LIGHTIFY'?
             str                         -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
@@ -231,6 +235,8 @@ instance Show LightModel where
     show LM_LivingColorsGen3BloomAura = "Living Colors G3 B/A"
     show LM_LivingColorsAura          = "Living Colors Aura"
     show LM_HueA19Lux                 = "Hue A19 Lux"
+    show LM_HueA19White               = "Hue A19 White"
+    show LM_HueA19WhiteV2             = "Hue A19 White V2"
     show LM_ColorLightModule          = "Color Light Module"
     show LM_ColorTemperatureModule    = "Color Temp. Module"
     show LM_HueA19WhiteAmbience       = "Hue A19 White Amb."
