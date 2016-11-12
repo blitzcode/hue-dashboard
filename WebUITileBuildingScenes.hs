@@ -301,6 +301,9 @@ addSceneTile sceneName scene shown window = do
                 H.! A.style (H.toValue styleCircleNoExist)
                 $ return ()
       -- List all group names affected by the scene, truncate with ellipsis if needed
+      --
+      -- TODO: If all lights in the scene have been removed this fails to output even
+      --       an empty line and causes slightly wrong layout. Maybe show an error
       H.h6 $
         H.small $
           H.toHtml $

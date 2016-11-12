@@ -424,6 +424,7 @@ addAllLightsTile window = do
               H.! A.id (H.toValue $ buildGroupID (GroupName "all-lights") "image")
         H.h6 $
           H.small $
+            -- TODO: Also show software version and number of connected switches
             sequence_ $ intersperse H.br
               [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
               , H.toHtml $ "IP "    <> fromIPAddress bridgeIP
