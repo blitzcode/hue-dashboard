@@ -105,6 +105,8 @@ If you've never build a Haskell application before and have nothing prepared on 
     stack build
     stack exec hue-dashboard
 
+A note for Windows users: It seems like there currently is an issue with dynamic linking. Simply remove the `-dynamic` flag from `ghc-options` in `hue-dashboard.cabal`.
+
 ### Setup
 
 Like any Hue API application you'll have to authorize access to your bridge by pushlinking. On startup, the program will discover your bridge IP address and prompt you to press the button on your bridge when running the first time. Subsequent runs will restore this and other configuration details from the created `config.yaml`.

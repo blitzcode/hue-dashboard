@@ -46,6 +46,7 @@ parseCmdLineOpt = liftIO $ do
         throwIO . userError $ "Done, exiting"
     return flags
   where
+    -- TODO: Add option to manually specify bridge IP
     options :: [OptDescr Flag]
     options = [ Option ['p']
                        ["port"]

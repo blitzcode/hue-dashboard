@@ -40,6 +40,7 @@ executable hue-dashboard
                     random,
                     process,
                     hashable
+  -- TODO: Seems like dynamic linking doesn't work on Windows, disable for that platform?
   ghc-options:      -Wall -rtsopts -with-rtsopts=-N -O2 -j -threaded -dynamic
   ghc-prof-options: -fprof-auto -caf-all
 
