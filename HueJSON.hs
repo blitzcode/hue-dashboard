@@ -155,7 +155,7 @@ data LightModel = LM_HueBulbA19
                 | LM_HueSpotBR30
                 | LM_HueSpotGU10
                 | LM_HueBR30
-                | LM_HueLightStrips
+                | LM_HueLightStrip
                 | LM_HueLivingColorsIris
                 | LM_HueLivingColorsBloom
                 | LM_LivingColorsGen3Iris
@@ -169,7 +169,8 @@ data LightModel = LM_HueBulbA19
                 | LM_HueA19WhiteAmbience
                 | LM_HueGU10WhiteAmbience
                 | LM_HueGo
-                | LM_HueLightStripsPlus
+                | LM_HueLightStripPlus
+                | LM_HueWhiteAmbienceFlexStrip
                 | LM_LivingWhitesPlug
                 | LM_LightifyFlex
                 | LM_LightifyClassicA60RGBW
@@ -189,7 +190,7 @@ instance FromJSON LightModel where
             "LCT002"                    -> return LM_HueSpotBR30
             "LCT003"                    -> return LM_HueSpotGU10
             "LCT011"                    -> return LM_HueBR30 -- What's the diff. to the 'Spot'?
-            "LST001"                    -> return LM_HueLightStrips
+            "LST001"                    -> return LM_HueLightStrip
             "LLC010"                    -> return LM_HueLivingColorsIris
             "LLC011"                    -> return LM_HueLivingColorsBloom
             "LLC012"                    -> return LM_HueLivingColorsBloom
@@ -210,7 +211,8 @@ instance FromJSON LightModel where
             "LTW013"                    -> return LM_HueGU10WhiteAmbience
             "LTW014"                    -> return LM_HueGU10WhiteAmbience
             "LLC020"                    -> return LM_HueGo
-            "LST002"                    -> return LM_HueLightStripsPlus
+            "LST002"                    -> return LM_HueLightStripPlus
+            "LTP001"                    -> return LM_HueWhiteAmbienceFlexStrip
             "LWL001"                    -> return LM_LivingWhitesPlug
             "Flex RGBW"                 -> return LM_LightifyFlex
             "Classic A60 RGBW"          -> return LM_LightifyClassicA60RGBW -- Model ID Unverified
@@ -228,7 +230,7 @@ instance Show LightModel where
     show LM_HueSpotBR30               = "Hue Spot BR30"
     show LM_HueSpotGU10               = "Hue Spot GU10"
     show LM_HueBR30                   = "Hue BR30"
-    show LM_HueLightStrips            = "Hue Light Strips"
+    show LM_HueLightStrip             = "Hue LightStrip"
     show LM_HueLivingColorsIris       = "Hue Living Colors Iris"
     show LM_HueLivingColorsBloom      = "Hue Living Colors Bl."
     show LM_LivingColorsGen3Iris      = "Living Colors G3 Iris"
@@ -242,7 +244,8 @@ instance Show LightModel where
     show LM_HueA19WhiteAmbience       = "Hue A19 White Amb."
     show LM_HueGU10WhiteAmbience      = "Hue GU10 White Amb."
     show LM_HueGo                     = "Hue Go"
-    show LM_HueLightStripsPlus        = "Hue Light Strips Plus"
+    show LM_HueLightStripPlus         = "Hue LightStrip Plus"
+    show LM_HueWhiteAmbienceFlexStrip = "Hue W. Amb. FlexStrip"
     show LM_LivingWhitesPlug          = "LivingWhites Plug"
     show LM_LightifyFlex              = "LIGHTIFY Flex"
     show LM_LightifyClassicA60RGBW    = "LIGHTIFY Cl. A60 RGBW"
