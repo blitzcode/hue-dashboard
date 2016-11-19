@@ -426,6 +426,7 @@ addAllLightsTile window = do
         H.h6 $
           H.small $
             -- TODO: Also show software version and number of connected switches
+            -- TODO: Hyperlink bridge IP to bridge homepage or debug interface
             sequence_ $ intersperse H.br
               [ H.toHtml $ "Model " <> _aeBC ^. bcModelID
               , H.toHtml $ "IP "    <> fromIPAddress bridgeIP
