@@ -52,13 +52,21 @@ withTrace traceFn echoOn appendOn colorOn level f =
                                                                         else WriteMode)
                                              else return Nothing
                                   _ -> return Nothing
-             let ts = TraceSettings { tsFile = h
-                                    , tsEchoOn = echoOn
+             let ts = TraceSettings { tsFile    = h
+                                    , tsEchoOn  = echoOn
                                     , tsColorOn = colorOn
-                                    , tsLevel = level
+                                    , tsLevel   = level
                                     }
              r <- tryPutMVar traceSettings ts
              unless r $ error "Double initialization of Trace module"
+             -- Force to UTF8 to avoid the dreaded '<stdout>: commitAndReleaseBuffer:
+             -- invalid argument' error when the locale is improperly configured and
+             -- a non-ASCII character is output
+             when (level /= TLNone) $ do
+                 hSetEncoding stdout utf8
+                 case h of
+                     Just file -> hSetEncoding file utf8
+                     Nothing   -> return ()
              return ts
         )
         ( \ts -> do traceT TLInfo "Shutting down trace system"
