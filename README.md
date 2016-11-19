@@ -200,6 +200,7 @@ Also see this [bug report](https://github.com/commercialhaskell/stack/issues/209
 cd /home/pi/hue-dashboard/
 exec .stack-work/dist/arm-linux/Cabal-1.22.5.0/build/hue-dashboard/hue-dashboard 2>&1
 ```
+* Occasionally Hue Dashboard might fail to start after a reboot with the above script. Starting & stopping the service with `sudo svc -u /service/hue-dashboard/` etc. always works. I can only conjecture that Hue Dashboard is being run before the network is fully initialized. Adding a `sleep 5` at the beginning seems to fix this reliably
 * On ARM machines Hue Dashboard displays a 'Server' tile, allowing for shutdown and reboot of the Raspberry Pi without using SSH
 * This hopefully worked out all fine, be sure to file bug reports with the respective parts of the Haskell ecosystem to make sure it keeps getting easier
 
