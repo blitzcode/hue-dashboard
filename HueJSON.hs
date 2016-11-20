@@ -178,6 +178,10 @@ data LightModel = LM_HueBulbA19
                 | LM_LightifyClassicB40TW
                 | LM_LightifyPAR16
                 | LM_LightifyPlug
+                | LM_InnrGU10Spot
+                | LM_InnrBulbRB162
+                | LM_InnrBulbRB172W
+                | LM_InnrFlexLightFL110
                 | LM_Unknown !String
 
 instance FromJSON LightModel where
@@ -220,6 +224,10 @@ instance FromJSON LightModel where
             "Classic B40 TW - LIGHTIFY" -> return LM_LightifyClassicB40TW
             "PAR16 50 TW"               -> return LM_LightifyPAR16 -- Model ID Unverified
             "Plug 01"                   -> return LM_LightifyPlug -- Also 'Plug - LIGHTIFY'?
+            "RS 125"                    -> return LM_InnrGU10Spot  -- Tentative support for Innr
+            "RB 162"                    -> return LM_InnrBulbRB162 -- ..
+            "RB 172 W"                  -> return LM_InnrBulbRB172W
+            "FL 110"                    -> return LM_InnrFlexLightFL110
             str                         -> return $ LM_Unknown str
     parseJSON _ = fail "Expected string"
 
@@ -253,6 +261,10 @@ instance Show LightModel where
     show LM_LightifyClassicB40TW      = "LIGHTIFY Cl. B40 TW"
     show LM_LightifyPAR16             = "LIGHTIFY PAR16 TW"
     show LM_LightifyPlug              = "LIGHTIFY Plug"
+    show LM_InnrGU10Spot              = "Innr GU10 Spot"
+    show LM_InnrBulbRB162             = "Innr Bulb RB 162"
+    show LM_InnrBulbRB172W            = "Innr Bulb RB 172 W"
+    show LM_InnrFlexLightFL110        = "Innr FlexLight FL 110"
     show (LM_Unknown s)               = "Unknown (" <> s <> ")"
 
 -- Scenes

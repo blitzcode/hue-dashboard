@@ -206,7 +206,7 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_LivingColorsGen3Iris      -> "iris"
                           LM_LivingColorsGen3BloomAura -> "bloom"
                           LM_LivingColorsAura          -> "aura"
-                          LM_HueA19Lux                 -> "white_e27"
+                          LM_HueA19Lux                 -> "white_and_color_e27"
                           LM_HueA19White               -> "white_e27"
                           LM_HueA19WhiteV2             -> "white_e27"
                           LM_ColorLightModule          -> "white_and_color_e27"
@@ -225,6 +225,10 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_LightifyClassicB40TW      -> "candelabra_e14"
                           LM_LightifyPAR16             -> "par16"
                           LM_LightifyPlug              -> "power_socket"
+                          LM_InnrGU10Spot              -> "gu10"
+                          LM_InnrBulbRB162             -> "white_e27"
+                          LM_InnrBulbRB172W            -> "white_e27"
+                          LM_InnrFlexLightFL110        -> "lightstrip"
                           LM_Unknown _                 -> "white_e27"
 
 -- Build group switch tile for light group
