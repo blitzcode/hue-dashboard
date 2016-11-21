@@ -7,6 +7,8 @@ Hue Dashboard is a web application for comfortably controlling [Philips Hue ligh
 
 ### What is Hue?
 
+![Hue Logo](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/hue-logo.jpg)
+
 [Hue](http://www2.meethue.com/en-XX) is Philips' product range of "smart" light bulbs and switches. Hue devices use [ZigBee Light Link](http://www.zigbee.org/zigbee-for-developers/applicationstandards/zigbee-light-link/) mesh networking to communicate. Part of the Hue system is a bridge which connects the Hue devices to the network. The bridge offers both an integration into Apple's [HomeKit](http://www.apple.com/ios/homekit/) framework and its own [REST / HTTP / JSON API](http://www.developers.meethue.com/). There's a growing number of [apps](http://www.developers.meethue.com/otherapps/otherAppsIOS.html), home automation systems and 3rd party ZigBee devices working with Hue.
 
 ### Screenshots
@@ -51,6 +53,10 @@ Another view on a Mac desktop browser:
 - Supports various OSRAM LIGHTIFY products that complement the existing Hue ecosystem, i.e. E14 candelabra bulbs and switchable outlets
 
 ![Web Interface](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/web-interface-osram-lightify.png)
+
+- Support for products from Innr Lighting
+
+![Innr Logo](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/innr-logo.jpg)
 
 - All official Philips Hue lights are recognized and displayed with the appropriate graphics
 - Color temperature lights get their own simpler color picker
@@ -207,6 +213,12 @@ exec .stack-work/dist/arm-linux/Cabal-1.22.5.0/build/hue-dashboard/hue-dashboard
 # TODO
 
 There's a large amount of `TODO` comments around the code, pointing out potential bugs and limitations, recording my thoughts for future improvements.
+
+# Related Projects
+
+If you want to have a very visible alarm telling you when your website or internet connection goes down, please also see my [Hue Watchdog](https://github.com/blitzcode/hue-watchdog/blob/master/README.md) project.
+
+![Alarm](https://raw.github.com/blitzcode/hue-watchdog/master/alarm.gif)
 
 # Legal
 
