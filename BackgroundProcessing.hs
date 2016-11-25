@@ -124,7 +124,7 @@ scheduleWatcher tvPC = loop =<< (localDay . zonedTimeToLocalTime <$> getZonedTim
                       pcSchedules . at schedName . _Just . sTrigStatus .~ STAlreadyTriggered
           -- Execute all pending actions, sleep for a while and start again
           sequence_ ioActions
-          waitNSec 10
+          waitNSec 10 -- TODO: All our schedules trigger on the full minute, just wait till then?
           loop $ localDay curTime
 
 -- Did we already pass the trigger time of the schedule today?
