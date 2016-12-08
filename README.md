@@ -220,6 +220,10 @@ If you want to have a very visible alarm telling you when your website or intern
 
 ![Alarm](https://raw.github.com/blitzcode/hue-watchdog/master/alarm.gif)
 
+Abuse those inexpensive [Amazon Dash Buttons](https://en.wikipedia.org/wiki/Amazon_Dash) to control your Hue Lights, please also see my [Hue Dash](https://github.com/blitzcode/hue-dash/) project.
+
+![Button](https://raw.github.com/blitzcode/hue-dash/master/button.gif)
+
 # Legal
 
 This program is published under the [MIT License](http://en.wikipedia.org/wiki/MIT_License).
