@@ -7,9 +7,12 @@ resolver: lts-5.15
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
+- location:
+    git: git@github.com:HeinrichApfelmus/threepenny-gui.git
+    commit: d00c4bba407b68e68b8d211234c68b6b7919f5e7
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
-- threepenny-gui-0.6.0.6
+# - threepenny-gui-0.6.0.6
 
 # Override default flag values for local packages and extra-deps
 flags: {}
