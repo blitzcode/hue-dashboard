@@ -166,14 +166,24 @@ setup ae@AppEnv { .. } window = do
     -- Duplicate broadcast channel
     tchan <- liftIO . atomically $ dupTChan _aeBroadcast
     -- Worker thread for receiving light updates
+    --
+    -- TODO: Worker thread creation and connected user count bookkeeping happens right
+    --       here and then in the disconnect handler. This feels flimsy, I wish there was
+    --       something as solid as a bracket pattern that would ensure no dangling threads
+    --       and user counts are left hanging around, no matter where an exception occurs
+    --
     updateWorker <- liftIO . async $ lightUpdateWorker window tchan
+    -- Increment connected user count
+    liftIO . atomically . modifyTVar' _aeConnectedUsers $ succ
+    -- Disconnect handler, cancel light update worker and decrement user count
     on UI.disconnect window . const . liftIO $ do
         -- TODO: This is a potential resource leak, see
         --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/133
-        --
-        -- TODO: Keep track of the number of connections to better investigate potential
-        --       resource leaks, also log lightUpdateWorker entry / exit
-        traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected"
+        remainingUsers <- atomically $ do
+            modifyTVar' _aeConnectedUsers pred
+            readTVar _aeConnectedUsers
+        traceS TLInfo $ "User ID '" <> fromCookieUserID userID <> "' disconnected ("
+            <> show remainingUsers <> " users remaining)"
         cancel updateWorker
     -- Trace some performance measurements (TODO: Show page size in characters)
     traceS TLInfo
@@ -187,9 +197,9 @@ setup ae@AppEnv { .. } window = do
 -- TODO: We don't handle addition / removal of lights or changes in properties like the
 --       name. Maybe refresh page automatically
 --
--- TODO: Because getElementById just freezes when we pass it a non-existent element, our
---       entire worker thread will just freeze when we receive an update for a new light,
---       or one with a changed ID etc., very bad, see getElementByIdSafe
+-- TODO: Because getElementByIdSafe throws when we pass it a non-existent element, our
+--       entire worker thread will just stop when we receive an update for a new light,
+--       or one with a changed ID etc.
 --
 lightUpdateWorker :: Window -> LightUpdateTChan -> IO ()
 lightUpdateWorker window tchan = runUI window $ loop

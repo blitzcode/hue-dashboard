@@ -37,6 +37,7 @@ data AppEnv = AppEnv
     , _aeBroadcast      :: !LightUpdateTChan
     , _aeColorPickerImg :: !(JP.Image JP.PixelRGB8)
     , _aeCmdLineOpts    :: !CmdLineOpts
+    , _aeConnectedUsers :: !(TVar Int)
     }
 
 data CmdLineOpts = CmdLineOpts

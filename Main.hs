@@ -102,6 +102,8 @@ main = do
                                flags
                   , _cloTraceHTTP     =  FlagTraceHTTP `elem` flags
                   }
+          -- Number of currently connected users
+          _aeConnectedUsers <- atomically . newTVar $ 0
           -- Launch application
           run AppEnv { .. }
 
