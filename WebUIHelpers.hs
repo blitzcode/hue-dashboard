@@ -1,5 +1,5 @@
 
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts, RankNTypes #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, FlexibleContexts, RankNTypes, LambdaCase #-}
 
 module WebUIHelpers where
 
@@ -17,6 +17,7 @@ import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
 import Util
+import Trace
 import HueJSON
 import PersistConfig
 import AppDefs (AppEnv)
@@ -64,15 +65,18 @@ buildGroupID groupName elemName =
     (show . hash $ fromGroupName groupName) <>
     "-" <> elemName
 
--- The getElementById function returns a Maybe, but actually just throws an exception if
--- the element is not found. The exception is unfortunately a JS exception on the client,
--- and our code just freezes / aborts without any helpful reason why the page couldn't be
--- generated. Until this is fixed in threepenny, we can only add support for tracing. Also
--- see https://github.com/HeinrichApfelmus/threepenny-gui/issues/129
+-- Throw an exception if we can't find the element. This is mostly an artifact from older
+-- versions of threepenny which never returned Nothing and just broke on the client with a
+-- JS error, hanging everything and forcing a reload
+--
+-- TODO: Now that invalid elements are returned properly as Nothing, we should probably
+--       think about a less 'exceptional' method of dealing with these
+--
 getElementByIdSafe :: Window -> String -> UI Element
-getElementByIdSafe window elementID = do
-    -- liftIO . putStrLn $ "getElementByIdSafe: " <> elementID
-    fromJust <$> getElementById window elementID
+getElementByIdSafe window elementID =
+    getElementById window elementID >>= \case
+        Nothing -> traceAndThrow $ "getElementByIdSafe: Invalid element ID: " <> elementID
+        Just e  -> return e
 
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 
