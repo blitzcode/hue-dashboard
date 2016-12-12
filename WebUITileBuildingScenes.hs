@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import Data.Monoid
 import Data.List
 import Data.Aeson
+import Data.Hashable
 import qualified Data.Vector as V
 import qualified Data.Function (on)
 import qualified Data.HashMap.Strict as HM
@@ -237,10 +238,13 @@ addScenesTile userID window = do
 addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
 addSceneTile sceneName scene shown window = do
   AppEnv { .. } <- ask
-  let editDeleteDivID    = "scene-" <> sceneName <> "-edit-delete-div"
-      deleteConfirmDivID = "scene-" <> sceneName <> "-confirm-div"
-      deleteConfirmBtnID = "scene-" <> sceneName <> "-confirm-btn"
-      circleContainerID  = "scene-" <> sceneName <> "-circle-container"
+  let -- We use the hash of the scene name, just in case the user
+      -- used characters not valid for element IDs
+      sceneNameHash      = show $ hash sceneName
+      editDeleteDivID    = "scene-" <> sceneNameHash <> "-edit-delete-div"
+      deleteConfirmDivID = "scene-" <> sceneNameHash <> "-confirm-div"
+      deleteConfirmBtnID = "scene-" <> sceneNameHash <> "-confirm-btn"
+      circleContainerID  = "scene-" <> sceneNameHash <> "-circle-container"
       styleCircleNoExist = "background: white; border-color: lightgrey;" :: String
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC

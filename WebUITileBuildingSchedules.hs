@@ -10,6 +10,7 @@ import Text.Read (readMaybe)
 import qualified Data.Text as T
 import Data.Monoid
 import Data.Maybe
+import Data.Hashable
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
@@ -293,9 +294,12 @@ addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
 addScheduleTile scheduleName Schedule { .. } shown window = do
   AppEnv { .. } <- ask
   scenes <- _pcScenes <$> (liftIO . atomically . readTVar $ _aePC)
-  let editDeleteDivID    = "schedule-" <> scheduleName <> "-edit-delete-div"
-      deleteConfirmDivID = "schedule-" <> scheduleName <> "-confirm-div"
-      deleteConfirmBtnID = "schedule-" <> scheduleName <> "-confirm-btn"
+  let -- We use the hash of the scene name, just in case the user
+      -- used characters not valid for element IDs
+      scheduleNameHash   = show $ hash scheduleName
+      editDeleteDivID    = "schedule-" <> scheduleNameHash <> "-edit-delete-div"
+      deleteConfirmDivID = "schedule-" <> scheduleNameHash <> "-confirm-div"
+      deleteConfirmBtnID = "schedule-" <> scheduleNameHash <> "-confirm-btn"
       minute             = show _sMinute
       minutePretty       = if length minute == 1 then "0" <> minute else minute
       sceneMissing       = not $ HM.member _sScene scenes
