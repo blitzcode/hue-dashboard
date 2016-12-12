@@ -200,93 +200,92 @@ addSchedulesTile sceneNames userID window = do
       -- TODO: Consider adding global toggle to suspend all schedules
   addPageUIAction $ do
       -- Create a new scene
-      getElementByIdSafe window scheduleCreatorBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              -- Schedule name
-              scheduleName <- -- Trim, autocorrect adds spaces
-                              T.unpack . T.strip . T.pack <$>
-                                  (get value =<< getElementByIdSafe window scheduleCreatorNameID)
-              -- Scene name
-              sceneName    <- get value =<< getElementByIdSafe window scheduleCreatorSceneID
-              -- Hour
-              hour         <- fromMaybe 16 . readMaybe <$>
-                                  (get value =<< getElementByIdSafe window scheduleCreatorHourID)
-              -- Minute
-              minute       <- fromMaybe 30 . readMaybe <$>
-                                  (get value =<< getElementByIdSafe window scheduleCreatorMinuteID)
-              -- Active days
-              daysActive   <- forM days $ \day ->
-                  get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
-              -- Action
-              actionStr    <- get value =<< getElementByIdSafe window scheduleCreatorActionID
-              let action | actionStr == actionActivate     = SAActivate
-                         | actionStr == actionActivateSlow = SAActivateSlow
-                         | actionStr == actionTurnOff      = SATurnOff
-                         | actionStr == actionBlink        = SABlink
-                         | otherwise                       = SAActivate
-              -- Don't bother creating schedules without name
-              -- TODO: Show an error message to indicate what the problem is
-              -- TODO: Deal with the situation where we have no scenes at all
-              unless (null scheduleName) $ do
-                  liftIO $ createSchedule _aePC
-                                          scheduleName
-                                          sceneName
-                                          hour
-                                          minute
-                                          daysActive
-                                          action
-                  traceS TLInfo $ printf
-                      "Created new schedule '%s' triggering at %i:%i action '%s' scene '%s' on %s"
-                      scheduleName
-                      hour
-                      minute
-                      (show action)
-                      sceneName
-                      ( concatMap (\(i, active) -> if   active
-                                                   then days !! i
-                                                   else ""
-                                  ) $ zip [0..] daysActive
-                      )
-                  reloadPage
+      onElementID scheduleCreatorBtnID "click" $ do
+          -- Schedule name
+          scheduleName <- -- Trim, autocorrect adds spaces
+                          T.unpack . T.strip . T.pack <$>
+                              (get value =<< getElementByIdSafe window scheduleCreatorNameID)
+          -- Scene name
+          sceneName    <- get value =<< getElementByIdSafe window scheduleCreatorSceneID
+          -- Hour
+          hour         <- fromMaybe 16 . readMaybe <$>
+                              (get value =<< getElementByIdSafe window scheduleCreatorHourID)
+          -- Minute
+          minute       <- fromMaybe 30 . readMaybe <$>
+                              (get value =<< getElementByIdSafe window scheduleCreatorMinuteID)
+          -- Active days
+          daysActive   <- forM days $ \day ->
+              get UI.checked =<< getElementByIdSafe window (scheduleCreatorDayID day)
+          -- Action
+          actionStr    <- get value =<< getElementByIdSafe window scheduleCreatorActionID
+          let action | actionStr == actionActivate     = SAActivate
+                     | actionStr == actionActivateSlow = SAActivateSlow
+                     | actionStr == actionTurnOff      = SATurnOff
+                     | actionStr == actionBlink        = SABlink
+                     | otherwise                       = SAActivate
+          -- Don't bother creating schedules without name
+          -- TODO: Show an error message to indicate what the problem is
+          -- TODO: Deal with the situation where we have no scenes at all
+          unless (null scheduleName) $ do
+              liftIO $ createSchedule _aePC
+                                      scheduleName
+                                      sceneName
+                                      hour
+                                      minute
+                                      daysActive
+                                      action
+              traceS TLInfo $ printf
+                  "Created new schedule '%s' triggering at %i:%i action '%s' scene '%s' on %s"
+                  scheduleName
+                  hour
+                  minute
+                  (show action)
+                  sceneName
+                  ( concatMap (\(i, active) -> if   active
+                                               then days !! i
+                                               else ""
+                              ) $ zip [0..] daysActive
+                  )
+              reloadPage
       -- Show / hide schedules
-      getElementByIdSafe window schedulesTileHideShowBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              -- Start a transaction, flip the shown state of the group by adding /
-              -- removing it from the visible list and return a list of UI actions to
-              -- update the UI with the changes
-              uiActions <- liftIO . atomically $ do
-                  pc <- readTVar _aePC
-                  let grpShownNow = pc
-                                  ^. pcUserData
-                                   . at userID
-                                   . non defaultUserData
-                                   . udVisibleGroupNames
-                                   . to (HS.member schedulesTileGroupName)
-                  writeTVar _aePC
-                      $  pc
-                         -- Careful not to use 'non' here, would otherwise remove the
-                         -- entire user when removing the last HS entry, confusing...
-                      &  pcUserData . at userID . _Just . udVisibleGroupNames
-                      %~ ( if   grpShownNow
-                           then HS.delete schedulesTileGroupName
-                           else HS.insert schedulesTileGroupName
-                         )
-                  return $
-                      ( if   grpShownNow
-                        then [ void $ element btn & set UI.text grpHiddenCaption ]
-                        else [ void $ element btn & set UI.text grpShownCaption  ]
-                      ) <>
-                      -- Hide or show all members of the schedule group. We do this by
-                      -- identifying them by a special CSS class instead of just setting
-                      -- them from names in our schedule database. This ensures we don't try
-                      -- to set a non-existing element in case another users has created
-                      -- a schedule not yet present in our DOM as a tile
-                      [ runFunction . ffi $ "$('." <> scheduleTilesClass <> "')." <>
-                            if   grpShownNow
-                            then "hide()"
-                            else "fadeIn()"
-                      ]
-              sequence_ uiActions
+      onElementID schedulesTileHideShowBtnID "click" $ do
+          -- Start a transaction, flip the shown state of the group by adding /
+          -- removing it from the visible list and return a list of UI actions to
+          -- update the UI with the changes
+          btn <- getElementByIdSafe window schedulesTileHideShowBtnID
+          uiActions <- liftIO . atomically $ do
+              pc <- readTVar _aePC
+              let grpShownNow = pc
+                              ^. pcUserData
+                               . at userID
+                               . non defaultUserData
+                               . udVisibleGroupNames
+                               . to (HS.member schedulesTileGroupName)
+              writeTVar _aePC
+                  $  pc
+                     -- Careful not to use 'non' here, would otherwise remove the
+                     -- entire user when removing the last HS entry, confusing...
+                  &  pcUserData . at userID . _Just . udVisibleGroupNames
+                  %~ ( if   grpShownNow
+                       then HS.delete schedulesTileGroupName
+                       else HS.insert schedulesTileGroupName
+                     )
+              return $
+                  ( if   grpShownNow
+                    then [ void $ element btn & set UI.text grpHiddenCaption ]
+                    else [ void $ element btn & set UI.text grpShownCaption  ]
+                  ) <>
+                  -- Hide or show all members of the schedule group. We do this by
+                  -- identifying them by a special CSS class instead of just setting
+                  -- them from names in our schedule database. This ensures we don't try
+                  -- to set a non-existing element in case another users has created
+                  -- a schedule not yet present in our DOM as a tile
+                  [ runFunction . ffi $ "$('." <> scheduleTilesClass <> "')." <>
+                        if   grpShownNow
+                        then "hide()"
+                        else "fadeIn()"
+                  ]
+          sequence_ uiActions
   return grpShown
 
 -- Add a tile for an individual schedule
@@ -374,12 +373,11 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
                              editOnClick
                              deleteConfirmDivID
                              deleteConfirmBtnID
-  addPageUIAction $ do
+  addPageUIAction $
       -- Delete
-      getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              liftIO . atomically $ do
-                  pc <- readTVar _aePC
-                  writeTVar _aePC $ pc & pcSchedules . iat scheduleName #~ Nothing
-              reloadPage
+      onElementID deleteConfirmBtnID "click" $ do
+          liftIO . atomically $ do
+              pc <- readTVar _aePC
+              writeTVar _aePC $ pc & pcSchedules . iat scheduleName #~ Nothing
+          reloadPage
 

@@ -78,6 +78,30 @@ getElementByIdSafe window elementID =
         Nothing -> traceAndThrow $ "getElementByIdSafe: Invalid element ID: " <> elementID
         Just e  -> return e
 
+-- Register event handlers directly on an element ID string. Why do we need this? Earlier
+-- versions of threepenny required a client server roundtrip to add DOM elements. To avoid
+-- this overhead, we build the DOM as HTML server side and submit it with a single
+-- runFunction call. The DOM building has since been fixed, but we still use the HTML
+-- generation (for various reasons). Unfortunately, registering event handlers requires a
+-- threepenny Element and getting one without the native DOM building combinators requires
+-- a call to getElementById, which does a roundtrip. So each event handler does a full
+-- client server roundtrip, very slow. These wrapper functions here register an event
+-- handler without the roundtrip / wait when used in combination with the new batching
+-- mode for runFunction calls (setCallBufferMode BufferRun). See the following bug for a
+-- full discussion and background:
+--
+-- https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+--
+onElementID
+    :: String   -- ID attribute of the element
+    -> String   -- Name of the DOM event to register the handler at
+    -> UI void  -- Handler to fire whenever the event happens
+    -> UI ()
+onElementID elid event handler = do
+    window   <- askWindow
+    exported <- ffiExport (runUI window handler >> return ())
+    runFunction $ ffi "$(%1).on(%2,%3)" ("#" ++ elid) event exported
+
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 
 anyLightsOn :: Lights -> Bool

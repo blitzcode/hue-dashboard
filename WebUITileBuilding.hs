@@ -108,14 +108,12 @@ addLightTile light lightID shown window = do
                 $ return ()
   addPageUIAction $ do
      -- Have light blink once after clicking the caption
-     getElementByIdSafe window (buildLightID lightID "caption") >>= \caption ->
-         on UI.click caption $ \_ -> do
-             lightsBreatheCycle bridgeIP
-                                bridgeUserID
-                                [lightID]
+     onElementID (buildLightID lightID "caption") "click" $
+         lightsBreatheCycle bridgeIP
+                            bridgeUserID
+                            [lightID]
      -- Turn on / off by clicking the light symbol
-     getElementByIdSafe window (buildLightID lightID "image") >>= \image ->
-         on UI.click image $ \_ -> do
+     onElementID (buildLightID lightID "image") "click" $ do
              -- Query current light state to see if we need to turn it on or off
              curLights <- liftIO . atomically $ readTVar _aeLights
              case HM.lookup lightID curLights of
@@ -287,20 +285,18 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
               H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
   addPageUIAction $ do
       -- Have light blink once after clicking the caption
-      getElementByIdSafe window (buildGroupID groupName "caption") >>= \caption ->
-          on UI.click caption $ \_ -> do
-              lightsBreatheCycle bridgeIP
-                                 bridgeUserID
-                                 groupLightIDs
+      onElementID (buildGroupID groupName "caption") "click" $
+          lightsBreatheCycle bridgeIP
+                             bridgeUserID
+                             groupLightIDs
       -- Register click handler for turning group lights on / off
-      getElementByIdSafe window (buildGroupID groupName "image") >>= \image ->
-          on UI.click image $ \_ -> do
-              -- Query current group light state to see if we need to turn group on or off
-              queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
-                  lightsSwitchOnOff bridgeIP
-                                    bridgeUserID
-                                    groupLightIDs
-                                    (not grpOn)
+      onElementID (buildGroupID groupName "image") "click" $
+          -- Query current group light state to see if we need to turn group on or off
+          queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
+              lightsSwitchOnOff bridgeIP
+                                bridgeUserID
+                                groupLightIDs
+                                (not grpOn)
       -- Register click handler for changing group brightness
       when grpHasDimming $
           getElementByIdSafe window (buildGroupID groupName "brightness-container") >>= \image ->
@@ -368,44 +364,44 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                                                 xyX
                                                 xyY
       -- Show / hide group lights
-      getElementByIdSafe window (buildGroupID groupName "show-btn") >>= \btn ->
-          on UI.click btn $ \_ -> do
-              -- Start a transaction, flip the shown state of the group by adding /
-              -- removing it from the visible list and return a list of UI actions to
-              -- update the UI with the changes
-              uiActions <- liftIO . atomically $ do
-                  pc <- readTVar _aePC
-                  let grpShown = pc
-                               ^. pcUserData
-                                . at userID
-                                . non defaultUserData
-                                . udVisibleGroupNames
-                                . to (HS.member groupName)
-                  writeTVar _aePC
-                      $  pc
-                         -- Careful not to use 'non' here, would otherwise remove the
-                         -- entire user when removing the last HS entry, confusing...
-                      &  pcUserData . at userID . _Just . udVisibleGroupNames
-                      %~ (if grpShown then HS.delete groupName else HS.insert groupName)
-                  return $
-                      ( if   grpShown
-                        then [ void $ element btn & set UI.text grpHiddenCaption ]
-                        else [ void $ element btn & set UI.text grpShownCaption  ]
-                      ) <>
-                      ( (flip map) groupLightIDs $ \lightID ->
-                            runFunction . ffi $ "$('#" <> buildLightID lightID "tile" <> "')." <>
-                                if   grpShown
-                                then "hide()"
-                                else "fadeIn()"
-                      )
-              sequence_ uiActions
+      onElementID (buildGroupID groupName "show-btn") "click" $ do
+          -- Start a transaction, flip the shown state of the group by adding /
+          -- removing it from the visible list and return a list of UI actions to
+          -- update the UI with the changes
+          btn <- getElementByIdSafe window (buildGroupID groupName "show-btn")
+          uiActions <- liftIO . atomically $ do
+              pc <- readTVar _aePC
+              let grpShown = pc
+                           ^. pcUserData
+                            . at userID
+                            . non defaultUserData
+                            . udVisibleGroupNames
+                            . to (HS.member groupName)
+              writeTVar _aePC
+                  $  pc
+                     -- Careful not to use 'non' here, would otherwise remove the
+                     -- entire user when removing the last HS entry, confusing...
+                  &  pcUserData . at userID . _Just . udVisibleGroupNames
+                  %~ (if grpShown then HS.delete groupName else HS.insert groupName)
+              return $
+                  ( if   grpShown
+                    then [ void $ element btn & set UI.text grpHiddenCaption ]
+                    else [ void $ element btn & set UI.text grpShownCaption  ]
+                  ) <>
+                  ( (flip map) groupLightIDs $ \lightID ->
+                        runFunction . ffi $ "$('#" <> buildLightID lightID "tile" <> "')." <>
+                            if   grpShown
+                            then "hide()"
+                            else "fadeIn()"
+                  )
+          sequence_ uiActions
 
 -- Tile for controlling all lights, also displays some bridge information
 --
 -- TODO: Maybe add controls for dimming / changing color of all lights?
 --
-addAllLightsTile :: Window -> PageBuilder ()
-addAllLightsTile window = do
+addAllLightsTile :: PageBuilder ()
+addAllLightsTile = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC
@@ -439,14 +435,13 @@ addAllLightsTile window = do
               ]
   -- Register click handler for turning all lights on / off
   addPageUIAction $
-      getElementByIdSafe window (buildGroupID (GroupName "all-lights") "image") >>= \image ->
-          on UI.click image $ \_ -> do
-              -- Query current light state to see if we need to turn everything on or off
-              lights <- liftIO . atomically $ readTVar _aeLights
-              -- Fire & forget REST API call in another thread
-              switchAllLights bridgeIP
-                              bridgeUserID
-                              (not $ anyLightsOn lights)
+      onElementID (buildGroupID (GroupName "all-lights") "image") "click" $ do
+          -- Query current light state to see if we need to turn everything on or off
+          lights <- liftIO . atomically $ readTVar _aeLights
+          -- Fire & forget REST API call in another thread
+          switchAllLights bridgeIP
+                          bridgeUserID
+                          (not $ anyLightsOn lights)
 
 data ColorPickerResult = CPR_Margin         -- Click on the margin
                        | CPR_SetColorLoop   -- Click on the 'Set Color Loop' button
@@ -581,8 +576,8 @@ getSystemUptime = do
 -- TODO: Add a 'Log' button to see record of last ten errors / warnings
 -- TODO: Show an error / warning icon if there have been any in the last hour
 --
-addServerTile :: Window -> PageBuilder ()
-addServerTile window = do
+addServerTile :: PageBuilder ()
+addServerTile = do
   AppEnv { .. } <- ask
   -- System status
   (avg15m, ramUsage) <- liftIO getSystemStatus
@@ -623,14 +618,12 @@ addServerTile window = do
                    H.! A.onclick "getElementById('server-danger-bttns').style.display='none';" $
                      H.span H.! A.class_ "glyphicon glyphicon-chevron-left" $ return ()
   -- Register click handler for shutdown / reboot
-  addPageUIAction $
-      getElementByIdSafe window "server-shutdown-bttn" >>= \bttn ->
-          on UI.click bttn $ \_ -> do
-              liftIO $ callCommand "sudo shutdown now"
-  addPageUIAction $
-      getElementByIdSafe window "server-reboot-bttn" >>= \bttn ->
-          on UI.click bttn $ \_ -> do
-              liftIO $ callCommand "sudo shutdown -r now"
+  addPageUIAction .
+      onElementID "server-shutdown-bttn" "click" .
+          liftIO $ callCommand "sudo shutdown now"
+  addPageUIAction .
+      onElementID "server-reboot-bttn" "click" .
+          liftIO $ callCommand "sudo shutdown -r now"
 
 -- Add hidden dropdown div triggered by the 'Jump' element of the title nav bar
 addTitleBarNavDropDown :: [GroupName] -> PageBuilder ()

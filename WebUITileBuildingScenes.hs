@@ -175,63 +175,62 @@ addScenesTile userID window = do
                  $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
-      getElementByIdSafe window sceneCreatorBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              -- Collect scene name and included lights
-              sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
-              sceneName        <- T.unpack . T.strip . T.pack <$> -- Trim, autocorrect adds spaces
-                                      get value sceneNameElement
-              inclLights       <- fmap concat . forM lightNameIDSorted $ \(_, lgtID) -> do
-                  let checkboxID = sceneCreatorLightCheckboxID lgtID
-                  checkboxElement <- getElementByIdSafe window checkboxID
-                  checkboxCheck   <- get UI.checked checkboxElement
-                  return $ if checkboxCheck then [lgtID] else []
-              -- Don't bother creating scenes without name or lights
-              -- TODO: Show an error message to indicate what the problem is
-              unless (null sceneName || null inclLights) $ do
-                  liftIO $ createScene _aeLights _aePC sceneName inclLights
-                  traceS TLInfo $ printf "Created new scene '%s' with %i lights"
-                                         sceneName (length inclLights)
-                  reloadPage
+      onElementID sceneCreatorBtnID "click" $ do
+          -- Collect scene name and included lights
+          sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
+          sceneName        <- T.unpack . T.strip . T.pack <$> -- Trim, autocorrect adds spaces
+                                  get value sceneNameElement
+          inclLights       <- fmap concat . forM lightNameIDSorted $ \(_, lgtID) -> do
+              let checkboxID = sceneCreatorLightCheckboxID lgtID
+              checkboxElement <- getElementByIdSafe window checkboxID
+              checkboxCheck   <- get UI.checked checkboxElement
+              return $ if checkboxCheck then [lgtID] else []
+          -- Don't bother creating scenes without name or lights
+          -- TODO: Show an error message to indicate what the problem is
+          unless (null sceneName || null inclLights) $ do
+              liftIO $ createScene _aeLights _aePC sceneName inclLights
+              traceS TLInfo $ printf "Created new scene '%s' with %i lights"
+                                     sceneName (length inclLights)
+              reloadPage
       -- Show / hide scenes
-      getElementByIdSafe window scenesTileHideShowBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              -- Start a transaction, flip the shown state of the group by adding /
-              -- removing it from the visible list and return a list of UI actions to
-              -- update the UI with the changes
-              uiActions <- liftIO . atomically $ do
-                  pc <- readTVar _aePC
-                  let grpShownNow = pc
-                                  ^. pcUserData
-                                   . at userID
-                                   . non defaultUserData
-                                   . udVisibleGroupNames
-                                   . to (HS.member scenesTileGroupName)
-                  writeTVar _aePC
-                      $  pc
-                         -- Careful not to use 'non' here, would otherwise remove the
-                         -- entire user when removing the last HS entry, confusing...
-                      &  pcUserData . at userID . _Just . udVisibleGroupNames
-                      %~ ( if   grpShownNow
-                           then HS.delete scenesTileGroupName
-                           else HS.insert scenesTileGroupName
-                         )
-                  return $
-                      ( if   grpShownNow
-                        then [ void $ element btn & set UI.text grpHiddenCaption ]
-                        else [ void $ element btn & set UI.text grpShownCaption  ]
-                      ) <>
-                      -- Hide or show all members of the scene group. We do this by
-                      -- identifying them by a special CSS class instead of just setting
-                      -- them from names in our scene database. This ensures we don't try
-                      -- to set a non-existing element in case another users has created
-                      -- a scene not yet present in our DOM as a tile
-                      [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
-                            if   grpShownNow
-                            then "hide()"
-                            else "fadeIn()"
-                      ]
-              sequence_ uiActions
+      onElementID scenesTileHideShowBtnID "click" $ do
+          -- Start a transaction, flip the shown state of the group by adding /
+          -- removing it from the visible list and return a list of UI actions to
+          -- update the UI with the changes
+          btn <- getElementByIdSafe window scenesTileHideShowBtnID
+          uiActions <- liftIO . atomically $ do
+              pc <- readTVar _aePC
+              let grpShownNow = pc
+                              ^. pcUserData
+                               . at userID
+                               . non defaultUserData
+                               . udVisibleGroupNames
+                               . to (HS.member scenesTileGroupName)
+              writeTVar _aePC
+                  $  pc
+                     -- Careful not to use 'non' here, would otherwise remove the
+                     -- entire user when removing the last HS entry, confusing...
+                  &  pcUserData . at userID . _Just . udVisibleGroupNames
+                  %~ ( if   grpShownNow
+                       then HS.delete scenesTileGroupName
+                       else HS.insert scenesTileGroupName
+                     )
+              return $
+                  ( if   grpShownNow
+                    then [ void $ element btn & set UI.text grpHiddenCaption ]
+                    else [ void $ element btn & set UI.text grpShownCaption  ]
+                  ) <>
+                  -- Hide or show all members of the scene group. We do this by
+                  -- identifying them by a special CSS class instead of just setting
+                  -- them from names in our scene database. This ensures we don't try
+                  -- to set a non-existing element in case another users has created
+                  -- a scene not yet present in our DOM as a tile
+                  [ runFunction . ffi $ "$('." <> sceneTilesClass <> "')." <>
+                        if   grpShownNow
+                        then "hide()"
+                        else "fadeIn()"
+                  ]
+          sequence_ uiActions
   return grpShown
 
 -- Add a tile for an individual scene
@@ -338,16 +337,13 @@ addSceneTile sceneName scene shown window = do
       -- TODO: Maybe add a rate limiter for this? Spamming the activate button for a scene
       --       with lots of lights can really overwhelm the bridge
       --
-      getElementByIdSafe window circleContainerID >>= \btn ->
-          on UI.click btn $ \_ ->
-              lightsSetScene bridgeIP bridgeUserID scene
+      onElementID circleContainerID "click" $ lightsSetScene bridgeIP bridgeUserID scene
       -- Delete
-      getElementByIdSafe window deleteConfirmBtnID >>= \btn ->
-          on UI.click btn $ \_ -> do
-              liftIO . atomically $ do
-                  pc <- readTVar _aePC
-                  writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
-              reloadPage
+      onElementID deleteConfirmBtnID "click" $ do
+          liftIO . atomically $ do
+              pc <- readTVar _aePC
+              writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
+          reloadPage
 
 addImportedScenesTile :: Bool -> Window -> PageBuilder ()
 addImportedScenesTile shown window = do
@@ -408,9 +404,8 @@ addImportedScenesTile shown window = do
   -- Register click handlers for activating the scenes
   addPageUIAction $
       forM_ topScenes $ \(sceneID, _) ->
-          getElementByIdSafe window (sceneBttnID sceneID) >>= \bttn ->
-              on UI.click bttn $ \_ ->
-                  recallScene bridgeIP
-                              bridgeUserID
-                              sceneID
+          onElementID (sceneBttnID sceneID) "click" $
+              recallScene bridgeIP
+                          bridgeUserID
+                          sceneID
 

@@ -86,7 +86,6 @@ setup ae@AppEnv { .. } window = do
             )
     -- Run PageBuilder monad, build list of HTML constructors and UI actions (event handlers)
     --
-    -- TODO: Show number of connected users
     -- TODO: Add a 'Help' tile with basic instructions, maybe only the first time
     -- TODO: Tile showing power / light usage over time
     -- TODO: Add support for a 'dark mode' theme
@@ -106,7 +105,7 @@ setup ae@AppEnv { .. } window = do
         -- Navigation dropdown
         addTitleBarNavDropDown (map fst lightGroupsList)
         -- 'All Lights' tile
-        addAllLightsTile window
+        addAllLightsTile
         -- 'Scenes' header tile
         addScenesTile userID window >>= \grpShown -> do
             -- Scene tiles
@@ -136,12 +135,12 @@ setup ae@AppEnv { .. } window = do
                 addScheduleTile scheduleName schedule grpShown window
         -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
         -- TODO: Command line option to control visibility of the server tile
-        when (isInfixOf "arm" $ map toLower SI.arch) $
-            addServerTile window
+        when (isInfixOf "arm" $ map toLower SI.arch) $ addServerTile
     -- Execute all blaze HTML builders and get HTML code for the entire dynamic part of the
     -- page. We generate our HTML with blaze-html and insert it with a single FFI call
-    -- instead of using threepenny's HTML combinators. The latter have some severe
-    -- performance issues, see https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
+    -- instead of using threepenny's HTML combinators. The latter at least used to have some
+    -- severe performance issues, see
+    -- https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
     --
     -- TODO: We're using String for everything here, inefficient
     --
@@ -150,16 +149,15 @@ setup ae@AppEnv { .. } window = do
     -- ffi function to actually insert our generated HTML. This places all the HTML
     -- in double quotes at the point of insertion and \-escapes all quotes in the actual
     -- HTML. Also, if we did not do it this way and escaped the string ourselves, any
-    -- %-sign in the HTML would trigger string substitution and the call would fail
+    -- %-sign in the HTML would trigger string substitution with ffi and the call would fail
     runFunction $ ffi "document.getElementById('lights').innerHTML = %1" tilesHtml
     finishPage <- liftIO getCurrentTime
-    -- Now that we build the page, execute all the UI actions to register event handlers
-    --
-    -- TODO: Since we can't batch this, it'll still take a second or more to register
-    --       all of these handlers, see
-    --       https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
-    --
+    -- Now that we build the page, execute all the UI actions to register event handlers.
+    -- Please see the comment for onElementID on why we batch it like this
+    setCallBufferMode BufferRun
     sequence_ . reverse $ page ^. pgUIActions
+    flushCallBuffer
+    setCallBufferMode NoBuffering
     -- We're done building the page, hide spinner
     void $ getElementByIdSafe window "navbar-spinner" & set UI.src "static/svg/checkmark.svg"
     finishEvents <- liftIO getCurrentTime
