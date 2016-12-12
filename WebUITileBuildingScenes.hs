@@ -175,7 +175,7 @@ addScenesTile userID window = do
                  $ H.toHtml (if grpShown then grpShownCaption else grpHiddenCaption)
   addPageUIAction $ do
       -- Create a new scene
-      onElementID sceneCreatorBtnID "click" $ do
+      onElementIDClick sceneCreatorBtnID $ do
           -- Collect scene name and included lights
           sceneNameElement <- getElementByIdSafe window sceneCreatorNameID
           sceneName        <- T.unpack . T.strip . T.pack <$> -- Trim, autocorrect adds spaces
@@ -193,7 +193,7 @@ addScenesTile userID window = do
                                      sceneName (length inclLights)
               reloadPage
       -- Show / hide scenes
-      onElementID scenesTileHideShowBtnID "click" $ do
+      onElementIDClick scenesTileHideShowBtnID $ do
           -- Start a transaction, flip the shown state of the group by adding /
           -- removing it from the visible list and return a list of UI actions to
           -- update the UI with the changes
@@ -337,9 +337,9 @@ addSceneTile sceneName scene shown window = do
       -- TODO: Maybe add a rate limiter for this? Spamming the activate button for a scene
       --       with lots of lights can really overwhelm the bridge
       --
-      onElementID circleContainerID "click" $ lightsSetScene bridgeIP bridgeUserID scene
+      onElementIDClick circleContainerID $ lightsSetScene bridgeIP bridgeUserID scene
       -- Delete
-      onElementID deleteConfirmBtnID "click" $ do
+      onElementIDClick deleteConfirmBtnID $ do
           liftIO . atomically $ do
               pc <- readTVar _aePC
               writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
@@ -404,7 +404,7 @@ addImportedScenesTile shown window = do
   -- Register click handlers for activating the scenes
   addPageUIAction $
       forM_ topScenes $ \(sceneID, _) ->
-          onElementID (sceneBttnID sceneID) "click" $
+          onElementIDClick (sceneBttnID sceneID) $
               recallScene bridgeIP
                           bridgeUserID
                           sceneID

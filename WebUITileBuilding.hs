@@ -108,12 +108,12 @@ addLightTile light lightID shown window = do
                 $ return ()
   addPageUIAction $ do
      -- Have light blink once after clicking the caption
-     onElementID (buildLightID lightID "caption") "click" $
+     onElementIDClick (buildLightID lightID "caption") $
          lightsBreatheCycle bridgeIP
                             bridgeUserID
                             [lightID]
      -- Turn on / off by clicking the light symbol
-     onElementID (buildLightID lightID "image") "click" $ do
+     onElementIDClick (buildLightID lightID "image") $ do
              -- Query current light state to see if we need to turn it on or off
              curLights <- liftIO . atomically $ readTVar _aeLights
              case HM.lookup lightID curLights of
@@ -130,56 +130,54 @@ addLightTile light lightID shown window = do
      --       beginning)
      --
      when dimmingSupport $
-         getElementByIdSafe window (buildLightID lightID "brightness-container") >>= \image ->
-             on UI.mousedown image $ \(mx, _) -> do
-                 -- Construct and perform REST API call
-                 lightsChangeBrightness bridgeIP
-                                        bridgeUserID
-                                        _aeLights
-                                        [lightID]
-                                        -- Click on left part decrements, right part increments
-                                        (if mx < 50 then (-brightnessChange) else brightnessChange)
+         onElementIDMouseDown (buildLightID lightID "brightness-container") $ \mx _ ->
+             -- Construct and perform REST API call
+             lightsChangeBrightness bridgeIP
+                                    bridgeUserID
+                                    _aeLights
+                                    [lightID]
+                                    -- Click on left part decrements, right part increments
+                                    (if mx < 50 then (-brightnessChange) else brightnessChange)
      -- Respond to clicks on the color picker
      when (colorSupport || onlyCTSupport) $
-         getElementByIdSafe window (buildLightID lightID "color-picker-overlay") >>= \image ->
-             on UI.mousedown image $ \(mx, my) ->
-                 -- Do we have the CT-only or the normal color picker?
-                 if   onlyCTSupport
-                 then case ctFromColorPickerCoordinates _aeColorPickerImg
-                                                        mx
-                                                        my of
-                          Nothing       -> return ()
-                          Just ctKelvin ->
-                              lightsSetColorTemperature bridgeIP
-                                                        bridgeUserID
-                                                        _aeLights
-                                                        [lightID]
-                                                        ctKelvin
-                 else case xyFromColorPickerCoordinates _aeColorPickerImg
-                                                        mx
-                                                        my
-                                                        (light ^. lgtModelID) of
-                          CPR_Margin       -> return ()
-                          CPR_SetColorLoop ->
-                              lightsColorLoop bridgeIP
-                                              bridgeUserID
-                                              _aeLights
-                                              [lightID]
-                          CPR_Random       -> do
-                              (xyX, xyY) <- liftIO getRandomXY
-                              lightsSetColorXY bridgeIP
-                                               bridgeUserID
-                                               _aeLights
-                                               [lightID]
-                                               xyX
-                                               xyY
-                          CPR_XY xyX xyY   ->
-                              lightsSetColorXY bridgeIP
-                                               bridgeUserID
-                                               _aeLights
-                                               [lightID]
-                                               xyX
-                                               xyY
+         onElementIDMouseDown (buildLightID lightID "color-picker-overlay") $ \mx my ->
+             -- Do we have the CT-only or the normal color picker?
+             if   onlyCTSupport
+             then case ctFromColorPickerCoordinates _aeColorPickerImg
+                                                    mx
+                                                    my of
+                      Nothing       -> return ()
+                      Just ctKelvin ->
+                          lightsSetColorTemperature bridgeIP
+                                                    bridgeUserID
+                                                    _aeLights
+                                                    [lightID]
+                                                    ctKelvin
+             else case xyFromColorPickerCoordinates _aeColorPickerImg
+                                                    mx
+                                                    my
+                                                    (light ^. lgtModelID) of
+                      CPR_Margin       -> return ()
+                      CPR_SetColorLoop ->
+                          lightsColorLoop bridgeIP
+                                          bridgeUserID
+                                          _aeLights
+                                          [lightID]
+                      CPR_Random       -> do
+                          (xyX, xyY) <- liftIO getRandomXY
+                          lightsSetColorXY bridgeIP
+                                           bridgeUserID
+                                           _aeLights
+                                           [lightID]
+                                           xyX
+                                           xyY
+                      CPR_XY xyX xyY   ->
+                          lightsSetColorXY bridgeIP
+                                           bridgeUserID
+                                           _aeLights
+                                           [lightID]
+                                           xyX
+                                           xyY
 
 getRandomXY :: IO (Float, Float)
 getRandomXY = do
@@ -285,12 +283,12 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
               H.div H.! A.class_   "progress-bar progress-bar-info"        $ return ()
   addPageUIAction $ do
       -- Have light blink once after clicking the caption
-      onElementID (buildGroupID groupName "caption") "click" $
+      onElementIDClick (buildGroupID groupName "caption") $
           lightsBreatheCycle bridgeIP
                              bridgeUserID
                              groupLightIDs
       -- Register click handler for turning group lights on / off
-      onElementID (buildGroupID groupName "image") "click" $
+      onElementIDClick (buildGroupID groupName "image") $
           -- Query current group light state to see if we need to turn group on or off
           queryAnyLightsInGroup  (^. lgtState . lsOn)>>= \grpOn ->
               lightsSwitchOnOff bridgeIP
@@ -299,72 +297,70 @@ addGroupSwitchTile groupName groupLightIDs userID window = do
                                 (not grpOn)
       -- Register click handler for changing group brightness
       when grpHasDimming $
-          getElementByIdSafe window (buildGroupID groupName "brightness-container") >>= \image ->
-              on UI.mousedown image $ \(mx, _) ->
-                  -- Construct and perform REST API call
-                  lightsChangeBrightness bridgeIP
-                                         bridgeUserID
-                                         _aeLights
-                                         groupLightIDs
-                                         -- Click on left part decrements, right part increments
-                                         (if mx < 50 then (-brightnessChange) else brightnessChange)
+          onElementIDMouseDown (buildGroupID groupName "brightness-container") $ \mx _ ->
+              -- Construct and perform REST API call
+              lightsChangeBrightness bridgeIP
+                                     bridgeUserID
+                                     _aeLights
+                                     groupLightIDs
+                                     -- Click on left part decrements, right part increments
+                                     (if mx < 50 then (-brightnessChange) else brightnessChange)
       -- Respond to clicks on the color picker
       when (grpHasColor || grpHasOnlyCT) $
-          getElementByIdSafe window (buildGroupID groupName "color-picker-overlay") >>= \image ->
-              on UI.mousedown image $ \(mx, my) ->
-                   -- Do we have the CT-only or the normal color picker?
-                   if   (not grpHasColor)
-                   then case ctFromColorPickerCoordinates _aeColorPickerImg
-                                                          mx
-                                                          my of
-                            Nothing       -> return ()
-                            Just ctKelvin ->
-                                lightsSetColorTemperature bridgeIP
-                                                          bridgeUserID
-                                                          _aeLights
-                                                          groupLightIDs
-                                                          ctKelvin
-                  else -- TODO: We have to specify a single light type for the color conversion,
-                       --       but we potentially set many different lights. Do a custom
-                       --       conversion for each color light in the group
-                       --
-                       -- TODO: We don't support color setting in groups with mixed color
-                       --       temperature and (extended) color lights. Either we're all
-                       --       color temperature and show the smaller CT-only picker, or
-                       --       we show the full picker and skip the color temperature and
-                       --       dimming only lights when setting. The problem is, what to
-                       --       do when the user selects a color like green or an option
-                       --       like the color loop, which both can't be accepted by the
-                       --       color temperature lights
-                       --
-                       case xyFromColorPickerCoordinates _aeColorPickerImg
-                                                         mx
-                                                         my
-                                                         LM_HueBulbA19 of
-                           CPR_Margin       -> return ()
-                           CPR_SetColorLoop ->
-                               lightsColorLoop bridgeIP
-                                               bridgeUserID
-                                               _aeLights
-                                               groupLightIDs
-                           CPR_Random       -> do
-                               -- TODO: Assign different random color to each light
-                               (xyX, xyY) <- liftIO getRandomXY
-                               lightsSetColorXY bridgeIP
-                                                bridgeUserID
-                                                _aeLights
-                                                groupLightIDs
-                                                xyX
-                                                xyY
-                           CPR_XY xyX xyY   ->
-                               lightsSetColorXY bridgeIP
-                                                bridgeUserID
-                                                _aeLights
-                                                groupLightIDs
-                                                xyX
-                                                xyY
+          onElementIDMouseDown (buildGroupID groupName "color-picker-overlay") $ \mx my ->
+              -- Do we have the CT-only or the normal color picker?
+              if   (not grpHasColor)
+              then case ctFromColorPickerCoordinates _aeColorPickerImg
+                                                     mx
+                                                     my of
+                       Nothing       -> return ()
+                       Just ctKelvin ->
+                           lightsSetColorTemperature bridgeIP
+                                                     bridgeUserID
+                                                     _aeLights
+                                                     groupLightIDs
+                                                     ctKelvin
+              else -- TODO: We have to specify a single light type for the color conversion,
+                   --       but we potentially set many different lights. Do a custom
+                   --       conversion for each color light in the group
+                   --
+                   -- TODO: We don't support color setting in groups with mixed color
+                   --       temperature and (extended) color lights. Either we're all
+                   --       color temperature and show the smaller CT-only picker, or
+                   --       we show the full picker and skip the color temperature and
+                   --       dimming only lights when setting. The problem is, what to
+                   --       do when the user selects a color like green or an option
+                   --       like the color loop, which both can't be accepted by the
+                   --       color temperature lights
+                   --
+                   case xyFromColorPickerCoordinates _aeColorPickerImg
+                                                     mx
+                                                     my
+                                                     LM_HueBulbA19 of
+                       CPR_Margin       -> return ()
+                       CPR_SetColorLoop ->
+                           lightsColorLoop bridgeIP
+                                           bridgeUserID
+                                           _aeLights
+                                           groupLightIDs
+                       CPR_Random       -> do
+                           -- TODO: Assign different random color to each light
+                           (xyX, xyY) <- liftIO getRandomXY
+                           lightsSetColorXY bridgeIP
+                                            bridgeUserID
+                                            _aeLights
+                                            groupLightIDs
+                                            xyX
+                                            xyY
+                       CPR_XY xyX xyY   ->
+                           lightsSetColorXY bridgeIP
+                                            bridgeUserID
+                                            _aeLights
+                                            groupLightIDs
+                                            xyX
+                                            xyY
       -- Show / hide group lights
-      onElementID (buildGroupID groupName "show-btn") "click" $ do
+      onElementIDClick (buildGroupID groupName "show-btn") $ do
           -- Start a transaction, flip the shown state of the group by adding /
           -- removing it from the visible list and return a list of UI actions to
           -- update the UI with the changes
@@ -435,7 +431,7 @@ addAllLightsTile = do
               ]
   -- Register click handler for turning all lights on / off
   addPageUIAction $
-      onElementID (buildGroupID (GroupName "all-lights") "image") "click" $ do
+      onElementIDClick (buildGroupID (GroupName "all-lights") "image") $ do
           -- Query current light state to see if we need to turn everything on or off
           lights <- liftIO . atomically $ readTVar _aeLights
           -- Fire & forget REST API call in another thread
@@ -619,10 +615,10 @@ addServerTile = do
                      H.span H.! A.class_ "glyphicon glyphicon-chevron-left" $ return ()
   -- Register click handler for shutdown / reboot
   addPageUIAction .
-      onElementID "server-shutdown-bttn" "click" .
+      onElementIDClick "server-shutdown-bttn" .
           liftIO $ callCommand "sudo shutdown now"
   addPageUIAction .
-      onElementID "server-reboot-bttn" "click" .
+      onElementIDClick "server-reboot-bttn" .
           liftIO $ callCommand "sudo shutdown -r now"
 
 -- Add hidden dropdown div triggered by the 'Jump' element of the title nav bar

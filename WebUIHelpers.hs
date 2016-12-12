@@ -91,16 +91,23 @@ getElementByIdSafe window elementID =
 -- full discussion and background:
 --
 -- https://github.com/HeinrichApfelmus/threepenny-gui/issues/131
---
-onElementID
-    :: String   -- ID attribute of the element
-    -> String   -- Name of the DOM event to register the handler at
-    -> UI void  -- Handler to fire whenever the event happens
-    -> UI ()
-onElementID elid event handler = do
+
+onElementIDClick :: String -> UI void -> UI ()
+onElementIDClick elementID handler = do
     window   <- askWindow
-    exported <- ffiExport (runUI window handler >> return ())
-    runFunction $ ffi "$(%1).on(%2,%3)" ("#" ++ elid) event exported
+    exported <- ffiExport $ runUI window handler >> return ()
+    runFunction $ ffi "$(%1).on('click', %2)" ("#" ++ elementID) exported
+
+onElementIDMouseDown :: String -> (Int -> Int -> UI void) -> UI ()
+onElementIDMouseDown elementID handler = do
+    window   <- askWindow
+    exported <- ffiExport (\mx my -> runUI window (handler mx my) >> return ())
+    runFunction $ ffi
+        ( "$(%1).on('mousedown', function(e) " ++
+          "{ var offs = $(this).offset(); %2(e.pageX - offs.left, e.pageY - offs.top); })"
+        )
+        ("#" ++ elementID)
+        exported
 
 -- TODO: Those any* functions duplicate functionality already have in App.fetchBridgeState
 

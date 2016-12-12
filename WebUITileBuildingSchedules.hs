@@ -200,7 +200,7 @@ addSchedulesTile sceneNames userID window = do
       -- TODO: Consider adding global toggle to suspend all schedules
   addPageUIAction $ do
       -- Create a new scene
-      onElementID scheduleCreatorBtnID "click" $ do
+      onElementIDClick scheduleCreatorBtnID $ do
           -- Schedule name
           scheduleName <- -- Trim, autocorrect adds spaces
                           T.unpack . T.strip . T.pack <$>
@@ -248,7 +248,7 @@ addSchedulesTile sceneNames userID window = do
                   )
               reloadPage
       -- Show / hide schedules
-      onElementID schedulesTileHideShowBtnID "click" $ do
+      onElementIDClick schedulesTileHideShowBtnID $ do
           -- Start a transaction, flip the shown state of the group by adding /
           -- removing it from the visible list and return a list of UI actions to
           -- update the UI with the changes
@@ -375,7 +375,7 @@ addScheduleTile scheduleName Schedule { .. } shown window = do
                              deleteConfirmBtnID
   addPageUIAction $
       -- Delete
-      onElementID deleteConfirmBtnID "click" $ do
+      onElementIDClick deleteConfirmBtnID $ do
           liftIO . atomically $ do
               pc <- readTVar _aePC
               writeTVar _aePC $ pc & pcSchedules . iat scheduleName #~ Nothing
