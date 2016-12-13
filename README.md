@@ -126,6 +126,7 @@ Usage: hue-dashboard [OPTION...]
   -p PORT     --port=PORT              network port (default: 8001)
               --localhost              only bind to localhost
   -i SECONDS  --poll-interval=SECONDS  bridge poll interval (default: 1)
+  -b IP       --bridge-ip=IP           manually specify Hue bridge IP address
   -t LEVEL    --trace-level=LEVEL      execution trace level (default: i)
                                          n = none
                                          e = errors only

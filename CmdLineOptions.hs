@@ -24,6 +24,7 @@ data Flag = FlagHelp
           | FlagLocalhost
           | FlagTraceHTTP
           | FlagPollInterval String
+          | FlagBridgeIP String
             deriving (Eq, Show)
 
 defPort, defPollInterval :: Int
@@ -46,7 +47,6 @@ parseCmdLineOpt = liftIO $ do
         throwIO . userError $ "Done, exiting"
     return flags
   where
-    -- TODO: Add option to manually specify bridge IP
     options :: [OptDescr Flag]
     options = [ Option ['p']
                        ["port"]
@@ -55,11 +55,15 @@ parseCmdLineOpt = liftIO $ do
               , Option []
                        ["localhost"]
                        (NoArg FlagLocalhost)
-                       ("only bind to localhost")
+                       "only bind to localhost"
               , Option ['i']
                        ["poll-interval"]
                        (ReqArg FlagPollInterval "SECONDS")
                        ("bridge poll interval (default: " <> show defPollInterval <> ")")
+              , Option ['b']
+                       ["bridge-ip"]
+                       (ReqArg FlagBridgeIP "IP")
+                       "manually specify Hue bridge IP address"
               , Option ['t']
                        ["trace-level"]
                        (ReqArg FlagTraceLevel "LEVEL")
@@ -72,7 +76,7 @@ parseCmdLineOpt = liftIO $ do
               , Option []
                        ["trace-file"]
                        (ReqArg FlagTraceFile "FILE")
-                       ("output file for execution trace (default: none)")
+                       "output file for execution trace (default: none)"
               , Option []
                        ["trace-no-color"]
                        (NoArg FlagTraceDisableColor)
@@ -88,7 +92,7 @@ parseCmdLineOpt = liftIO $ do
               , Option []
                        ["trace-http"]
                        (NoArg FlagTraceHTTP)
-                       ("trace web server events")
+                       "trace web server events"
               , Option ['h']
                        ["help"]
                        (NoArg FlagHelp)

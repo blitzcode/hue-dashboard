@@ -6,6 +6,9 @@ module Main (main) where
 import Data.Monoid
 import Data.Maybe
 import qualified Data.HashMap.Strict as HM
+import Data.Aeson
+import qualified Data.ByteString.Char8 as B8
+import qualified Data.ByteString.Lazy as BS
 import Control.Lens
 import Control.Exception
 import Control.Concurrent.STM
@@ -40,8 +43,15 @@ main = do
       -- Load configuration (might not be there)
       mbCfg <- loadConfig configFilePath
       -- Bridge connection and user ID
-      bridgeIP <- discoverBridgeIP    $ view pcBridgeIP     <$> mbCfg
-      userID   <- createUser bridgeIP $ view pcBridgeUserID <$> mbCfg
+      let cmdOptBridgeIP =
+            foldr ( \f r -> case f of
+                              FlagBridgeIP ip ->
+                                decode . BS.fromStrict . B8.pack $ "\"" <> ip <> "\""
+                              _               -> r
+            ) Nothing flags
+      bridgeIP <- discoverBridgeIP $ case cmdOptBridgeIP of Just ip -> ip
+                                                            Nothing -> view pcBridgeIP <$> mbCfg
+      userID <- createUser bridgeIP $ view pcBridgeUserID <$> mbCfg
       -- We have everything setup, build and store configuration
       let newCfg = (fromMaybe defaultPersistConfig mbCfg)
                        & pcBridgeIP     .~ bridgeIP
