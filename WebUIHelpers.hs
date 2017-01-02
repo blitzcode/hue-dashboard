@@ -141,6 +141,7 @@ trucateEllipsis maxLength str
     | length str > maxLength = take maxLength str <> "…"
     | otherwise              = str
 
+-- TODO: Make the delete button small and the edit button large
 addEditAndDeleteButton :: String -> String -> String -> String -> H.Html
 addEditAndDeleteButton editDeleteDivID
                        editBtnOnClick
