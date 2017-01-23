@@ -142,8 +142,11 @@ createUser bridgeIP userID =
             -- http://www.developers.meethue.com/documentation/configuration-api#71_create_user
             --
             host <- liftIO getHostName
-            let body = -- We use our application name and the host name, as recommended
-                       HM.fromList ([("devicetype", "hue-dashboard#" <> host)] :: [(String, String)])
+            -- We use our application name and the host name, as recommended. Truncate the host
+            -- name to the API limit
+            let body = HM.fromList ( [("devicetype", "hue-dashboard#" <> take 19 host)]
+                                     :: [(String, String)]
+                                   )
             traceS TLInfo $ "Creating new user ID: " <> show body
             r <- (Just <$> bridgeRequest MethodPOST bridgeIP (Just body) (BridgeUserID "") "")
               `catches`
