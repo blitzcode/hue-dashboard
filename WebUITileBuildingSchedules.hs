@@ -290,8 +290,8 @@ addSchedulesTile sceneNames userID window = do
   return grpShown
 
 -- Add a tile for an individual schedule
-addScheduleTile :: ScheduleName -> Schedule -> Bool -> Window -> PageBuilder ()
-addScheduleTile scheduleName Schedule { .. } shown window = do
+addScheduleTile :: ScheduleName -> Schedule -> Bool -> PageBuilder ()
+addScheduleTile scheduleName Schedule { .. } shown = do
   AppEnv { .. } <- ask
   scenes <- _pcScenes <$> (liftIO . atomically . readTVar $ _aePC)
   let -- We use the hash of the scene name, just in case the user

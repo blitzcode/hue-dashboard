@@ -44,8 +44,8 @@ import ProcFS
 --
 -- TODO: Add ability to rename lights
 --
-addLightTile :: Light -> LightID -> Bool -> Window -> PageBuilder ()
-addLightTile light lightID shown window = do
+addLightTile :: Light -> LightID -> Bool -> PageBuilder ()
+addLightTile light lightID shown = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC

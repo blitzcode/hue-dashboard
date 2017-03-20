@@ -235,8 +235,8 @@ addScenesTile userID window = do
   return grpShown
 
 -- Add a tile for an individual scene
-addSceneTile :: SceneName -> Scene -> Bool -> Window -> PageBuilder ()
-addSceneTile sceneName scene shown window = do
+addSceneTile :: SceneName -> Scene -> Bool -> PageBuilder ()
+addSceneTile sceneName scene shown = do
   AppEnv { .. } <- ask
   let -- We use the hash of the scene name, just in case the user
       -- used characters not valid for element IDs
@@ -349,8 +349,8 @@ addSceneTile sceneName scene shown window = do
               writeTVar _aePC $ pc & pcScenes . iat sceneName #~ Nothing
           reloadPage
 
-addImportedScenesTile :: Bool -> Window -> PageBuilder ()
-addImportedScenesTile shown window = do
+addImportedScenesTile :: Bool -> PageBuilder ()
+addImportedScenesTile shown = do
   AppEnv { .. } <- ask
   -- Get relevant bridge information, assume it won't change over the lifetime of the connection
   bridgeIP     <- liftIO . atomically $ (^. pcBridgeIP    ) <$> readTVar _aePC

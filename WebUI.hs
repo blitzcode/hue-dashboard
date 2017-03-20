@@ -110,9 +110,9 @@ setup ae@AppEnv { .. } window = do
         addScenesTile userID window >>= \grpShown -> do
             -- Scene tiles
             forM_ scenes $ \(sceneName, scene) ->
-                addSceneTile sceneName scene grpShown window
+                addSceneTile sceneName scene grpShown
             -- Imported scenes tile
-            addImportedScenesTile grpShown window
+            addImportedScenesTile grpShown
         -- Create tiles for all light groups
         forM_ lightGroupsList $ \(groupName, groupLightIDs) -> do
             -- Build group switch tile for current light group
@@ -127,12 +127,12 @@ setup ae@AppEnv { .. } window = do
             forM_ sortedIDs $ \lightID ->
                 case HM.lookup lightID lights of
                     Nothing    -> return ()
-                    Just light -> addLightTile light lightID grpShown window
+                    Just light -> addLightTile light lightID grpShown
         -- 'Schedules' header tile
         addSchedulesTile (map fst scenes) userID window >>= \grpShown -> do
             -- Schedule tiles
             forM_ schedules $ \(scheduleName, schedule) ->
-                addScheduleTile scheduleName schedule grpShown window
+                addScheduleTile scheduleName schedule grpShown
         -- Add a server tile when we're running on ARM (Raspbery Pi or similar)
         -- TODO: Command line option to control visibility of the server tile
         when (isInfixOf "arm" $ map toLower SI.arch) $ addServerTile
