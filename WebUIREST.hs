@@ -13,6 +13,7 @@ module WebUIREST ( lightsSetState
                  , switchAllLights
                  ) where
 
+import Data.Monoid
 import Data.Aeson
 import Data.Vector ()
 import qualified Data.HashMap.Strict as HM
@@ -21,7 +22,6 @@ import Control.Concurrent.Async
 import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.Reader
-import System.FilePath
 
 import Util
 import PersistConfig
@@ -48,7 +48,7 @@ lightsSetState bridgeIP userID lightIDs body =
                 bridgeIP
                 (Just body)
                 userID
-                ("lights" </> fromLightID lightID </> "state")
+                ("lights/" <> fromLightID lightID <> "/state")
 
 lightsSetScene :: MonadIO m
                => IPAddress
@@ -64,7 +64,7 @@ lightsSetScene bridgeIP userID scene =
                 bridgeIP
                 (Just lightState)
                 userID
-                ("lights" </> fromLightID lightID </> "state")
+                ("lights/" <> fromLightID lightID <> "/state")
 
 lightsSwitchOnOff :: MonadIO m => IPAddress -> BridgeUserID -> [LightID] -> Bool -> m ()
 lightsSwitchOnOff bridgeIP userID lightIDs onOff =
@@ -180,5 +180,5 @@ switchAllLights bridgeIP userID onOff =
                 bridgeIP
                 (Just body)
                 userID
-                ("groups" </> "0" </> "action") -- Special group 0, all lights
+                "groups/0/action" -- Special group 0, all lights
 

@@ -16,7 +16,6 @@ import Control.Monad.IO.Class
 import Control.Monad.Catch
 import Data.Aeson
 import Data.Monoid
-import System.FilePath ((</>))
 import Network.HTTP.Simple
 
 import Util
@@ -49,8 +48,8 @@ bridgeRequest :: forall m a body. (MonadIO m, MonadThrow m, FromJSON a, ToJSON b
               -> String
               -> m a
 bridgeRequest method bridgeIP mbBody userID apiEndPoint = do
-    request' <- parseRequest $ show method <> " http://" <> fromIPAddress bridgeIP </> "api"
-                               </> fromBridgeUserID userID </> apiEndPoint
+    request' <- parseRequest $ show method <> " http://" <> fromIPAddress bridgeIP <> "/api/"
+                               <> fromBridgeUserID userID <> "/" <> apiEndPoint
     let request = case mbBody of
                       Just j  -> setRequestBodyJSON j request'
                       Nothing -> request'
