@@ -10,12 +10,13 @@ packages:
 - location:
     git: https://github.com/blitzcode/threepenny-gui.git
     commit: 1670033cfe746d25c9e823f436259e23b0cebb3b
+  extra-dep: true
 #   git: git@github.com:HeinrichApfelmus/threepenny-gui.git
 #   commit: 95a90ad4d0b8a22114f9b3775dcbfc65f588ef0b
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
-# - threepenny-gui-0.6.0.6
+    # - threepenny-gui-0.7.1.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}
