@@ -196,6 +196,7 @@ iconFromLM lm = basePath </> fn <.> ext
                           LM_HueSpotBR30               -> "br30"
                           LM_HueSpotGU10               -> "gu10"
                           LM_HueBR30                   -> "br30"
+                          LM_HueCandle                 -> "candelabra_e14"
                           LM_HueLightStrip             -> "lightstrip"
                           LM_HueLivingColorsIris       -> "iris"
                           LM_HueLivingColorsBloom      -> "bloom"
@@ -211,6 +212,7 @@ iconFromLM lm = basePath </> fn <.> ext
                                                           -- the normal color ones, flat top
                                                           "white_and_color_e27"
                           LM_HueGU10WhiteAmbience      -> "gu10"
+                          LM_HueCandleWhiteAmbience    -> "candelabra_e14"
                           LM_HueGo                     -> "go"
                           LM_HueLightStripPlus         -> "lightstrip"
                           LM_HueWhiteAmbienceFlexStrip -> "lightstrip"

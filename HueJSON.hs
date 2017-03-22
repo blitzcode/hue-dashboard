@@ -155,6 +155,7 @@ data LightModel = LM_HueBulbA19
                 | LM_HueSpotBR30
                 | LM_HueSpotGU10
                 | LM_HueBR30
+                | LM_HueCandle
                 | LM_HueLightStrip
                 | LM_HueLivingColorsIris
                 | LM_HueLivingColorsBloom
@@ -168,6 +169,7 @@ data LightModel = LM_HueBulbA19
                 | LM_ColorTemperatureModule
                 | LM_HueA19WhiteAmbience
                 | LM_HueGU10WhiteAmbience
+                | LM_HueCandleWhiteAmbience
                 | LM_HueGo
                 | LM_HueLightStripPlus
                 | LM_HueWhiteAmbienceFlexStrip
@@ -194,6 +196,7 @@ instance FromJSON LightModel where
             "LCT002"                    -> return LM_HueSpotBR30
             "LCT003"                    -> return LM_HueSpotGU10
             "LCT011"                    -> return LM_HueBR30 -- What's the diff. to the 'Spot'?
+            "LCT012"                    -> return LM_HueCandle
             "LST001"                    -> return LM_HueLightStrip
             "LLC010"                    -> return LM_HueLivingColorsIris
             "LLC011"                    -> return LM_HueLivingColorsBloom
@@ -214,6 +217,7 @@ instance FromJSON LightModel where
             "LTW004"                    -> return LM_HueA19WhiteAmbience
             "LTW013"                    -> return LM_HueGU10WhiteAmbience
             "LTW014"                    -> return LM_HueGU10WhiteAmbience
+            "LTW012"                    -> return LM_HueCandleWhiteAmbience
             "LLC020"                    -> return LM_HueGo
             "LST002"                    -> return LM_HueLightStripPlus
             "LTP001"                    -> return LM_HueWhiteAmbienceFlexStrip
@@ -238,6 +242,7 @@ instance Show LightModel where
     show LM_HueSpotBR30               = "Hue Spot BR30"
     show LM_HueSpotGU10               = "Hue Spot GU10"
     show LM_HueBR30                   = "Hue BR30"
+    show LM_HueCandle                 = "Hue Color Candle"
     show LM_HueLightStrip             = "Hue LightStrip"
     show LM_HueLivingColorsIris       = "Hue Living Colors Iris"
     show LM_HueLivingColorsBloom      = "Hue Living Colors Bl."
@@ -251,6 +256,7 @@ instance Show LightModel where
     show LM_ColorTemperatureModule    = "Color Temp. Module"
     show LM_HueA19WhiteAmbience       = "Hue A19 White Amb."
     show LM_HueGU10WhiteAmbience      = "Hue GU10 White Amb."
+    show LM_HueCandleWhiteAmbience    = "Hue White Amb. Candle"
     show LM_HueGo                     = "Hue Go"
     show LM_HueLightStripPlus         = "Hue LightStrip Plus"
     show LM_HueWhiteAmbienceFlexStrip = "Hue W. Amb. FlexStrip"
