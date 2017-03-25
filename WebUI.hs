@@ -45,13 +45,14 @@ webUIStart ae = do
                   | otherwise                              = "0.0.0.0"
     traceS TLInfo $ printf "Starting web server on %s, port %s" (show interface) (show port)
     liftIO . startGUI
-        defaultConfig { jsPort       = Just port
-                      , jsAddr       = Just interface
-                      , jsLog        = if   ae ^. aeCmdLineOpts . cloTraceHTTP
-                                       then traceB TLInfo
-                                       else \_ -> return ()
-                      , jsStatic     = Just "static"
-                      , jsCustomHTML = Just "dashboard.html"
+        defaultConfig { jsPort                     = Just port
+                      , jsAddr                     = Just interface
+                      , jsLog                      = if   ae ^. aeCmdLineOpts . cloTraceHTTP
+                                                     then traceB TLInfo
+                                                     else \_ -> return ()
+                      , jsStatic                   = Just "static"
+                      , jsCustomHTML               = Just "dashboard.html"
+                      , jsWindowReloadOnDisconnect = True
                       }
         $ setup ae
 
