@@ -150,6 +150,12 @@ This program was developed on OS X 10.10 (also tested on Ubuntu 16.04 LTS and Ra
 
 The program traces a lot of information and all errors / warnings to the console, please look for any error messages if things don't work as expected.
 
+# Vagrant
+
+One option to get this running quickly is to utilize [Vagrant](https://www.vagrantup.com/) with [VirtualBox](https://www.virtualbox.org) to setup hue-dashboard with all of its dependencies in an Ubuntu 16.04 Virtual Machine rather then install everything on your Linux/Mac/Windows machine directly.
+
+[Install both Vagrant and VirtualBox](https://www.vagrantup.com/intro/getting-started/index.html) and then just run `vagrant up`. The server will come up on the same port 8001 as normal and will be accessible at http://127.0.0.1:8000. There are some instructions inside /Vagrantfile on how to allow other computers to access the virtual machine. 
+
 # Raspberry Pi
 
 ![Raspberry Pi](https://raw.github.com/blitzcode/hue-dashboard/master/doc-img/raspberry-pi.jpg)
