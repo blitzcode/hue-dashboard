@@ -8,9 +8,9 @@ resolver: lts-5.15
 packages:
 - '.'
 - location:
-    git: git@github.com:HeinrichApfelmus/threepenny-gui.git
+    git: https://github.com/HeinrichApfelmus/threepenny-gui.git
     commit: 5ccc078e1b2731e49b9d0bbba153589e07ecdd30
-#   git: https://github.com/blitzcode/threepenny-gui.git
+#   git: https://github.com/blitzcode/threepenny-gui.git 
 #   commit: 1670033cfe746d25c9e823f436259e23b0cebb3b
   extra-dep: true
 
