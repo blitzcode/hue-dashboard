@@ -630,20 +630,22 @@ addTitleBarNavDropDown groups =
     H.div H.! A.class_ "title-bar-nav-dropdown"
           H.! A.onclick "$(this).slideToggle(100);" $ do
       H.div H.! A.class_ "nav-link"
-             H.! A.onclick "$('html, body').animate({ scrollTop: 0 });"
-             $ "Scenes"
+            H.! A.onclick "$('html, body').animate({ scrollTop: 0 });"
+            $ "Scenes"
       H.hr
       forM_ groups $ \groupName -> do
         H.div H.! A.class_ "nav-link"
-               H.! A.onclick ( H.toValue $ "$('html, body').animate({ scrollTop: $('#"
-                                           <> buildGroupID groupName "tile" <>
-                                           "').offset().top - 35 });"
-                             )
-               $ H.toHtml (fromGroupName groupName)
+              H.! A.onclick ( H.toValue $ "$('html, body').animate({ scrollTop: $('#"
+                                          <> buildGroupID groupName "tile" <>
+                                          "').offset().top - 35 });"
+                            )
+              $ H.toHtml (fromGroupName groupName)
       H.hr
       H.div H.! A.class_ "nav-link"
-             H.! A.onclick "$('html, body').animate({ scrollTop: $(document).height() });"
-             $ "Schedules"
+            H.! A.onclick "$('html, body').animate({ scrollTop: $(document).height() });"
+            $ "Schedules"
       H.hr
-      H.a H.! A.href "https://github.com/blitzcode/hue-dashboard" $ "About"
+      H.a H.! A.href "https://github.com/blitzcode/hue-dashboard"
+          H.! A.target "new"
+          $ "About"
 
