@@ -17,6 +17,15 @@ packages:
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - threepenny-gui-0.8.0.0
+# Pin semigroupiods to its original revision. This is a fix for this nasty issue:
+#
+# https://github.com/blitzcode/hue-dashboard/issues/6
+# https://github.com/ekmett/semigroupoids/issues/71
+#
+# Alternatively, this can be used to allow the dependency change:
+#
+# allow-newer: true
+- semigroupoids-5.0.1@rev:0
 
 # Override default flag values for local packages and extra-deps
 flags: {}
